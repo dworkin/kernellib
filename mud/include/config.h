@@ -7,5 +7,10 @@
 
 # define CALLOUTRSRC	FALSE	/* don't have callouts as a resource */
 
-# define CREATOR "_F_system_create"
-# define DEBUG
+/*
+ * Configuration settings for Leprechaun.
+ */
+
+# define CREATOR  "_F_system_create"  /* system creator function */
+# define DISTINCT_LWO_SUBDIR  "/id/"  /* in addition to LIGHTWEIGHT_SUBDIR */
+# define DEBUG                        /* debug assertions are on by default */
