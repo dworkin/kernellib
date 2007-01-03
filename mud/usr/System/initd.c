@@ -59,7 +59,7 @@ static void create()
 	     * the increased TLS size does not affect the current execution
 	     * round, so initialize user code in call-outs
 	     */
-	    call_out("init", path);
+	    call_out("init", 0, path);
         }
     }
 }

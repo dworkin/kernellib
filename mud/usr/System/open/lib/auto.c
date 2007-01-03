@@ -1,22 +1,33 @@
-#include <type.h>
-#include <kernel/kernel.h>
-#include <system/assert.h>
-#include <system/path.h>
-#include <system/object.h>
-#include <system/system.h>
+# include <type.h>
+# include <kernel/kernel.h>
+# include <kernel/tls.h>
+# include <system/assert.h>
+# include <system/path.h>
+# include <system/object.h>
+# include <system/system.h>
 
-private inherit api_path API_PATH;
+/*
+ * To do: Find a more space-efficient alternative than inheriting these APIs,
+ * because they add two variables to nearly every object in the mud.
+ */
+private inherit api_path  API_PATH;
+private inherit api_tls   API_TLS;
 
 private int      onumber_;
 private object   proxy_;
 private object   env_;
 private mapping  inv_;
 
-nomask int _F_system_create(varargs int clone) {
+static void create(varargs mixed args...)
+{ }
+
+nomask int _F_system_create(varargs int clone)
+{
     ASSERT_ACCESS(::previous_program() == AUTO);
     if (clone) {
-        string  oname;
-        object  this;
+        string   oname;
+        object   this;
+	mixed   *args;
 
         this = ::this_object();
         oname = ::object_name(this);
@@ -27,21 +38,34 @@ nomask int _F_system_create(varargs int clone) {
             proxy_ = ::new_object(PROXY);
             ::call_other(proxy_, "init", onumber_);
         }
+
+	args = api_tls::get_tlvar(0);
+	if (args) {
+	    DEBUG_ASSERT(typeof(args) == T_ARRAY);
+	    api_tls::set_tlvar(0, nil);
+	    call_limited("create", args...);
+	} else {
+	    call_limited("create");
+	}
+	return TRUE;
     }
-    return 0;
+    return FALSE;
 }
 
-nomask int _Q_number() {
+nomask int _Q_number()
+{
     ASSERT_ACCESS(::previous_program() == SYSTEM_AUTO);
     return onumber_;
 }
 
-nomask object _Q_proxy() {
+nomask object _Q_proxy()
+{
     ASSERT_ACCESS(::previous_program() == SYSTEM_AUTO);
     return proxy_;
 }
 
-nomask void _F_move(object env) {
+nomask void _F_move(object env)
+{
     ASSERT_ACCESS(::previous_program() == SYSTEM_AUTO);
     if (env_) {
         ::call_other(env_, "_F_leave", onumber_);
@@ -55,7 +79,8 @@ nomask void _F_move(object env) {
     }
 }
 
-nomask void _F_enter(int onumber, object obj) {
+nomask void _F_enter(int onumber, object obj)
+{
     ASSERT_ACCESS(::previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(onumber);
     DEBUG_ASSERT(obj);
@@ -64,21 +89,24 @@ nomask void _F_enter(int onumber, object obj) {
     inv_[onumber] = obj;
 }
 
-nomask void _F_leave(int onumber) {
+nomask void _F_leave(int onumber)
+{
     ASSERT_ACCESS(::previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(onumber);
     DEBUG_ASSERT(inv_ && inv_[onumber]);
     inv_[onumber] = nil;
 }
 
-nomask object _F_find(int onumber) {
+nomask object _F_find(int onumber)
+{
     ASSERT_ACCESS(::previous_program() == PROXY
                   || ::previous_program() == OBJECTD);
     DEBUG_ASSERT(onumber);
     return inv_ ? inv_[onumber] : nil;
 }
 
-nomask object *_Q_inv() {
+nomask object *_Q_inv()
+{
     int      i, size;
     object  *inv;
 
@@ -95,13 +123,15 @@ nomask object *_Q_inv() {
     return inv_ ? map_values(inv_) : ({ });
 }
 
-nomask object _Q_env() {
+nomask object _Q_env()
+{
     ASSERT_ACCESS(::previous_program() == PROXY
                   || ::previous_program() == SYSTEM_AUTO);
     return env_;
 }
 
-static mixed call_other(mixed obj, string func, mixed args...) {
+static mixed call_other(mixed obj, string func, mixed args...)
+{
     ASSERT_ARG_1(obj);
     ASSERT_ARG_2(func);
     if (typeof(obj) == T_OBJECT && ::object_name(obj) == PROXY + "#-1") {
@@ -121,7 +151,8 @@ static mixed call_other(mixed obj, string func, mixed args...) {
     return ::call_other(obj, func, args...);
 }
 
-static int destruct_object(mixed obj) {
+static int destruct_object(mixed obj)
+{
     if (typeof(obj) == T_OBJECT && ::object_name(obj) == PROXY + "#-1") {
         int onumber;
 
@@ -150,7 +181,8 @@ static int destruct_object(mixed obj) {
     return ::destruct_object(obj);
 }
 
-static object find_object(mixed oname) {
+static object find_object(mixed oname)
+{
     if (typeof(oname) == T_OBJECT && ::object_name(oname) == PROXY + "#-1") {
         /* validate proxy */
         return ::call_other(oname, "find") ? oname : nil;
@@ -173,7 +205,8 @@ static object find_object(mixed oname) {
     return ::find_object(oname);
 }
 
-static string function_object(string func, object obj) {
+static string function_object(string func, object obj)
+{
     ASSERT_ARG_1(func);
     ASSERT_ARG_2(obj);
     if (::object_name(obj) == PROXY + "#-1") {
@@ -183,13 +216,18 @@ static string function_object(string func, object obj) {
     return ::function_object(func, obj);
 }
 
-static void message(string message) {
+static void message(string message)
+{
     ASSERT_ARG(message);
     ::call_other(DRIVER, "message", message);
 }
 
-static object new_object(mixed obj) {
+static object new_object(mixed obj, varargs mixed args...)
+{
     if (typeof(obj) == T_STRING) {
+	if (sizeof(args)) {
+	    api_tls::set_tlvar(0, args);
+	}
         obj = ::new_object(obj);
         if (sscanf(::object_name(obj), "%*s" + ENTITY_SUBDIR)) {
             return ::call_other(obj, "_Q_proxy");
@@ -199,7 +237,8 @@ static object new_object(mixed obj) {
     return ::new_object(obj);
 }
 
-static string object_name(object obj) {
+static string object_name(object obj)
+{
     ASSERT_ARG(obj);
     if (::object_name(obj) == PROXY + "#-1") {
         int onumber;
@@ -213,7 +252,8 @@ static string object_name(object obj) {
     return ::object_name(obj);
 }
 
-static object previous_object(varargs int n) {
+static object previous_object(varargs int n)
+{
     object obj;
 
     if (obj = ::previous_object(n)) {
@@ -229,7 +269,8 @@ static object previous_object(varargs int n) {
     return obj;
 }
 
-static mixed *status(varargs mixed obj) {
+static mixed *status(varargs mixed obj)
+{
     if (typeof(obj) == T_OBJECT && ::object_name(obj) == PROXY + "#-1") {
         obj = ::call_other(obj, "find");
         if (!obj) return nil;
@@ -247,11 +288,13 @@ static mixed *status(varargs mixed obj) {
     return ::status(obj);
 }
 
-static object this_object() {
+static object this_object()
+{
     return proxy_ ? proxy_ : ::this_object();
 }
 
-static void move_object(object obj, object env) {
+static void move_object(object obj, object env)
+{
     ASSERT_ARG_1(obj);
     ASSERT_ARG_2(!env || ::object_name(env) != PROXY + "#-1");
     if (::object_name(obj) == PROXY + "#-1") {
@@ -261,7 +304,8 @@ static void move_object(object obj, object env) {
     ::call_other(obj, "_F_move", env);
 }
 
-static object environment(object obj) {
+static object environment(object obj)
+{
     ASSERT_ARG(obj);
     if (::object_name(obj) == PROXY + "#-1") {
         obj = ::call_other(obj, "find");
@@ -270,7 +314,8 @@ static object environment(object obj) {
     return ::call_other(obj, "_Q_env");
 }
 
-static object *inventory(object obj) {
+static object *inventory(object obj)
+{
     ASSERT_ARG(obj);
     if (::object_name(obj) == PROXY + "#-1") {
         obj = ::call_other(obj, "find");
