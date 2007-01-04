@@ -1,8 +1,7 @@
-#include <system/assert.h>
+# include <system/assert.h>
 
-inherit "/usr/System/open/lib/auto";
-
-static void create() {
+static void create()
+{
     string  oname;
     object  sword, temple;
 
