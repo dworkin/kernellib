@@ -24,6 +24,7 @@ static void create(varargs mixed args...)
 nomask int _F_system_create(varargs int clone)
 {
     ASSERT_ACCESS(::previous_program() == AUTO);
+    api_tls::create();
     if (clone) {
         string   oname;
         object   this;

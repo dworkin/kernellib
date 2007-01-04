@@ -1,5 +1,10 @@
 # include <system/assert.h>
 
+private void log(string message)
+{
+    message(object_name(this_object()) + ": " + message + "\n");
+}
+
 static void create()
 {
     string  oname;
@@ -14,20 +19,20 @@ static void create()
     ASSERT(find_object(sword));
     oname = object_name(sword);
     ASSERT(find_object(oname));
-    message("~Game/initd: created <" + oname + ">\n");
+    log("created <" + oname + ">");
 
     move_object(sword, temple);
     ASSERT(environment(sword) == temple);
     ASSERT(sizeof(inventory(temple)) == 1);
-    message("~Game/initd: moved <" + oname + ">\n");
+    log("moved <" + oname + ">");
 
     move_object(sword, nil);
     ASSERT(environment(sword) == nil);
     ASSERT(!sizeof(inventory(temple)));
-    message("~Game/initd: moved <" + oname + "> again\n");
+    log("moved <" + oname + "> again");
 
     destruct_object(sword);
     ASSERT(!sizeof(inventory(temple)));
     ASSERT(!find_object(sword));
-    message("~Game/initd: destructed <" + oname + ">\n");
+    log("destructed <" + oname + ">");
 }
