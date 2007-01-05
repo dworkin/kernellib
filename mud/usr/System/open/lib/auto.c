@@ -182,7 +182,7 @@ static int destruct_object(mixed obj)
     return ::destruct_object(obj);
 }
 
-static object find_object(mixed oname)
+static atomic object find_object(mixed oname)
 {
     if (typeof(oname) == T_OBJECT && ::object_name(oname) == PROXY + "#-1") {
         /* validate proxy */
@@ -220,7 +220,8 @@ static string function_object(string func, object obj)
 static void message(string message)
 {
     ASSERT_ARG(message);
-    ::call_other(DRIVER, "message", message);
+    ::call_other(DRIVER, "message",
+		 previous_program() + ": " + message + "\n");
 }
 
 static object new_object(mixed obj, varargs mixed args...)

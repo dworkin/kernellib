@@ -1,10 +1,5 @@
 # include <system/assert.h>
 
-private void log(string message)
-{
-    message(object_name(this_object()) + ": " + message + "\n");
-}
-
 static void create()
 {
     string  oname;
@@ -13,26 +8,26 @@ static void create()
     compile_object("~/data/ent/sword");
     temple = compile_object("~/room/temple");
 
-    sword = new_object("~/data/ent/sword");
-    sword = new_object("~/data/ent/sword");
-    sword = new_object("~/data/ent/sword");
+    sword = new_object("~/data/ent/sword", 10);
+    sword = new_object("~/data/ent/sword", 11);
+    sword = new_object("~/data/ent/sword", 12);
     ASSERT(find_object(sword));
     oname = object_name(sword);
     ASSERT(find_object(oname));
-    log("created <" + oname + ">");
+    message("created <" + oname + ">");
 
     move_object(sword, temple);
     ASSERT(environment(sword) == temple);
     ASSERT(sizeof(inventory(temple)) == 1);
-    log("moved <" + oname + ">");
+    message("moved <" + oname + ">");
 
     move_object(sword, nil);
     ASSERT(environment(sword) == nil);
     ASSERT(!sizeof(inventory(temple)));
-    log("moved <" + oname + "> again");
+    message("moved <" + oname + "> again");
 
     destruct_object(sword);
     ASSERT(!sizeof(inventory(temple)));
     ASSERT(!find_object(sword));
-    log("destructed <" + oname + ">");
+    message("destructed <" + oname + ">");
 }
