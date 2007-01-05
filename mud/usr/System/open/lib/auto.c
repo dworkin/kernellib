@@ -182,7 +182,7 @@ static int destruct_object(mixed obj)
     return ::destruct_object(obj);
 }
 
-static atomic object find_object(mixed oname)
+static object find_object(mixed oname)
 {
     if (typeof(oname) == T_OBJECT && ::object_name(oname) == PROXY + "#-1") {
         /* validate proxy */
@@ -224,7 +224,16 @@ static void message(string message)
 		 previous_program() + ": " + message + "\n");
 }
 
-static object new_object(mixed obj, varargs mixed args...)
+static atomic object clone_object(string master, varargs mixed args...)
+{
+    ASSERT_ARG_1(master);
+    if (sizeof(args)) {
+	api_tls::set_tlvar(0, args);
+    }
+    return ::clone_object(master);
+}
+
+static atomic object new_object(mixed obj, varargs mixed args...)
 {
     if (typeof(obj) == T_STRING) {
 	if (sizeof(args)) {

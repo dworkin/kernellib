@@ -3,11 +3,13 @@
 static void create()
 {
     string  oname;
-    object  sword, temple;
+    object  temple, elf, sword;
 
-    compile_object("~/data/ent/sword");
     temple = compile_object("~/room/temple");
+    compile_object("~/obj/elf");
+    compile_object("~/data/ent/sword");
 
+    elf = clone_object("~/obj/elf", 10);
     sword = new_object("~/data/ent/sword", 10);
     sword = new_object("~/data/ent/sword", 11);
     sword = new_object("~/data/ent/sword", 12);
