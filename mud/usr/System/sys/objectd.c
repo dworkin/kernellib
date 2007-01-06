@@ -7,13 +7,15 @@
 
 private inherit api_path  API_PATH;
 
-int      onumber_;
-mapping  ents_;
+int      next_uid_;
+mapping  uid_to_node_;
+mapping  owner_to_node_;
 
 static void create()
 {
-    onumber_ = -2;
-    ents_ = ([ ]);
+    next_uid_ = 1;
+    uid_to_node_ = ([ ]);
+    owner_to_node_ = ([ ]);
 }
 
 string path_special(string compiled)
@@ -35,41 +37,61 @@ int forbid_inherit(string from, string path, int priv)
         && !sscanf(path, "/usr/System/open/%*s");
 }
 
-int new_ent(object ent)
+private int oid_to_uid(int oid)
 {
-    int onumber;
-
-    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    DEBUG_ASSERT(ent);
-    onumber = onumber_--;
-    ents_[onumber] = ent;
-    return onumber;
+    return -oid / 1000000;
 }
 
-void destruct_ent(int onumber)
+int new_dlwo(object obj)
 {
+    object  node;
+    string  owner;
+
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    ASSERT(ents_[onumber]);
-    ents_[onumber] = nil;
+    DEBUG_ASSERT(obj);
+    owner = obj->query_owner();
+    node = owner_to_node_[owner];
+    if (!node) {
+	int uid;
+
+	/* create node for owner */
+	uid = next_uid_++;
+	node = clone_object(OBJNODE, owner);
+	node->set_uid(uid);
+	uid_to_node_[uid] = node;
+	owner_to_node_[owner] = node;
+    }
+    return node->new_dlwo(obj);
 }
 
-object find_ent(int onumber)
+void destruct_dlwo(int oid)
 {
-    object obj;
+    int uid;
+
+    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
+    DEBUG_ASSERT(oid);
+    uid = oid_to_uid(oid);
+    uid_to_node_[uid]->destruct_dlwo(oid);
+}
+
+object find_dlwo(int oid)
+{
+    int uid;
 
     ASSERT_ACCESS(previous_program() == PROXY
                   || previous_program() == SYSTEM_AUTO);
-    obj = ents_[onumber];
-    if (obj && api_path::number(object_name(obj)) != -1) {
-        obj = obj->_F_find(onumber);
-    }
-    return obj;
+    DEBUG_ASSERT(oid);
+    uid = oid_to_uid(oid);
+    return uid_to_node_[uid]->find_dlwo(oid);
 }
 
-void move_ent(int onumber, object obj)
+void move_dlwo(int oid, object obj)
 {
+    int uid;
+
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    DEBUG_ASSERT(onumber && ents_[onumber]);
+    DEBUG_ASSERT(oid);
     DEBUG_ASSERT(obj);
-    ents_[onumber] = obj;
+    uid = oid_to_uid(oid);
+    uid_to_node_[uid]->move_dlwo(oid, obj);
 }

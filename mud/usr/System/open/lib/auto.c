@@ -33,9 +33,9 @@ nomask int _F_system_create(varargs int clone)
         this = ::this_object();
         oname = ::object_name(this);
         if (api_path::number(oname) == -1
-            && sscanf(oname, "%*s" + ENTITY_SUBDIR))
+            && sscanf(oname, "%*s" + DISTINCT_LWO_SUBDIR))
         {
-            onumber_ = ::call_other(OBJECTD, "new_ent", this);
+            onumber_ = ::call_other(OBJECTD, "new_dlwo", this);
             proxy_ = ::new_object(PROXY);
             ::call_other(proxy_, "init", onumber_);
         }
@@ -75,7 +75,7 @@ nomask void _F_move(object env)
         ::call_other(env, "_F_enter", onumber_, ::this_object());
     }
     if (proxy_) {
-        ::call_other(OBJECTD, "move_ent", onumber_,
+        ::call_other(OBJECTD, "move_dlwo", onumber_,
                      env ? env : ::this_object());
     }
 }
@@ -101,7 +101,7 @@ nomask void _F_leave(int onumber)
 nomask object _F_find(int onumber)
 {
     ASSERT_ACCESS(::previous_program() == PROXY
-                  || ::previous_program() == OBJECTD);
+                  || ::previous_program() == OBJNODE);
     DEBUG_ASSERT(onumber);
     return inv_ ? inv_[onumber] : nil;
 }
@@ -139,13 +139,13 @@ static mixed call_other(mixed obj, string func, mixed args...)
         obj = ::call_other(obj, "find");
         ASSERT_ARG_1(obj);
     } else if (typeof(obj) == T_STRING) {
-        int onumber;
+        int oid;
 
         obj = api_path::normalize(obj);
-        onumber = api_path::number(obj);
-        if (onumber <= -2) {
-            /* find entity */
-            obj = ::call_other(OBJECTD, "find_ent", onumber);
+        oid = api_path::number(obj);
+        if (oid <= -1) {
+            /* find distinct LWO */
+            obj = ::call_other(OBJECTD, "find_dlwo", oid);
             ASSERT_ARG_1(obj);
         }
     }
@@ -162,7 +162,7 @@ static int destruct_object(mixed obj)
         onumber = ::call_other(obj, "_Q_number");
         DEBUG_ASSERT(onumber <= -2);
         ::call_other(obj, "_F_move", nil);
-        ::call_other(OBJECTD, "destruct_ent", onumber);
+        ::call_other(OBJECTD, "destruct_dlwo", onumber);
         return TRUE;
     }
     if (typeof(obj) == T_STRING) {
@@ -172,10 +172,10 @@ static int destruct_object(mixed obj)
         oname = api_path::normalize(obj);
         onumber = api_path::number(oname);
         if (onumber <= -2) {
-            obj = ::call_other(OBJECTD, "find_ent", onumber);
+            obj = ::call_other(OBJECTD, "find_dlwo", onumber);
             if (!obj) return FALSE;
             ::call_other(obj, "_F_move", nil);
-            ::call_other(OBJECTD, "destruct_ent", onumber);
+            ::call_other(OBJECTD, "destruct_dlwo", onumber);
             return TRUE;
         }
     }
@@ -190,16 +190,16 @@ static object find_object(mixed oname)
     }
 
     if (typeof(oname) == T_STRING) {
-        int onumber;
+        int oid;
 
         oname = api_path::normalize(oname);
-        onumber = api_path::number(oname);
-        if (onumber <= -2) {
-            object ent;
+        oid = api_path::number(oname);
+        if (oid < -1) {
+            object obj;
 
-            /* find entity, returning by proxy */
-            ent = ::call_other(OBJECTD, "find_ent", onumber);
-            return ent ? ::call_other(ent, "_Q_proxy") : nil;
+            /* find distinct LWO, returning by proxy */
+            obj = ::call_other(OBJECTD, "find_dlwo", oid);
+            return obj ? ::call_other(obj, "_Q_proxy") : nil;
         }
     }
 
@@ -240,7 +240,7 @@ static atomic object new_object(mixed obj, varargs mixed args...)
 	    api_tls::set_tlvar(0, args);
 	}
         obj = ::new_object(obj);
-        if (sscanf(::object_name(obj), "%*s" + ENTITY_SUBDIR)) {
+        if (sscanf(::object_name(obj), "%*s" + DISTINCT_LWO_SUBDIR)) {
             return ::call_other(obj, "_Q_proxy");
         }
         return obj;
@@ -272,7 +272,7 @@ static object previous_object(varargs int n)
 
         oname = ::object_name(obj);
         if (api_path::number(oname) == -1
-            && sscanf(oname, "%*s" + ENTITY_SUBDIR))
+            && sscanf(oname, "%*s" + DISTINCT_LWO_SUBDIR))
         {
             obj = ::call_other(obj, "_Q_proxy");
         }
@@ -286,13 +286,13 @@ static mixed *status(varargs mixed obj)
         obj = ::call_other(obj, "find");
         if (!obj) return nil;
     } else if (typeof(obj) == T_STRING) {
-        int onumber;
+        int oid;
 
         obj = api_path::normalize(obj);
-        onumber = api_path::number(obj);
-        if (onumber <= -2) {
-            /* find entity */
-            obj = ::call_other(OBJECTD, "find_ent", onumber);
+        oid = api_path::number(obj);
+        if (oid < -1) {
+            /* find distinct LWO */
+            obj = ::call_other(OBJECTD, "find_dlwo", oid);
             if (!obj) return nil;
         }
     }

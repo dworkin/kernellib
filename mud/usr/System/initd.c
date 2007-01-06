@@ -46,7 +46,7 @@ static void create()
     /* install object manager */
     DRIVER->set_object_manager(load(OBJECTD));
 
-    load(ENTOBJ);
+    load(OBJNODE);
     load(PROXY);
 
     /* initialize user code */
