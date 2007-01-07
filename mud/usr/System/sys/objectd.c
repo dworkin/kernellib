@@ -5,7 +5,7 @@
 # include <system/path.h>
 # include <system/system.h>
 
-private inherit api_path  API_PATH;
+private inherit path  API_PATH;
 
 int      next_uid_;
 mapping  uid_to_node_;
@@ -32,8 +32,8 @@ int forbid_inherit(string from, string path, int priv)
      * user objects cannot inherit system objects, except for objects in
      * ~System/open
      */
-    return api_path::creator(from) != "System"
-        && api_path::creator(path) == "System"
+    return path::creator(from) != "System"
+        && path::creator(path) == "System"
         && !sscanf(path, "/usr/System/open/%*s");
 }
 

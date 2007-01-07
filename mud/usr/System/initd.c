@@ -2,11 +2,13 @@
 # include <kernel/kernel.h>
 # include <kernel/rsrc.h>
 # include <kernel/tls.h>
+# include <kernel/user.h>
 # include <system/object.h>
 # include <system/system.h>
+# include <system/user.h>
 
-private inherit api_rsrc  API_RSRC;
-private inherit api_tls   API_TLS;
+private inherit rsrc  API_RSRC;
+private inherit tls   API_TLS;
 
 /*
  * NAME:        load
@@ -34,23 +36,31 @@ static void create()
 {
     int      i, size;
     string  *owners, path;
+    object   objectd, telnetd;
 
-    api_rsrc::create();
-    api_tls::create();
+    rsrc::create();
+    tls::create();
 
     DRIVER->message("Initializing system.\n");
 
-    /* reserve TLS space for create() arguments */
-    api_tls::set_tls_size(1);
+    /* reserve a TLS slot for create() arguments */
+    tls::set_tls_size(1);
 
     /* install object manager */
-    DRIVER->set_object_manager(load(OBJECTD));
-
+    objectd = load(OBJECTD);
     load(OBJNODE);
+    DRIVER->set_object_manager(objectd);
+
+    /* install telnet manager */
+    telnetd = load(SYSTEM_TELNETD);
+    load(SYSTEM_USER);
+    load(SYSTEM_WIZTOOL);
+    USERD->set_telnet_manager(0, telnetd);
+
     load(PROXY);
 
     /* initialize user code */
-    owners = api_rsrc::query_owners() - ({ nil, "System" });
+    owners = rsrc::query_owners() - ({ nil, "System" });
     size = sizeof(owners);
     for (i = 0; i < size; ++i) {
         path = USR_DIR + "/" + owners[i] + "/initd";

@@ -1,1 +1,1 @@
-#define SYSTEM_AUTO "/usr/System/open/lib/auto"
+# define SYSTEM_AUTO  "/usr/System/open/lib/auto"

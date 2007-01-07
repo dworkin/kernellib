@@ -3,7 +3,7 @@
 # include <system/path.h>
 # include <system/system.h>
 
-private inherit api_path  API_PATH;
+private inherit path  API_PATH;
 
 int      uid_;
 int      next_oid_;
@@ -53,7 +53,7 @@ object find_dlwo(int oid)
 
     ASSERT_ACCESS(previous_program() == OBJECTD);
     obj = dlwos_[oid];
-    if (obj && api_path::number(object_name(obj)) != -1) {
+    if (obj && path::number(object_name(obj)) != -1) {
 	/* find distinct LWO in environment */
 	obj = obj->_F_find(oid);
     }
