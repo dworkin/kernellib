@@ -13,7 +13,7 @@
 private inherit api_path  API_PATH;
 private inherit api_tls   API_TLS;
 
-private int      onumber_;
+private int      oid_;
 private object   proxy_;
 private object   env_;
 private mapping  inv_;
@@ -35,9 +35,9 @@ nomask int _F_system_create(varargs int clone)
         if (api_path::number(oname) == -1
             && sscanf(oname, "%*s" + DISTINCT_LWO_SUBDIR))
         {
-            onumber_ = ::call_other(OBJECTD, "new_dlwo", this);
+            oid_ = ::call_other(OBJECTD, "new_dlwo", this);
             proxy_ = ::new_object(PROXY);
-            ::call_other(proxy_, "init", onumber_);
+            ::call_other(proxy_, "init", oid_);
         }
 
 	args = api_tls::get_tlvar(0);
@@ -53,10 +53,10 @@ nomask int _F_system_create(varargs int clone)
     return FALSE;
 }
 
-nomask int _Q_number()
+nomask int _Q_oid()
 {
     ASSERT_ACCESS(::previous_program() == SYSTEM_AUTO);
-    return onumber_;
+    return oid_;
 }
 
 nomask object _Q_proxy()
@@ -69,41 +69,40 @@ nomask void _F_move(object env)
 {
     ASSERT_ACCESS(::previous_program() == SYSTEM_AUTO);
     if (env_) {
-        ::call_other(env_, "_F_leave", onumber_);
+        ::call_other(env_, "_F_leave", oid_);
     }
     if (env_ = env) {
-        ::call_other(env, "_F_enter", onumber_, ::this_object());
+        ::call_other(env, "_F_enter", oid_, ::this_object());
     }
     if (proxy_) {
-        ::call_other(OBJECTD, "move_dlwo", onumber_,
-                     env ? env : ::this_object());
+        ::call_other(OBJECTD, "move_dlwo", oid_, env ? env : ::this_object());
     }
 }
 
-nomask void _F_enter(int onumber, object obj)
+nomask void _F_enter(int oid, object obj)
 {
     ASSERT_ACCESS(::previous_program() == SYSTEM_AUTO);
-    DEBUG_ASSERT(onumber);
+    DEBUG_ASSERT(oid);
     DEBUG_ASSERT(obj);
     if (!inv_) inv_ = ([ ]);
-    DEBUG_ASSERT(!inv_[onumber]);
-    inv_[onumber] = obj;
+    DEBUG_ASSERT(!inv_[oid]);
+    inv_[oid] = obj;
 }
 
-nomask void _F_leave(int onumber)
+nomask void _F_leave(int oid)
 {
     ASSERT_ACCESS(::previous_program() == SYSTEM_AUTO);
-    DEBUG_ASSERT(onumber);
-    DEBUG_ASSERT(inv_ && inv_[onumber]);
-    inv_[onumber] = nil;
+    DEBUG_ASSERT(oid);
+    DEBUG_ASSERT(inv_ && inv_[oid]);
+    inv_[oid] = nil;
 }
 
-nomask object _F_find(int onumber)
+nomask object _F_find(int oid)
 {
     ASSERT_ACCESS(::previous_program() == PROXY
                   || ::previous_program() == OBJNODE);
-    DEBUG_ASSERT(onumber);
-    return inv_ ? inv_[onumber] : nil;
+    DEBUG_ASSERT(oid);
+    return inv_ ? inv_[oid] : nil;
 }
 
 nomask object *_Q_inv()
@@ -155,27 +154,27 @@ static mixed call_other(mixed obj, string func, mixed args...)
 static int destruct_object(mixed obj)
 {
     if (typeof(obj) == T_OBJECT && ::object_name(obj) == PROXY + "#-1") {
-        int onumber;
+        int oid;
 
         obj = ::call_other(obj, "find");
         ASSERT_ARG(obj);
-        onumber = ::call_other(obj, "_Q_number");
-        DEBUG_ASSERT(onumber <= -2);
+        oid = ::call_other(obj, "_Q_oid");
+        DEBUG_ASSERT(oid <= -2);
         ::call_other(obj, "_F_move", nil);
-        ::call_other(OBJECTD, "destruct_dlwo", onumber);
+        ::call_other(OBJECTD, "destruct_dlwo", oid);
         return TRUE;
     }
     if (typeof(obj) == T_STRING) {
-        int     onumber;
+        int     oid;
         string  oname;
 
         oname = api_path::normalize(obj);
-        onumber = api_path::number(oname);
-        if (onumber <= -2) {
-            obj = ::call_other(OBJECTD, "find_dlwo", onumber);
+        oid = api_path::number(oname);
+        if (oid <= -2) {
+            obj = ::call_other(OBJECTD, "find_dlwo", oid);
             if (!obj) return FALSE;
             ::call_other(obj, "_F_move", nil);
-            ::call_other(OBJECTD, "destruct_dlwo", onumber);
+            ::call_other(OBJECTD, "destruct_dlwo", oid);
             return TRUE;
         }
     }
@@ -252,13 +251,13 @@ static string object_name(object obj)
 {
     ASSERT_ARG(obj);
     if (::object_name(obj) == PROXY + "#-1") {
-        int onumber;
+        int oid;
 
         obj = ::call_other(obj, "find");
         ASSERT_ARG(obj);
-        onumber = ::call_other(obj, "_Q_number");
-        DEBUG_ASSERT(onumber <= -2);
-        return api_path::master(::object_name(obj)) + "#" + onumber;
+        oid = ::call_other(obj, "_Q_oid");
+        DEBUG_ASSERT(oid <= -2);
+        return api_path::master(::object_name(obj)) + "#" + oid;
     }
     return ::object_name(obj);
 }
