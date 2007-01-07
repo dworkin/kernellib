@@ -75,7 +75,7 @@ int login(string str)
 	if (Name[0] >= 'a' && Name[0] <= 'z') {
 	    Name[0] -= 'a' - 'A';
 	}
-	restore_object(DEFAULT_USER_DIR + "/" + str + ".pwd");
+	restore_object(SYSTEM_SAVE_DIR + "/" + str + ".pwd");
 
 	if (password) {
 	    /* check password */
@@ -274,7 +274,7 @@ int receive_message(string str)
 		password = hash_string("crypt", str);
 		if (wiztool) {
 		    /* save wizards only */
-		    save_object(DEFAULT_USER_DIR + "/" + name + ".pwd");
+		    save_object(SYSTEM_SAVE_DIR + "/" + name + ".pwd");
 		}
 		message("\nPassword changed.\n");
 	    } else {

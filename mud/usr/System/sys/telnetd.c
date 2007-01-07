@@ -1,3 +1,4 @@
+# include <status.h>
 # include <kernel/user.h>
 # include <system/assert.h>
 # include <system/user.h>
@@ -17,5 +18,5 @@ int query_timeout(object connection)
 string query_banner(object connection)
 {
     ASSERT_ACCESS(previous_program() == USERD);
-    return nil;
+    return "\nWelcome to Leprechaun.\n\nlogin: ";
 }
