@@ -11,6 +11,7 @@ static void create()
 
     elf = clone_object("~/obj/elf", 10);
     sword = new_object("~/data/id/sword", 10);
+    ASSERT(sword->query_class() == 10);
     sword = new_object("~/data/id/sword", 11);
     sword = new_object("~/data/id/sword", 12);
     ASSERT(find_object(sword));

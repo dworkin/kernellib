@@ -142,12 +142,15 @@ static mixed call_other(mixed obj, string func, mixed args...)
 
         obj = api_path::normalize(obj);
         oid = api_path::number(obj);
-        if (oid <= -1) {
+        if (oid < -1) {
             /* find distinct LWO */
             obj = ::call_other(OBJECTD, "find_dlwo", oid);
             ASSERT_ARG_1(obj);
         }
     }
+
+    /* function must be callable */
+    ASSERT_ARG_2(::function_object(func, obj));
     return ::call_other(obj, func, args...);
 }
 
