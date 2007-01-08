@@ -6,8 +6,11 @@ static void create()
     object  temple, elf, sword;
 
     temple = compile_object("~/room/temple");
-    compile_object("~/obj/elf");
-    compile_object("~/data/sim/sword");
+    ASSERT(temple);
+    elf = compile_object("~/obj/elf");
+    ASSERT(!elf);
+    sword = compile_object("~/data/sim/sword");
+    ASSERT(!sword);
 
     elf = clone_object("~/obj/elf", 10);
     sword = new_object("~/data/sim/sword", 10);

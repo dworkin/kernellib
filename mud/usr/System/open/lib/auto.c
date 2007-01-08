@@ -77,7 +77,7 @@ nomask void _F_move(object env)
         ::call_other(env, "_F_enter", oid_, ::this_object());
     }
     if (proxy_) {
-        ::call_other(OBJECTD, "move_sim", oid_, env ? env : ::this_object());
+        ::call_other(OBJECTD, "move_sim", oid_, (env) ? env : ::this_object());
     }
 }
 
@@ -104,7 +104,7 @@ nomask object _F_find(int oid)
     ASSERT_ACCESS(::previous_program() == PROXY
                   || ::previous_program() == OBJNODE);
     DEBUG_ASSERT(oid);
-    return inv_ ? inv_[oid] : nil;
+    return (inv_) ? inv_[oid] : nil;
 }
 
 nomask object *_Q_inv()
@@ -122,7 +122,7 @@ nomask object *_Q_inv()
             DEBUG_ASSERT(inv[i]);
         }
     }
-    return inv_ ? map_values(inv_) : ({ });
+    return (inv_) ? map_values(inv_) : ({ });
 }
 
 nomask object _Q_env()
@@ -140,16 +140,22 @@ static mixed call_other(mixed obj, string func, mixed args...)
         obj = ::call_other(obj, "find");
         ASSERT_ARG_1(obj);
     } else if (typeof(obj) == T_STRING) {
-        int oid;
+        int ptype, oid;
 
         obj = path::normalize(obj);
+	ptype = path::type(obj);
         oid = path::number(obj);
-        if (oid < -1) {
+        if (ptype == PT_SIMULATED && oid) {
             /* find simulated object */
             obj = ::call_other(OBJECTD, "find_sim", oid);
             ASSERT_ARG_1(obj);
-        }
+        } else {
+	    obj = (ptype == PT_DEFAULT || ptype == PT_CLONABLE && oid)
+		? ::find_object(obj) : nil;
+	    ASSERT_ARG_1(obj);
+	}
     }
+    DEBUG_ASSERT(typeof(obj) == T_OBJECT);
 
     /* function must be callable */
     ASSERT_ARG_2(::function_object(func, obj));
@@ -164,7 +170,7 @@ static atomic int destruct_object(mixed obj)
         obj = ::call_other(obj, "find");
         ASSERT_ARG(obj);
         oid = ::call_other(obj, "_Q_oid");
-        DEBUG_ASSERT(oid <= -2);
+        DEBUG_ASSERT(oid < -1);
         ::call_other(obj, "_F_move", nil);
         ::call_other(OBJECTD, "destruct_sim", oid);
         return TRUE;
@@ -175,7 +181,7 @@ static atomic int destruct_object(mixed obj)
 
         oname = path::normalize(obj);
         oid = path::number(oname);
-        if (oid <= -2) {
+        if (oid < -1) {
             obj = ::call_other(OBJECTD, "find_sim", oid);
             if (!obj) return FALSE;
             ::call_other(obj, "_F_move", nil);
@@ -188,26 +194,28 @@ static atomic int destruct_object(mixed obj)
 
 static object find_object(mixed oname)
 {
+    int ptype, oid;
+
     if (typeof(oname) == T_OBJECT && ::object_name(oname) == PROXY + "#-1") {
         /* validate proxy */
         return ::call_other(oname, "find") ? oname : nil;
     }
 
-    if (typeof(oname) == T_STRING) {
-        int oid;
+    ASSERT_ARG(typeof(oname) == T_STRING);
+    oname = path::normalize(oname);
+    ptype = path::type(oname);
+    oid = path::number(oname);
+    if (ptype == PT_SIMULATED && oid) {
+	object obj;
 
-        oname = path::normalize(oname);
-        oid = path::number(oname);
-        if (oid < -1) {
-            object obj;
-
-            /* find simulated object, returning by proxy */
-            obj = ::call_other(OBJECTD, "find_sim", oid);
-            return obj ? ::call_other(obj, "_Q_proxy") : nil;
-        }
+	/* find simulated object, returning by proxy */
+	obj = ::call_other(OBJECTD, "find_sim", oid);
+	return (obj) ? ::call_other(obj, "_Q_proxy") : nil;
     }
 
-    return ::find_object(oname);
+    /* cannot find inheritable objects or clonable master objects */
+    return (ptype == PT_DEFAULT || ptype == PT_CLONABLE && oid)
+	? ::find_object(oname) : nil;
 }
 
 static string function_object(string func, object obj)
@@ -261,7 +269,7 @@ static string object_name(object obj)
         obj = ::call_other(obj, "find");
         ASSERT_ARG(obj);
         oid = ::call_other(obj, "_Q_oid");
-        DEBUG_ASSERT(oid <= -2);
+        DEBUG_ASSERT(oid < -1);
         return path::master(::object_name(obj)) + "#" + oid;
     }
     return ::object_name(obj);
@@ -305,7 +313,7 @@ static mixed *status(varargs mixed obj)
 
 static object this_object()
 {
-    return proxy_ ? proxy_ : ::this_object();
+    return (proxy_) ? proxy_ : ::this_object();
 }
 
 static void move_object(object obj, object env)
@@ -337,4 +345,14 @@ static object *inventory(object obj)
         ASSERT_ARG(obj);
     }
     return ::call_other(obj, "_Q_inv");
+}
+
+static object compile_object(string path, varargs string source)
+{
+    object obj;
+
+    ASSERT_ARG_1(path);
+    path = path::normalize(path);
+    obj = ::compile_object(path, source);
+    return (obj && path::type(path) == PT_DEFAULT) ? obj : nil;
 }
