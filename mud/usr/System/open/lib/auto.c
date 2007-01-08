@@ -156,7 +156,7 @@ static mixed call_other(mixed obj, string func, mixed args...)
     return ::call_other(obj, func, args...);
 }
 
-static int destruct_object(mixed obj)
+static atomic int destruct_object(mixed obj)
 {
     if (typeof(obj) == T_OBJECT && ::object_name(obj) == PROXY + "#-1") {
         int oid;
