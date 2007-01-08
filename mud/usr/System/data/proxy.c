@@ -32,7 +32,7 @@ object find()
         env_ = nil;
     }
 
-    if (obj = OBJECTD->find_dlwo(oid_)) {
+    if (obj = OBJECTD->find_sim(oid_)) {
         /* update cached environment */
         env_ = obj->_Q_env();
         return obj;

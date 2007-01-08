@@ -7,13 +7,13 @@ static void create()
 
     temple = compile_object("~/room/temple");
     compile_object("~/obj/elf");
-    compile_object("~/data/id/sword");
+    compile_object("~/data/sim/sword");
 
     elf = clone_object("~/obj/elf", 10);
-    sword = new_object("~/data/id/sword", 10);
+    sword = new_object("~/data/sim/sword", 10);
     ASSERT(sword->query_class() == 10);
-    sword = new_object("~/data/id/sword", 11);
-    sword = new_object("~/data/id/sword", 12);
+    sword = new_object("~/data/sim/sword", 11);
+    sword = new_object("~/data/sim/sword", 12);
     ASSERT(find_object(sword));
     oname = object_name(sword);
     ASSERT(find_object(oname));

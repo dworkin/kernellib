@@ -42,7 +42,7 @@ private int oid_to_uid(int oid)
     return -oid / 1000000;
 }
 
-int new_dlwo(object obj)
+int new_sim(object obj)
 {
     object  node;
     string  owner;
@@ -61,20 +61,20 @@ int new_dlwo(object obj)
 	uid_to_node_[uid] = node;
 	owner_to_node_[owner] = node;
     }
-    return node->new_dlwo(obj);
+    return node->new_sim(obj);
 }
 
-void destruct_dlwo(int oid)
+void destruct_sim(int oid)
 {
     int uid;
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(oid);
     uid = oid_to_uid(oid);
-    uid_to_node_[uid]->destruct_dlwo(oid);
+    uid_to_node_[uid]->destruct_sim(oid);
 }
 
-object find_dlwo(int oid)
+object find_sim(int oid)
 {
     int uid;
 
@@ -82,10 +82,10 @@ object find_dlwo(int oid)
                   || previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(oid);
     uid = oid_to_uid(oid);
-    return uid_to_node_[uid]->find_dlwo(oid);
+    return uid_to_node_[uid]->find_sim(oid);
 }
 
-void move_dlwo(int oid, object obj)
+void move_sim(int oid, object obj)
 {
     int uid;
 
@@ -93,5 +93,5 @@ void move_dlwo(int oid, object obj)
     DEBUG_ASSERT(oid);
     DEBUG_ASSERT(obj);
     uid = oid_to_uid(oid);
-    uid_to_node_[uid]->move_dlwo(oid, obj);
+    uid_to_node_[uid]->move_sim(oid, obj);
 }

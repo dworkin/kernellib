@@ -34,9 +34,9 @@ nomask int _F_system_create(varargs int clone)
         this = ::this_object();
         oname = ::object_name(this);
         if (path::number(oname) == -1
-            && sscanf(oname, "%*s" + DISTINCT_LWO_SUBDIR))
+            && sscanf(oname, "%*s" + SIMULATED_SUBDIR))
         {
-            oid_ = ::call_other(OBJECTD, "new_dlwo", this);
+            oid_ = ::call_other(OBJECTD, "new_sim", this);
             proxy_ = ::new_object(PROXY);
             ::call_other(proxy_, "init", oid_);
         }
@@ -76,7 +76,7 @@ nomask void _F_move(object env)
         ::call_other(env, "_F_enter", oid_, ::this_object());
     }
     if (proxy_) {
-        ::call_other(OBJECTD, "move_dlwo", oid_, env ? env : ::this_object());
+        ::call_other(OBJECTD, "move_sim", oid_, env ? env : ::this_object());
     }
 }
 
@@ -144,8 +144,8 @@ static mixed call_other(mixed obj, string func, mixed args...)
         obj = path::normalize(obj);
         oid = path::number(obj);
         if (oid < -1) {
-            /* find distinct LWO */
-            obj = ::call_other(OBJECTD, "find_dlwo", oid);
+            /* find simulated object */
+            obj = ::call_other(OBJECTD, "find_sim", oid);
             ASSERT_ARG_1(obj);
         }
     }
@@ -165,7 +165,7 @@ static int destruct_object(mixed obj)
         oid = ::call_other(obj, "_Q_oid");
         DEBUG_ASSERT(oid <= -2);
         ::call_other(obj, "_F_move", nil);
-        ::call_other(OBJECTD, "destruct_dlwo", oid);
+        ::call_other(OBJECTD, "destruct_sim", oid);
         return TRUE;
     }
     if (typeof(obj) == T_STRING) {
@@ -175,10 +175,10 @@ static int destruct_object(mixed obj)
         oname = path::normalize(obj);
         oid = path::number(oname);
         if (oid <= -2) {
-            obj = ::call_other(OBJECTD, "find_dlwo", oid);
+            obj = ::call_other(OBJECTD, "find_sim", oid);
             if (!obj) return FALSE;
             ::call_other(obj, "_F_move", nil);
-            ::call_other(OBJECTD, "destruct_dlwo", oid);
+            ::call_other(OBJECTD, "destruct_sim", oid);
             return TRUE;
         }
     }
@@ -200,8 +200,8 @@ static object find_object(mixed oname)
         if (oid < -1) {
             object obj;
 
-            /* find distinct LWO, returning by proxy */
-            obj = ::call_other(OBJECTD, "find_dlwo", oid);
+            /* find simulated object, returning by proxy */
+            obj = ::call_other(OBJECTD, "find_sim", oid);
             return obj ? ::call_other(obj, "_Q_proxy") : nil;
         }
     }
@@ -243,7 +243,7 @@ static atomic object new_object(mixed obj, varargs mixed args...)
 	    tls::set_tlvar(0, args);
 	}
         obj = ::new_object(obj);
-        if (sscanf(::object_name(obj), "%*s" + DISTINCT_LWO_SUBDIR)) {
+        if (sscanf(::object_name(obj), "%*s" + SIMULATED_SUBDIR)) {
             return ::call_other(obj, "_Q_proxy");
         }
         return obj;
@@ -275,7 +275,7 @@ static object previous_object(varargs int n)
 
         oname = ::object_name(obj);
         if (path::number(oname) == -1
-            && sscanf(oname, "%*s" + DISTINCT_LWO_SUBDIR))
+            && sscanf(oname, "%*s" + SIMULATED_SUBDIR))
         {
             obj = ::call_other(obj, "_Q_proxy");
         }
@@ -294,8 +294,8 @@ static mixed *status(varargs mixed obj)
         obj = path::normalize(obj);
         oid = path::number(obj);
         if (oid < -1) {
-            /* find distinct LWO */
-            obj = ::call_other(OBJECTD, "find_dlwo", oid);
+            /* find simulated object */
+            obj = ::call_other(OBJECTD, "find_sim", oid);
             if (!obj) return nil;
         }
     }
