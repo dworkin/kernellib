@@ -3,7 +3,7 @@
 # include <system/path.h>
 # include <system/system.h>
 
-private inherit path  API_PATH;
+private inherit path UTIL_PATH;
 
 int      uid_;
 int      next_oid_;

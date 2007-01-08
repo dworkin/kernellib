@@ -1,1 +1,1 @@
-# define API_PATH  "/usr/System/lib/api/path"
+# define UTIL_PATH  "/usr/System/lib/util/path"

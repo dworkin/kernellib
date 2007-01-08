@@ -5,7 +5,7 @@
 # include <system/path.h>
 # include <system/system.h>
 
-private inherit path  API_PATH;
+private inherit path  UTIL_PATH;
 
 int      next_uid_;
 mapping  uid_to_node_;

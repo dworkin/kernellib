@@ -7,11 +7,12 @@
 # include <system/system.h>
 
 /*
- * To do: Find a more space-efficient alternative than inheriting these APIs,
- * because they add two variables to nearly every object in the mud.
+ * To do: Consider a more space-efficient alternative than inheriting this API,
+ * because it adds a variable to more or less every object in the mud.
  */
-private inherit api_path  API_PATH;
-private inherit api_tls   API_TLS;
+private inherit tls API_TLS;
+
+private inherit path UTIL_PATH;
 
 private int      oid_;
 private object   proxy_;
@@ -24,7 +25,7 @@ static void create(varargs mixed args...)
 nomask int _F_system_create(varargs int clone)
 {
     ASSERT_ACCESS(::previous_program() == AUTO);
-    api_tls::create();
+    tls::create();
     if (clone) {
         string   oname;
         object   this;
@@ -32,7 +33,7 @@ nomask int _F_system_create(varargs int clone)
 
         this = ::this_object();
         oname = ::object_name(this);
-        if (api_path::number(oname) == -1
+        if (path::number(oname) == -1
             && sscanf(oname, "%*s" + DISTINCT_LWO_SUBDIR))
         {
             oid_ = ::call_other(OBJECTD, "new_dlwo", this);
@@ -40,10 +41,10 @@ nomask int _F_system_create(varargs int clone)
             ::call_other(proxy_, "init", oid_);
         }
 
-	args = api_tls::get_tlvar(0);
+	args = tls::get_tlvar(0);
 	if (args) {
 	    DEBUG_ASSERT(typeof(args) == T_ARRAY);
-	    api_tls::set_tlvar(0, nil);
+	    tls::set_tlvar(0, nil);
 	    call_limited("create", args...);
 	} else {
 	    call_limited("create");
@@ -115,7 +116,7 @@ nomask object *_Q_inv()
     inv = map_values(inv_);
     size = sizeof(inv);
     for (i = 0; i < size; ++i) {
-        if (api_path::number(::object_name(inv[i])) == -1) {
+        if (path::number(::object_name(inv[i])) == -1) {
             inv[i] = ::call_other(inv[i], "_Q_proxy");
             DEBUG_ASSERT(inv[i]);
         }
@@ -140,8 +141,8 @@ static mixed call_other(mixed obj, string func, mixed args...)
     } else if (typeof(obj) == T_STRING) {
         int oid;
 
-        obj = api_path::normalize(obj);
-        oid = api_path::number(obj);
+        obj = path::normalize(obj);
+        oid = path::number(obj);
         if (oid < -1) {
             /* find distinct LWO */
             obj = ::call_other(OBJECTD, "find_dlwo", oid);
@@ -171,8 +172,8 @@ static int destruct_object(mixed obj)
         int     oid;
         string  oname;
 
-        oname = api_path::normalize(obj);
-        oid = api_path::number(oname);
+        oname = path::normalize(obj);
+        oid = path::number(oname);
         if (oid <= -2) {
             obj = ::call_other(OBJECTD, "find_dlwo", oid);
             if (!obj) return FALSE;
@@ -194,8 +195,8 @@ static object find_object(mixed oname)
     if (typeof(oname) == T_STRING) {
         int oid;
 
-        oname = api_path::normalize(oname);
-        oid = api_path::number(oname);
+        oname = path::normalize(oname);
+        oid = path::number(oname);
         if (oid < -1) {
             object obj;
 
@@ -230,7 +231,7 @@ static atomic object clone_object(string master, varargs mixed args...)
 {
     ASSERT_ARG_1(master);
     if (sizeof(args)) {
-	api_tls::set_tlvar(0, args);
+	tls::set_tlvar(0, args);
     }
     return ::clone_object(master);
 }
@@ -239,7 +240,7 @@ static atomic object new_object(mixed obj, varargs mixed args...)
 {
     if (typeof(obj) == T_STRING) {
 	if (sizeof(args)) {
-	    api_tls::set_tlvar(0, args);
+	    tls::set_tlvar(0, args);
 	}
         obj = ::new_object(obj);
         if (sscanf(::object_name(obj), "%*s" + DISTINCT_LWO_SUBDIR)) {
@@ -260,7 +261,7 @@ static string object_name(object obj)
         ASSERT_ARG(obj);
         oid = ::call_other(obj, "_Q_oid");
         DEBUG_ASSERT(oid <= -2);
-        return api_path::master(::object_name(obj)) + "#" + oid;
+        return path::master(::object_name(obj)) + "#" + oid;
     }
     return ::object_name(obj);
 }
@@ -273,7 +274,7 @@ static object previous_object(varargs int n)
         string oname;
 
         oname = ::object_name(obj);
-        if (api_path::number(oname) == -1
+        if (path::number(oname) == -1
             && sscanf(oname, "%*s" + DISTINCT_LWO_SUBDIR))
         {
             obj = ::call_other(obj, "_Q_proxy");
@@ -290,8 +291,8 @@ static mixed *status(varargs mixed obj)
     } else if (typeof(obj) == T_STRING) {
         int oid;
 
-        obj = api_path::normalize(obj);
-        oid = api_path::number(obj);
+        obj = path::normalize(obj);
+        oid = path::number(obj);
         if (oid < -1) {
             /* find distinct LWO */
             obj = ::call_other(OBJECTD, "find_dlwo", oid);
