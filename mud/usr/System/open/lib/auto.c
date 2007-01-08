@@ -25,19 +25,18 @@ static void create(varargs mixed args...)
 
 nomask int _F_system_create(varargs int clone)
 {
-    ASSERT_ACCESS(::previous_program() == AUTO);
-    tls::create();
-    if (clone) {
-        string   oname;
-        object   this;
-	mixed   *args;
+    int     ptype;
+    string  oname;
 
-        this = ::this_object();
-        oname = ::object_name(this);
-        if (path::number(oname) == -1
-            && sscanf(oname, "%*s" + SIMULATED_SUBDIR))
-        {
-            oid_ = ::call_other(OBJECTD, "new_sim", this);
+    ASSERT_ACCESS(previous_program() == AUTO);
+    tls::create();
+    oname = ::object_name(::this_object());
+    ptype = path::type(oname);
+    if (clone) {
+	mixed *args;
+
+        if (ptype == PT_SIMULATED) {
+            oid_ = ::call_other(OBJECTD, "new_sim", ::this_object());
             proxy_ = ::new_object(PROXY);
             ::call_other(proxy_, "init", oid_);
         }
@@ -50,26 +49,29 @@ nomask int _F_system_create(varargs int clone)
 	} else {
 	    call_limited("create");
 	}
-	return TRUE;
+    } else if (ptype == PT_DEFAULT) {
+	call_limited("create");
     }
-    return FALSE;
+
+    /* kernel creator function should not call create() */
+    return TRUE;
 }
 
 nomask int _Q_oid()
 {
-    ASSERT_ACCESS(::previous_program() == SYSTEM_AUTO);
+    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     return oid_;
 }
 
 nomask object _Q_proxy()
 {
-    ASSERT_ACCESS(::previous_program() == SYSTEM_AUTO);
+    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     return proxy_;
 }
 
 nomask void _F_move(object env)
 {
-    ASSERT_ACCESS(::previous_program() == SYSTEM_AUTO);
+    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     if (env_) {
         ::call_other(env_, "_F_leave", oid_);
     }
@@ -83,7 +85,7 @@ nomask void _F_move(object env)
 
 nomask void _F_enter(int oid, object obj)
 {
-    ASSERT_ACCESS(::previous_program() == SYSTEM_AUTO);
+    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(oid);
     DEBUG_ASSERT(obj);
     if (!inv_) inv_ = ([ ]);
@@ -93,7 +95,7 @@ nomask void _F_enter(int oid, object obj)
 
 nomask void _F_leave(int oid)
 {
-    ASSERT_ACCESS(::previous_program() == SYSTEM_AUTO);
+    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(oid);
     DEBUG_ASSERT(inv_ && inv_[oid]);
     inv_[oid] = nil;
@@ -101,8 +103,8 @@ nomask void _F_leave(int oid)
 
 nomask object _F_find(int oid)
 {
-    ASSERT_ACCESS(::previous_program() == PROXY
-                  || ::previous_program() == OBJNODE);
+    ASSERT_ACCESS(previous_program() == PROXY
+                  || previous_program() == OBJNODE);
     DEBUG_ASSERT(oid);
     return (inv_) ? inv_[oid] : nil;
 }
@@ -112,7 +114,7 @@ nomask object *_Q_inv()
     int      i, size;
     object  *inv;
 
-    ASSERT_ACCESS(::previous_program() == SYSTEM_AUTO);
+    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     if (!inv_) return ({ });
     inv = map_values(inv_);
     size = sizeof(inv);
@@ -127,8 +129,8 @@ nomask object *_Q_inv()
 
 nomask object _Q_env()
 {
-    ASSERT_ACCESS(::previous_program() == PROXY
-                  || ::previous_program() == SYSTEM_AUTO);
+    ASSERT_ACCESS(previous_program() == PROXY
+                  || previous_program() == SYSTEM_AUTO);
     return env_;
 }
 
