@@ -5,9 +5,10 @@
 # include <system/path.h>
 # include <system/object.h>
 # include <system/system.h>
+# include <system/tls.h>
 
 /*
- * To do: Consider a more space-efficient alternative than inheriting this API,
+ * TODO: Consider a more space-efficient alternative than inheriting this API,
  * because it adds a variable to more or less every object in the mud.
  */
 private inherit tls API_TLS;
@@ -41,10 +42,10 @@ nomask int _F_system_create(varargs int clone)
             ::call_other(proxy_, "init", oid_);
         }
 
-	args = tls::get_tlvar(0);
+	args = tls::get_tlvar(SYSTEM_TLS_CREATE_ARGS);
 	if (args) {
 	    DEBUG_ASSERT(typeof(args) == T_ARRAY);
-	    tls::set_tlvar(0, nil);
+	    tls::set_tlvar(SYSTEM_TLS_CREATE_ARGS, nil);
 	    call_limited("create", args...);
 	} else {
 	    call_limited("create");
@@ -231,7 +232,7 @@ static atomic object clone_object(string master, varargs mixed args...)
 {
     ASSERT_ARG_1(master);
     if (sizeof(args)) {
-	tls::set_tlvar(0, args);
+	tls::set_tlvar(SYSTEM_TLS_CREATE_ARGS, args);
     }
     return ::clone_object(master);
 }
@@ -240,7 +241,7 @@ static atomic object new_object(mixed obj, varargs mixed args...)
 {
     if (typeof(obj) == T_STRING) {
 	if (sizeof(args)) {
-	    tls::set_tlvar(0, args);
+	    tls::set_tlvar(SYSTEM_TLS_CREATE_ARGS, args);
 	}
         obj = ::new_object(obj);
         if (sscanf(::object_name(obj), "%*s" + SIMULATED_SUBDIR)) {
