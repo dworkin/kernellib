@@ -5,7 +5,7 @@
 # include <system/path.h>
 # include <system/system.h>
 
-private inherit path  UTIL_PATH;
+private inherit path UTIL_PATH;
 
 int      next_uid_;
 mapping  uid_to_node_;
@@ -16,6 +16,11 @@ static void create()
     next_uid_ = 1;
     uid_to_node_ = ([ ]);
     owner_to_node_ = ([ ]);
+}
+
+void compiling(string path)
+{
+    ASSERT_ACCESS(previous_program() == DRIVER);
 }
 
 string path_special(string compiled)
@@ -32,9 +37,25 @@ int forbid_inherit(string from, string path, int priv)
      * user objects cannot inherit system objects, except for objects in
      * ~System/open
      */
-    return path::creator(from) != "System"
-        && path::creator(path) == "System"
-        && !sscanf(path, "/usr/System/open/%*s");
+    if (path::creator(from) != "System" && path::creator(path) == "System"
+        && !sscanf(path, "/usr/System/open/%*s"))
+        {
+            return TRUE;
+        }
+
+    /* forbid private inheritance of objects with undefined functions */
+    if (priv) {
+        mixed *status;
+    
+        status = status(path);
+        if (status && status[O_UNDEFINED]) {
+            DRIVER->message("Cannot privately inherit object with undefined "
+                            + "functions\n");
+            return TRUE;
+        }
+    }
+
+    return FALSE;
 }
 
 private int oid_to_uid(int oid)

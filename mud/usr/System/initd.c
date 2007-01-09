@@ -4,6 +4,7 @@
 # include <kernel/tls.h>
 # include <kernel/user.h>
 # include <system/object.h>
+# include <system/path.h>
 # include <system/system.h>
 # include <system/user.h>
 
@@ -19,7 +20,7 @@ private object load(string path)
     object obj;
 
     obj = find_object(path);
-    if (!obj) {
+    if (!obj && !status(path)) {
         obj = compile_object(path);
     }
     if (obj) {

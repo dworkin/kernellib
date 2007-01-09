@@ -1,3 +1,4 @@
+# include <status.h>
 # include <type.h>
 # include <kernel/kernel.h>
 # include <kernel/tls.h>
@@ -349,12 +350,15 @@ static object *inventory(object obj)
     return ::call_other(obj, "_Q_inv");
 }
 
-static object compile_object(string path, varargs string source)
+static atomic object compile_object(string path, varargs string source)
 {
     object obj;
 
     ASSERT_ARG_1(path);
     path = path::normalize(path);
     obj = ::compile_object(path, source);
+    if (obj && status(obj)[O_UNDEFINED]) {
+	error("Non-inheritable object cannot have undefined functions");
+    }
     return (obj && path::type(path) == PT_DEFAULT) ? obj : nil;
 }
