@@ -21,9 +21,17 @@ private object   proxy_;
 private object   env_;
 private mapping  inv_;
 
+/*
+ * NAME:        create()
+ * DESCRIPTION: dummy initialization function
+ */
 static void create(varargs mixed args...)
 { }
 
+/*
+ * NAME:        _F_system_create()
+ * DESCRIPTION: system creator function
+ */
 nomask int _F_system_create(varargs int clone)
 {
     int     ptype;
@@ -89,7 +97,9 @@ nomask void _F_enter(int oid, object obj)
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(oid);
     DEBUG_ASSERT(obj);
-    if (!inv_) inv_ = ([ ]);
+    if (!inv_) {
+        inv_ = ([ ]);
+    }
     DEBUG_ASSERT(!inv_[oid]);
     inv_[oid] = obj;
 }
@@ -116,7 +126,10 @@ nomask object *_Q_inv()
     object  *inv;
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    if (!inv_) return ({ });
+    if (!inv_) {
+        return ({ });
+    }
+
     inv = map_values(inv_);
     size = sizeof(inv);
     for (i = 0; i < size; ++i) {
@@ -125,7 +138,7 @@ nomask object *_Q_inv()
             DEBUG_ASSERT(inv[i]);
         }
     }
-    return (inv_) ? map_values(inv_) : ({ });
+    return inv;
 }
 
 nomask object _Q_env()
@@ -186,7 +199,9 @@ static atomic int destruct_object(mixed obj)
         oid = path::number(oname);
         if (oid < -1) {
             obj = ::call_other(OBJECTD, "find_sim", oid);
-            if (!obj) return FALSE;
+            if (!obj) {
+                return FALSE;
+            }
             ::call_other(obj, "_F_move", nil);
             ::call_other(OBJECTD, "destruct_sim", oid);
             return TRUE;
@@ -282,7 +297,8 @@ static object previous_object(varargs int n)
 {
     object obj;
 
-    if (obj = ::previous_object(n)) {
+    obj = ::previous_object(n);
+    if (obj) {
         string oname;
 
         oname = ::object_name(obj);
@@ -360,5 +376,50 @@ static atomic object compile_object(string path, varargs string source)
     if (obj && status(obj)[O_UNDEFINED]) {
 	error("Non-inheritable object cannot have undefined functions");
     }
+
+    /* hide clonable and light-weight master objects */
     return (obj && path::type(path) == PT_DEFAULT) ? obj : nil;
+}
+
+static mixed **get_dir(string path)
+{
+    int      ptype;
+    mixed  **list;
+
+    ASSERT_ARG(path);
+    path = path::normalize(path);
+    list = ::get_dir(path);
+
+    /* hide clonable and light-weight master objects */
+    ptype = path::type(path);
+    if (ptype == PT_CLONABLE || ptype == PT_LIGHTWEIGHT) {
+        int i, size;
+
+        for (i = 0; i < size; ++i) {
+            if (list[3][i]) {
+                list[3][i] = TRUE;
+            }
+        }
+    }
+    
+    return list;
+}
+
+static mixed *file_info(string path)
+{
+    mixed *info;
+
+    ASSERT_ARG(path);
+    path = path::normalize(path);
+    info = ::file_info(path);
+    if (typeof(info[2]) == T_OBJECT) {
+        int ptype;
+
+        /* hide clonable and light-weight master objects */
+        ptype = path::type(::object_name(info[2]));
+        if (ptype == PT_CLONABLE || ptype == PT_LIGHTWEIGHT) {
+            info[2] = TRUE;
+        }
+    }
+    return info;
 }
