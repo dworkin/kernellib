@@ -116,3 +116,36 @@ void move_sim(int oid, object obj)
     uid = oid_to_uid(oid);
     uid_to_node_[uid]->move_sim(oid, obj);
 }
+
+int sim_callout(int oid, string func, mixed delay, mixed *args)
+{
+    int uid;
+
+    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
+    DEBUG_ASSERT(oid);
+    uid = oid_to_uid(oid);
+    DEBUG_ASSERT(uid_to_node_[uid]);
+    return uid_to_node_[uid]->sim_callout(oid, func, delay, args);
+}
+
+mixed remove_sim_callout(int oid, int handle)
+{
+    int uid;
+
+    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
+    DEBUG_ASSERT(oid);
+    uid = oid_to_uid(oid);
+    DEBUG_ASSERT(uid_to_node_[uid]);
+    return uid_to_node_[uid]->remove_sim_callout(oid, handle);
+}
+
+mixed *query_sim_callouts(int oid)
+{
+    int uid;
+
+    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
+    DEBUG_ASSERT(oid);
+    uid = oid_to_uid(oid);
+    DEBUG_ASSERT(uid_to_node_[uid]);
+    return uid_to_node_[uid]->query_sim_callouts(oid);
+}

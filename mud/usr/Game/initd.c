@@ -27,6 +27,7 @@ static void create()
     ASSERT(sizeof(inventory(temple)) == 1);
     message("moved <" + oname + ">");
 
+    /*
     move_object(sword, nil);
     ASSERT(environment(sword) == nil);
     ASSERT(!sizeof(inventory(temple)));
@@ -36,4 +37,5 @@ static void create()
     ASSERT(!sizeof(inventory(temple)));
     ASSERT(!find_object(sword));
     message("destructed <" + oname + ">");
+    */
 }

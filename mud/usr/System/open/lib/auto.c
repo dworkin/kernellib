@@ -425,3 +425,29 @@ static mixed *file_info(string path)
     }
     return info;
 }
+
+static int call_out(string func, mixed delay, mixed args...)
+{
+    string oname;
+
+    ASSERT_ARG_1(func);
+    ASSERT_ARG_2(typeof(delay) == T_INT || typeof(delay) == T_FLOAT);
+
+    oname = ::object_name(::this_object());
+    if (path::number(oname) == -1 && path::type(oname) == PT_SIMULATED) {
+        return ::call_other(OBJECTD, "sim_callout", oid_, func, delay, args);
+    }
+    return ::call_out(func, delay, args...);
+}
+
+static mixed remove_call_out(int handle)
+{
+    /* TODO: to be implemented */
+}
+
+nomask void _F_call(string func, mixed *args)
+{
+    /* TODO: access control */
+    ASSERT_ACCESS(previous_program() == OBJNODE);
+    ::call_other(::this_object(), func, args...);
+}
