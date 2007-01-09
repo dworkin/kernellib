@@ -174,7 +174,9 @@ static mixed call_other(mixed obj, string func, mixed args...)
     DEBUG_ASSERT(typeof(obj) == T_OBJECT);
 
     /* function must be callable */
-    ASSERT_ARG_2(::function_object(func, obj));
+    if (!::function_object(func, obj)) {
+        error("Cannot call function " + func);
+    }
     return ::call_other(obj, func, args...);
 }
 
