@@ -1,3 +1,4 @@
+# include <status.h>
 # include <kernel/kernel.h>
 # include <system/assert.h>
 # include <system/object.h>
@@ -80,19 +81,46 @@ int sim_callout(int oid, string func, mixed delay, mixed *args)
 
 mixed remove_sim_callout(int oid, int handle)
 {
+    int      i, size;
+    mixed  **callouts;
+
     ASSERT_ACCESS(previous_program() == OBJECTD);
     DEBUG_ASSERT(oid);
 
-    /* TODO: remove call-out only for the specified object */
-    return remove_call_out(handle);
+    callouts = status(this_object())[O_CALLOUTS];
+    for (i = sizeof(callouts) - 1; i >= 0; --i) {
+        if (callouts[i][CO_HANDLE] == handle) {
+            return (callouts[i][CO_FIRSTXARG] == oid)
+                ? remove_call_out(handle) : -1;
+        }
+    }
+
+    return -1;
 }
 
-mixed *query_sim_callouts(int oid)
+mixed *query_sim_callouts(string owner, int oid)
 {
+    int      i, j, size, owns;
+    mixed  **callouts;
+
     ASSERT_ACCESS(previous_program() == OBJECTD);
 
-    /* TODO: to be implemented */
-    return ({ });
+    /* filter call-outs by OID */
+    callouts = status(this_object())[O_CALLOUTS];
+    size = sizeof(callouts);
+    owns = (owner && owner == query_owner());
+    for (i = j = 0; i < size; ++i) {
+        if (callouts[i][CO_FIRSTXARG] == oid) {
+            callouts[j] = ({ callouts[i][CO_HANDLE],
+                             callouts[i][CO_FIRSTXARG + 1],
+                             callouts[i][CO_DELAY] });
+            if (owns) {
+                callouts[j] += callouts[i][CO_FIRSTXARG + 2];
+            }
+            ++j;
+        }
+    }
+    return callouts[.. j - 1];
 }
 
 static void call_sim(int oid, string func, mixed *args)

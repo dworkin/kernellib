@@ -139,7 +139,7 @@ mixed remove_sim_callout(int oid, int handle)
     return uid_to_node_[uid]->remove_sim_callout(oid, handle);
 }
 
-mixed *query_sim_callouts(int oid)
+mixed *query_sim_callouts(string owner, int oid)
 {
     int uid;
 
@@ -147,5 +147,5 @@ mixed *query_sim_callouts(int oid)
     DEBUG_ASSERT(oid);
     uid = oid_to_uid(oid);
     DEBUG_ASSERT(uid_to_node_[uid]);
-    return uid_to_node_[uid]->query_sim_callouts(oid);
+    return uid_to_node_[uid]->query_sim_callouts(owner, oid);
 }
