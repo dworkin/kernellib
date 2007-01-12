@@ -58,8 +58,6 @@ static void create()
     load(SYSTEM_WIZTOOL);
     USERD->set_telnet_manager(0, telnetd);
 
-    load(PROXY);
-
     /* initialize user code */
     owners = rsrc::query_owners() - ({ nil, "System" });
     size = sizeof(owners);

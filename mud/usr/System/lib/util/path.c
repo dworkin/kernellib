@@ -50,8 +50,7 @@ static int type(string path)
 	return sscanf(path, "%*s" + LIGHTWEIGHT_SUBDIR) ? PT_DEFAULT
 	    : PT_CLONABLE;
     } else if (sscanf(path, "%*s" + LIGHTWEIGHT_SUBDIR)) {
-	return sscanf(path, "%*s" + SIMULATED_SUBDIR) ? PT_SIMULATED
-	    : PT_LIGHTWEIGHT;
+	return PT_LIGHTWEIGHT;
     } else {
 	return PT_DEFAULT;
     }

@@ -9,13 +9,13 @@ private inherit path UTIL_PATH;
 
 int      uid_;
 int      next_oid_;
-mapping  sims_;
+mapping  data_;
 
 static void create(int clone)
 {
     if (clone) {
 	next_oid_ = 1;
-	sims_ = ([ ]);
+	data_ = ([ ]);
     }
 }
 
@@ -31,55 +31,41 @@ int query_uid()
     return uid_;
 }
 
-int new_sim(object obj)
+int add_data(object env)
 {
     int oid;
 
     ASSERT_ACCESS(previous_program() == OBJECTD);
     DEBUG_ASSERT(uid_);
+    DEBUG_ASSERT(env);
     oid = -(uid_ * 1000000 + next_oid_++);
-    sims_[oid] = obj;
+    data_[oid] = env;
     return oid;
 }
 
-void destruct_sim(int oid)
+object find_data(int oid)
 {
     ASSERT_ACCESS(previous_program() == OBJECTD);
-    DEBUG_ASSERT(oid && sims_[oid]);
-    sims_[oid] = nil;
+    return data_[oid] ? data_[oid]->_F_find(oid) : nil;
 }
 
-object find_sim(int oid)
-{
-    object obj;
-
-    ASSERT_ACCESS(previous_program() == OBJECTD);
-    obj = sims_[oid];
-    if (obj && path::number(object_name(obj)) != -1) {
-	/* find simulated object in environment */
-	obj = obj->_F_find(oid);
-    }
-    return obj;
-}
-
-void move_sim(int oid, object obj)
+void move_data(int oid, object env)
 {
     ASSERT_ACCESS(previous_program() == OBJECTD);
-    DEBUG_ASSERT(oid && sims_[oid]);
-    DEBUG_ASSERT(obj);
-    sims_[oid] = obj;
+    DEBUG_ASSERT(oid && data_[oid]);
+    data_[oid] = env;
 }
 
-int sim_callout(int oid, string func, mixed delay, mixed *args)
+int data_callout(int oid, string func, mixed delay, mixed *args)
 {
     ASSERT_ACCESS(previous_program() == OBJECTD);
     DEBUG_ASSERT(oid);
     DEBUG_ASSERT(func);
     DEBUG_ASSERT(args);
-    return call_out("call_sim", delay, oid, func, args);
+    return call_out("call_data", delay, oid, func, args);
 }
 
-mixed remove_sim_callout(int oid, int handle)
+mixed remove_data_callout(int oid, int handle)
 {
     int      i, size;
     mixed  **callouts;
@@ -98,9 +84,9 @@ mixed remove_sim_callout(int oid, int handle)
     return -1;
 }
 
-mixed *query_sim_callouts(string owner, int oid)
+mixed *query_data_callouts(string owner, int oid)
 {
-    int      i, j, size, owns;
+    int      i, j, size, owned;
     mixed  **callouts;
 
     ASSERT_ACCESS(previous_program() == OBJECTD);
@@ -108,13 +94,13 @@ mixed *query_sim_callouts(string owner, int oid)
     /* filter call-outs by OID */
     callouts = status(this_object())[O_CALLOUTS];
     size = sizeof(callouts);
-    owns = (owner && owner == query_owner());
+    owned = (owner && owner == query_owner());
     for (i = j = 0; i < size; ++i) {
         if (callouts[i][CO_FIRSTXARG] == oid) {
             callouts[j] = ({ callouts[i][CO_HANDLE],
                              callouts[i][CO_FIRSTXARG + 1],
                              callouts[i][CO_DELAY] });
-            if (owns) {
+            if (owned) {
                 callouts[j] += callouts[i][CO_FIRSTXARG + 2];
             }
             ++j;
@@ -123,15 +109,11 @@ mixed *query_sim_callouts(string owner, int oid)
     return callouts[.. j - 1];
 }
 
-static void call_sim(int oid, string func, mixed *args)
+static void call_data(int oid, string func, mixed *args)
 {
     object obj;
 
-    obj = sims_[oid];
-    if (obj && path::number(object_name(obj)) != -1) {
-	/* find simulated object in environment */
-	obj = obj->_F_find(oid);
-    }
+    obj = data_[oid] ? data_[oid]->_F_find(oid) : nil;
     if (obj) {
         obj->_F_call(func, args);
     }

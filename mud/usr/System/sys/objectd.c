@@ -49,8 +49,8 @@ int forbid_inherit(string from, string path, int priv)
     
         status = status(path);
         if (status && status[O_UNDEFINED]) {
-            DRIVER->message("Cannot privately inherit object with undefined "
-                            + "functions\n");
+            DRIVER->message("Abstract object cannot be privately "
+                            + "inherited\n");
             return TRUE;
         }
     }
@@ -63,14 +63,12 @@ private int oid_to_uid(int oid)
     return -oid / 1000000;
 }
 
-int new_sim(object obj)
+int add_data(string owner, object env)
 {
     object  node;
-    string  owner;
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    DEBUG_ASSERT(obj);
-    owner = obj->query_owner();
+    DEBUG_ASSERT(env);
     node = owner_to_node_[owner];
     if (!node) {
 	int uid;
@@ -82,42 +80,31 @@ int new_sim(object obj)
 	uid_to_node_[uid] = node;
 	owner_to_node_[owner] = node;
     }
-    return node->new_sim(obj);
+    return node->add_data(env);
 }
 
-void destruct_sim(int oid)
+object find_data(int oid)
 {
     int uid;
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(oid);
     uid = oid_to_uid(oid);
-    uid_to_node_[uid]->destruct_sim(oid);
+    return uid_to_node_[uid]->find_data(oid);
 }
 
-object find_sim(int oid)
-{
-    int uid;
-
-    ASSERT_ACCESS(previous_program() == PROXY
-                  || previous_program() == SYSTEM_AUTO);
-    DEBUG_ASSERT(oid);
-    uid = oid_to_uid(oid);
-    return uid_to_node_[uid]->find_sim(oid);
-}
-
-void move_sim(int oid, object obj)
+void move_data(int oid, object env)
 {
     int uid;
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(oid);
-    DEBUG_ASSERT(obj);
+    DEBUG_ASSERT(env);
     uid = oid_to_uid(oid);
-    uid_to_node_[uid]->move_sim(oid, obj);
+    uid_to_node_[uid]->move_data(oid, env);
 }
 
-int sim_callout(int oid, string func, mixed delay, mixed *args)
+int data_callout(int oid, string func, mixed delay, mixed *args)
 {
     int uid;
 
@@ -125,10 +112,10 @@ int sim_callout(int oid, string func, mixed delay, mixed *args)
     DEBUG_ASSERT(oid);
     uid = oid_to_uid(oid);
     DEBUG_ASSERT(uid_to_node_[uid]);
-    return uid_to_node_[uid]->sim_callout(oid, func, delay, args);
+    return uid_to_node_[uid]->data_callout(oid, func, delay, args);
 }
 
-mixed remove_sim_callout(int oid, int handle)
+mixed remove_data_callout(int oid, int handle)
 {
     int uid;
 
@@ -136,10 +123,10 @@ mixed remove_sim_callout(int oid, int handle)
     DEBUG_ASSERT(oid);
     uid = oid_to_uid(oid);
     DEBUG_ASSERT(uid_to_node_[uid]);
-    return uid_to_node_[uid]->remove_sim_callout(oid, handle);
+    return uid_to_node_[uid]->remove_data_callout(oid, handle);
 }
 
-mixed *query_sim_callouts(string owner, int oid)
+mixed *query_data_callouts(string owner, int oid)
 {
     int uid;
 
@@ -147,5 +134,5 @@ mixed *query_sim_callouts(string owner, int oid)
     DEBUG_ASSERT(oid);
     uid = oid_to_uid(oid);
     DEBUG_ASSERT(uid_to_node_[uid]);
-    return uid_to_node_[uid]->query_sim_callouts(owner, oid);
+    return uid_to_node_[uid]->query_data_callouts(owner, oid);
 }

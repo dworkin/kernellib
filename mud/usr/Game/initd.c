@@ -8,34 +8,24 @@ static void create()
     temple = compile_object("~/room/temple");
     ASSERT(temple);
     elf = compile_object("~/obj/elf");
-    ASSERT(!elf);
-    sword = compile_object("~/data/sim/sword");
-    ASSERT(!sword);
+    ASSERT(!elf); /* hidden master object */
+    sword = compile_object("~/data/sword");
+    ASSERT(!sword); /* hidden master object */
 
-    elf = clone_object("~/obj/elf", 10);
-    sword = new_object("~/data/sim/sword", 10);
+    elf = clone_object("~/obj/elf", 9);
+    ASSERT(elf->query_level() == 9);
+
+    sword = new_object("~/data/sword", 10);
     ASSERT(sword->query_class() == 10);
-    sword = new_object("~/data/sim/sword", 11);
-    sword = new_object("~/data/sim/sword", 12);
-    ASSERT(find_object(sword));
+    move_object(sword, elf);
+    ASSERT(environment(sword) == elf);
+    ASSERT(sizeof(inventory(elf)) == 1);
+
     oname = object_name(sword);
-    ASSERT(find_object(oname));
-    message("created <" + oname + ">");
+    ASSERT(find_object(object_name(sword)) == sword);
 
     move_object(sword, temple);
     ASSERT(environment(sword) == temple);
     ASSERT(sizeof(inventory(temple)) == 1);
-    message("moved <" + oname + ">");
-
-    /*
-    move_object(sword, nil);
-    ASSERT(environment(sword) == nil);
-    ASSERT(!sizeof(inventory(temple)));
-    message("moved <" + oname + "> again");
-
-    destruct_object(sword);
-    ASSERT(!sizeof(inventory(temple)));
-    ASSERT(!find_object(sword));
-    message("destructed <" + oname + ">");
-    */
+    ASSERT(!sizeof(inventory(elf)));
 }
