@@ -112,7 +112,7 @@ nomask void _F_leave(int oid)
 nomask object _F_find(int oid)
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO
-                  || previous_program() == OBJNODE);
+                  || previous_program() == OWNEROBJ);
     DEBUG_ASSERT(oid < -1);
     return (inv_) ? inv_[oid] : nil;
 }
@@ -389,12 +389,13 @@ static mixed remove_call_out(int handle)
     return ::remove_call_out(handle);
 }
 
-nomask void _F_call(string func, mixed *args)
+nomask void _F_call_data(string func, mixed *args)
 {
     string prog;
 
-    /* TODO: access control */
-    ASSERT_ACCESS(previous_program() == OBJNODE);
+    ASSERT_ACCESS(previous_program() == OWNEROBJ);
     prog = ::function_object(func, this_object());
-    ::call_other(this_object(), func, args...);
+    if (prog && path::creator(prog) != "System") {
+        ::call_other(this_object(), func, args...);
+    }
 }

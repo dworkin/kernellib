@@ -14,7 +14,7 @@ mapping  data_;
 static void create(int clone)
 {
     if (clone) {
-	next_oid_ = 1;
+	next_oid_ = 2;
 	data_ = ([ ]);
     }
 }
@@ -117,6 +117,6 @@ static void call_data(int oid, string func, mixed *args)
 
     obj = data_[oid] ? data_[oid]->_F_find(oid) : nil;
     if (obj) {
-        obj->_F_call(func, args);
+        obj->_F_call_data(func, args);
     }
 }

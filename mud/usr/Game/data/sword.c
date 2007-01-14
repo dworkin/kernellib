@@ -22,6 +22,7 @@ void start()
 
 static void stop(object obj)
 {
+    message("Call-out finished in <" + object_name(this_object()) + ">.");
     ASSERT(!sizeof(status(this_object())[O_CALLOUTS]));
     ASSERT(obj != this_object());
 }

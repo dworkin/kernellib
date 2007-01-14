@@ -49,7 +49,7 @@ static void create()
 
     /* install object manager */
     objectd = load(OBJECTD);
-    load(OBJNODE);
+    load(OWNEROBJ);
     DRIVER->set_object_manager(objectd);
 
     /* install telnet manager */
