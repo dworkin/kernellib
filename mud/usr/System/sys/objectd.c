@@ -10,8 +10,8 @@ private inherit path  UTIL_PATH;
 private inherit tls   API_TLS;
 
 int      next_uid_;
-mapping  uid_to_obj_;
-mapping  owner_to_obj_;
+mapping  uids_;
+mapping  ownerobjs_;
 
 /*
  * NAME:        create()
@@ -21,8 +21,8 @@ static void create()
 {
     tls::create();
     next_uid_ = 1;
-    uid_to_obj_ = ([ ]);
-    owner_to_obj_ = ([ ]);
+    uids_ = ([ ]);
+    ownerobjs_ = ([ ]);
 }
 
 /*
@@ -112,22 +112,23 @@ private int uid(int oid)
  */
 int add_data(string owner, object env)
 {
-    object ownerobj;
+    mixed   uid;
+    object  ownerobj;
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(env);
-    ownerobj = owner_to_obj_[owner];
-    if (!ownerobj) {
-	int uid;
-
+    uid = uids_[owner];
+    if (!uid) {
 	/* create owner object for owner */
-	uid = next_uid_++;
-	ownerobj = clone_object(OWNEROBJ, owner);
-	ownerobj->set_uid(uid);
-	uid_to_obj_[uid] = ownerobj;
-	owner_to_obj_[owner] = ownerobj;
+	uid = uids_[owner] = next_uid_++;
+
+        ownerobj = clone_object(OWNEROBJ, owner);
+        ownerobj->set_uid(uid);
+        ownerobjs_[uid] = ownerobj;
     }
-    return ownerobj->add_data(env);
+
+    DEBUG_ASSERT(ownerobjs_[uid]);
+    return ownerobjs_[uid]->add_data(env);
 }
 
 /*
@@ -142,7 +143,7 @@ object find_data(int oid)
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(oid);
     uid = uid(oid);
-    ownerobj = uid_to_obj_[uid];
+    ownerobj = ownerobjs_[uid];
     return ownerobj ? ownerobj->find_data(oid) : nil;
 }
 
@@ -158,7 +159,8 @@ void move_data(int oid, object env)
     DEBUG_ASSERT(oid);
     DEBUG_ASSERT(env);
     uid = uid(oid);
-    uid_to_obj_[uid]->move_data(oid, env);
+    DEBUG_ASSERT(ownerobjs_[uid]);
+    ownerobjs_[uid]->move_data(oid, env);
 }
 
 /*
@@ -172,8 +174,8 @@ int data_callout(int oid, string func, mixed delay, mixed *args)
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(oid);
     uid = uid(oid);
-    DEBUG_ASSERT(uid_to_obj_[uid]);
-    return uid_to_obj_[uid]->data_callout(oid, func, delay, args);
+    DEBUG_ASSERT(ownerobjs_[uid]);
+    return ownerobjs_[uid]->data_callout(oid, func, delay, args);
 }
 
 /*
@@ -187,8 +189,8 @@ mixed remove_data_callout(int oid, int handle)
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(oid);
     uid = uid(oid);
-    DEBUG_ASSERT(uid_to_obj_[uid]);
-    return uid_to_obj_[uid]->remove_data_callout(oid, handle);
+    DEBUG_ASSERT(ownerobjs_[uid]);
+    return ownerobjs_[uid]->remove_data_callout(oid, handle);
 }
 
 /*
@@ -202,6 +204,6 @@ mixed *query_data_callouts(string owner, int oid)
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(oid);
     uid = uid(oid);
-    DEBUG_ASSERT(uid_to_obj_[uid]);
-    return uid_to_obj_[uid]->query_data_callouts(owner, oid);
+    DEBUG_ASSERT(ownerobjs_[uid]);
+    return ownerobjs_[uid]->query_data_callouts(owner, oid);
 }
