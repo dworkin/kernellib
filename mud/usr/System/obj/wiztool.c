@@ -3,7 +3,6 @@
 
 inherit LIB_WIZTOOL;
 
-
 private object user;		/* associated user object */
 
 /*

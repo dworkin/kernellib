@@ -85,12 +85,14 @@ int add_data(string owner, object env)
 
 object find_data(int oid)
 {
-    int uid;
+    int     uid;
+    object  node;
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(oid);
     uid = oid_to_uid(oid);
-    return uid_to_node_[uid]->find_data(oid);
+    node = uid_to_node_[uid];
+    return node ? node->find_data(oid) : nil;
 }
 
 void move_data(int oid, object env)

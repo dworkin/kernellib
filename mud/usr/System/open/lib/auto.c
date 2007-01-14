@@ -66,12 +66,19 @@ nomask int _F_system_create(varargs int clone)
 nomask int _Q_oid()
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
+    if (oid_ < -1
+        && (!env_ || ::call_other(env_, "_F_find", oid_) != this_object()))
+    {
+        oid_ = -1;
+        env_ = nil;
+    }
     return oid_;
 }
 
 nomask void _F_move(object env)
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
+    _Q_oid(); /* update environment */
     if (env_) {
         DEBUG_ASSERT(oid_ != -1);
         ::call_other(env_, "_F_leave", oid_);
@@ -112,8 +119,9 @@ nomask void _F_leave(int oid)
 
 nomask object _F_find(int oid)
 {
-    ASSERT_ACCESS(previous_program() == OBJNODE);
-    DEBUG_ASSERT(oid);
+    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO
+                  || previous_program() == OBJNODE);
+    DEBUG_ASSERT(oid < -1);
     return (inv_) ? inv_[oid] : nil;
 }
 
@@ -126,35 +134,52 @@ nomask object *_Q_inv()
 nomask object _Q_env()
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
+    _Q_oid(); /* update environment */
     return env_;
 }
 
 static mixed call_other(mixed obj, string func, mixed args...)
 {
+    string prog;
+
+    /*
+     * resolve and validate object
+     */
     ASSERT_ARG_1(obj);
-    ASSERT_ARG_2(func);
     if (typeof(obj) == T_STRING) {
         int ptype, oid;
 
         obj = path::normalize(obj);
 	ptype = path::type(obj);
         oid = path::number(obj);
-        if (ptype == PT_LIGHTWEIGHT && oid) {
-            /* find inventory light-weight object */
+        if (ptype == PT_LIGHTWEIGHT && oid < -1) {
+            string master;
+            
+            /*
+             * find managed light-weight object
+             */
+            master = path::master(obj);
             obj = ::call_other(OBJECTD, "find_data", oid);
+            ASSERT_ARG_1(obj && path::master(::object_name(obj)) != master);
         } else {
-	    obj = (ptype == PT_DEFAULT || ptype == PT_CLONABLE && oid)
-		? ::find_object(obj) : nil;
+            ASSERT_ARG_1(ptype == PT_DEFAULT || ptype == PT_CLONABLE && oid);
+	    obj = ::find_object(obj);
+            ASSERT_ARG_1(obj);
 	}
-        ASSERT_ARG_1(obj);
     } else {
         ASSERT_ARG_1(typeof(obj) == T_OBJECT);
+        if (path::type(::object_name(obj)) == PT_LIGHTWEIGHT) {
+            ::call_other(obj, "_Q_oid"); /* update environment */
+        }
     }
 
-    /* function must be callable */
-    if (!::function_object(func, obj)) {
-        error("Cannot call function " + func);
-    }
+    /* 
+     * function must be callable
+     */
+    ASSERT_ARG_2(func);
+    prog = ::function_object(func, obj);
+    ASSERT_ARG_2(prog && path::creator(prog) != "System");
+
     return ::call_other(obj, func, args...);
 }
 
@@ -167,7 +192,7 @@ static object find_object(string oname)
     oname = path::normalize(oname);
     ptype = path::type(oname);
     oid = path::number(oname);
-    if (ptype == PT_LIGHTWEIGHT && oid) {
+    if (ptype == PT_LIGHTWEIGHT && oid < -1) {
         obj = ::call_other(OBJECTD, "find_data", oid);
         return (obj && path::master(::object_name(obj)) == path::master(oname))
             ? obj : nil;
@@ -320,10 +345,13 @@ static mixed *file_info(string path)
 
 static int call_out(string func, mixed delay, mixed args...)
 {
-    string oname;
+    string prog;
 
     ASSERT_ARG_1(func);
+    prog = ::function_object(func, this_object());
+    ASSERT_ARG_1(prog && path::creator(prog) != "System");
     ASSERT_ARG_2(typeof(delay) == T_INT || typeof(delay) == T_FLOAT);
+    DEBUG_ASSERT(oid_ == _Q_oid());
     if (oid_ < -1) {
         return ::call_other(OBJECTD, "data_callout", oid_, func, delay, args);
     }
@@ -332,12 +360,19 @@ static int call_out(string func, mixed delay, mixed args...)
 
 static mixed remove_call_out(int handle)
 {
-    /* TODO: to be implemented */
+    DEBUG_ASSERT(oid_ == _Q_oid());
+    if (oid_ < -1) {
+        return ::call_other(OBJECTD, "remove_data_callout", oid_, handle);
+    }
+    return ::remove_call_out(handle);
 }
 
 nomask void _F_call(string func, mixed *args)
 {
+    string prog;
+
     /* TODO: access control */
     ASSERT_ACCESS(previous_program() == OBJNODE);
+    prog = ::function_object(func, this_object());
     ::call_other(this_object(), func, args...);
 }
