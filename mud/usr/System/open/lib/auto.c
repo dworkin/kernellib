@@ -1,18 +1,11 @@
 # include <status.h>
 # include <type.h>
 # include <kernel/kernel.h>
-# include <kernel/tls.h>
 # include <system/assert.h>
 # include <system/path.h>
 # include <system/object.h>
 # include <system/system.h>
 # include <system/tls.h>
-
-/*
- * TODO: Consider a more space-efficient alternative than inheriting this API,
- * because it adds a variable to more or less every object in the mud.
- */
-private inherit tls API_TLS;
 
 private inherit path UTIL_PATH;
 
@@ -37,7 +30,6 @@ nomask int _F_system_create(varargs int clone)
     string  oname;
 
     ASSERT_ACCESS(previous_program() == AUTO);
-    tls::create();
     oname = ::object_name(this_object());
     ptype = path::type(oname);
     if (clone) {
@@ -45,10 +37,10 @@ nomask int _F_system_create(varargs int clone)
 
         oid_ = path::number(oname);
 
-	args = tls::get_tlvar(SYSTEM_TLS_CREATE_ARGS);
+	args = ::call_other(OBJECTD, "get_tlvar", SYSTEM_TLS_CREATE_ARGS);
 	if (args) {
 	    DEBUG_ASSERT(typeof(args) == T_ARRAY);
-	    tls::set_tlvar(SYSTEM_TLS_CREATE_ARGS, nil);
+	    ::call_other(OBJECTD, "set_tlvar", SYSTEM_TLS_CREATE_ARGS, nil);
 	    call_limited("create", args...);
 	} else {
 	    call_limited("create");
@@ -218,7 +210,7 @@ static atomic object clone_object(string master, varargs mixed args...)
      * pass create() arguments using TLS
      */
     if (sizeof(args)) {
-	tls::set_tlvar(SYSTEM_TLS_CREATE_ARGS, args);
+	::call_other(OBJECTD, "set_tlvar", SYSTEM_TLS_CREATE_ARGS, args);
     }
 
     return ::clone_object(master);
@@ -231,7 +223,10 @@ static atomic object new_object(mixed master, varargs mixed args...)
          * pass create() arguments using TLS
          */
 	if (sizeof(args)) {
-	    tls::set_tlvar(SYSTEM_TLS_CREATE_ARGS, args);
+            if (sizeof(args)) {
+                ::call_other(OBJECTD, "set_tlvar", SYSTEM_TLS_CREATE_ARGS,
+                             args);
+            }
 	}
     } else {
         ASSERT_ARG_1(typeof(master) == T_OBJECT
@@ -263,7 +258,34 @@ static string object_name(object obj)
  */
 static mixed *status(varargs mixed obj)
 {
-    return ::status(obj);
+    int     oid;
+    mixed  *status;
+
+    if (typeof(obj) == T_STRING) {
+        int ptype;
+
+        obj = path::normalize(obj);
+        ptype = path::type(obj);
+        oid = path::number(obj);
+        if (ptype == PT_LIGHTWEIGHT && oid < -1) {
+            string master;
+
+            master = path::master(obj);
+            obj = ::call_other(OBJECTD, "find_data", oid);
+            if (!obj || path::master(::object_name(obj)) != master) {
+                return nil;
+            }
+        }
+    } else if (typeof(obj) == T_OBJECT) {
+        oid = ::call_other(obj, "_Q_oid");
+    }
+    status = ::status(obj);
+    if (oid < -1) {
+        DEBUG_ASSERT(status);
+        status[O_CALLOUTS] = ::call_other(OBJECTD, "query_data_callouts",
+                                          query_owner(), oid);
+    }
+    return status;
 }
 
 static void move_object(object obj, object env)

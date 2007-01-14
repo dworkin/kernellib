@@ -1,11 +1,13 @@
 # include <status.h>
 # include <kernel/kernel.h>
+# include <kernel/tls.h>
 # include <system/assert.h>
 # include <system/object.h>
 # include <system/path.h>
 # include <system/system.h>
 
-private inherit path UTIL_PATH;
+private inherit path  UTIL_PATH;
+private inherit tls   API_TLS;
 
 int      next_uid_;
 mapping  uid_to_node_;
@@ -13,6 +15,7 @@ mapping  owner_to_node_;
 
 static void create()
 {
+    tls::create();
     next_uid_ = 1;
     uid_to_node_ = ([ ]);
     owner_to_node_ = ([ ]);
@@ -56,6 +59,18 @@ int forbid_inherit(string from, string path, int priv)
     }
 
     return FALSE;
+}
+
+mixed get_tlvar(int index)
+{
+    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
+    return tls::get_tlvar(index);
+}
+
+void set_tlvar(int index, mixed value)
+{
+    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
+    tls::set_tlvar(index, value);
 }
 
 private int oid_to_uid(int oid)

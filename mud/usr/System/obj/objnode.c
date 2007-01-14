@@ -97,13 +97,15 @@ mixed *query_data_callouts(string owner, int oid)
     owned = (owner && owner == query_owner());
     for (i = j = 0; i < size; ++i) {
         if (callouts[i][CO_FIRSTXARG] == oid) {
-            callouts[j] = ({ callouts[i][CO_HANDLE],
-                             callouts[i][CO_FIRSTXARG + 1],
-                             callouts[i][CO_DELAY] });
+            mixed *callout;
+
+            callout = ({ callouts[i][CO_HANDLE],
+                         callouts[i][CO_FIRSTXARG + 1],
+                         callouts[i][CO_DELAY] });
             if (owned) {
-                callouts[j] += callouts[i][CO_FIRSTXARG + 2];
+                callout += callouts[i][CO_FIRSTXARG + 2];
             }
-            ++j;
+            callouts[j++] = callout;
         }
     }
     return callouts[.. j - 1];

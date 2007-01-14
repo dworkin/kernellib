@@ -21,9 +21,11 @@ static void create()
     ASSERT(!sword); /* hidden master object */
 
     elf = clone_object("~/obj/elf", 9);
+    ASSERT(elf);
     ASSERT(elf->query_level() == 9);
 
     sword = new_object("~/data/sword", 10);
+    ASSERT(sword);
     ASSERT(sword->query_class() == 10);
     ASSERT(object_number(sword) == -1);
     ASSERT(!find_object(object_name(sword)));
@@ -40,6 +42,7 @@ static void create()
     ASSERT(!sizeof(inventory(elf)));
 
     call_out("copy", 0, sword);
+    sword->start();
 }
 
 static void copy(object sword)
