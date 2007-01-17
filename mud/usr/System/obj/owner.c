@@ -7,76 +7,95 @@
 
 private inherit path UTIL_PATH;
 
-int      uid_;
-int      next_oid_;
-mapping  data_;
+int      next_onumber_;  /* next object number */
+mapping  data_;          /* ([ int onumber: object env ]) */
 
+/*
+ * NAME:        create()
+ * DESCRIPTION: initialize owner object
+ */
 static void create(int clone)
 {
     if (clone) {
-	next_oid_ = 2;
+	next_onumber_ = 2;
 	data_ = ([ ]);
     }
 }
 
-void set_uid(int uid)
+/*
+ * NAME:        add_data()
+ * DESCRIPTION: register an LWO for management
+ */
+int add_data(int uid, object env)
 {
-    ASSERT_ACCESS(previous_program() == OBJECTD);
-    uid_ = uid;
-}
-
-int query_uid()
-{
-    ASSERT_ACCESS(previous_program() == OBJECTD);
-    return uid_;
-}
-
-int add_data(object env)
-{
-    int oid;
+    int onumber;
 
     ASSERT_ACCESS(previous_program() == OBJECTD);
-    DEBUG_ASSERT(uid_);
+    DEBUG_ASSERT(uid);
     DEBUG_ASSERT(env);
-    oid = -(uid_ * 1000000 + next_oid_++);
-    data_[oid] = env;
-    return oid;
+    onumber = -(uid * 1000000 + next_onumber_++);
+    data_[onumber] = env;
+    return onumber;
 }
 
-object find_data(int oid)
+/*
+ * NAME:        find_data()
+ * DESCRIPTION: find a managed LWO by number
+ */
+object find_data(int onumber)
 {
+    object env;
+
     ASSERT_ACCESS(previous_program() == OBJECTD);
-    return data_[oid] ? data_[oid]->_F_find(oid) : nil;
+    DEBUG_ASSERT(onumber <= -2);
+    env = data_[onumber];
+    return env ? env->_F_find(onumber) : nil;
 }
 
-void move_data(int oid, object env)
+/*
+ * NAME:        move_data()
+ * DESCRIPTION: move a managed LWO to another environment
+ */
+void move_data(int onumber, object env)
 {
     ASSERT_ACCESS(previous_program() == OBJECTD);
-    DEBUG_ASSERT(oid && data_[oid]);
-    data_[oid] = env;
+    DEBUG_ASSERT(onumber <= -2 && data_[onumber]);
+    data_[onumber] = env;
 }
 
-int data_callout(int oid, string func, mixed delay, mixed *args)
+/*
+ * NAME:        data_callout()
+ * DESCRIPTION: schedule a call-out for a managed LWO
+ */
+int data_callout(int onumber, string func, mixed delay, mixed *args)
 {
     ASSERT_ACCESS(previous_program() == OBJECTD);
-    DEBUG_ASSERT(oid);
+    DEBUG_ASSERT(onumber);
     DEBUG_ASSERT(func);
     DEBUG_ASSERT(args);
-    return call_out("call_data", delay, oid, func, args);
+    return call_out("call_data", delay, onumber, func, args);
 }
 
-mixed remove_data_callout(int oid, int handle)
+/*
+ * NAME:        remove_data_callout()
+ * DESCRIPTION: remove a call-out for a managed LWO
+ */
+mixed remove_data_callout(int onumber, int handle)
 {
     int      i, size;
     mixed  **callouts;
 
     ASSERT_ACCESS(previous_program() == OBJECTD);
-    DEBUG_ASSERT(oid);
+    DEBUG_ASSERT(onumber);
 
     callouts = status(this_object())[O_CALLOUTS];
     for (i = sizeof(callouts) - 1; i >= 0; --i) {
         if (callouts[i][CO_HANDLE] == handle) {
-            return (callouts[i][CO_FIRSTXARG] == oid)
+            /*
+             * Found the call-out. Remove it only if it belongs to the managed
+             * LWO.
+             */
+            return (callouts[i][CO_FIRSTXARG] == onumber)
                 ? remove_call_out(handle) : -1;
         }
     }
@@ -84,25 +103,30 @@ mixed remove_data_callout(int oid, int handle)
     return -1;
 }
 
-mixed *query_data_callouts(string owner, int oid)
+/*
+ * NAME:        query_data_callouts()
+ * DESCRIPTION: return the call-outs of a managed LWO
+ */
+mixed *query_data_callouts(string owner, int onumber)
 {
     int      i, j, size, owned;
     mixed  **callouts;
 
     ASSERT_ACCESS(previous_program() == OBJECTD);
 
-    /* filter call-outs by OID */
+    /* filter call-outs by object number */
     callouts = status(this_object())[O_CALLOUTS];
     size = sizeof(callouts);
     owned = (owner && owner == query_owner());
     for (i = j = 0; i < size; ++i) {
-        if (callouts[i][CO_FIRSTXARG] == oid) {
+        if (callouts[i][CO_FIRSTXARG] == onumber) {
             mixed *callout;
 
             callout = ({ callouts[i][CO_HANDLE],
                          callouts[i][CO_FIRSTXARG + 1],
                          callouts[i][CO_DELAY] });
             if (owned) {
+                /* include arguments */
                 callout += callouts[i][CO_FIRSTXARG + 2];
             }
             callouts[j++] = callout;
@@ -111,12 +135,21 @@ mixed *query_data_callouts(string owner, int oid)
     return callouts[.. j - 1];
 }
 
-static void call_data(int oid, string func, mixed *args)
+/*
+ * NAME:        call_data()
+ * DESCRIPTION: dispatch a call-out to a managed LWO
+ */
+static void call_data(int onumber, string func, mixed *args)
 {
-    object obj;
+    object env;
 
-    obj = data_[oid] ? data_[oid]->_F_find(oid) : nil;
-    if (obj) {
-        obj->_F_call_data(func, args);
+    env = data_[onumber];
+    if (env) {
+        object obj;
+
+        obj = env->_F_find(onumber);
+        if (obj) {
+            obj->_F_call_data(func, args);
+        }
     }
 }

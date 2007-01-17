@@ -12,7 +12,7 @@ private inherit rsrc  API_RSRC;
 private inherit tls   API_TLS;
 
 /*
- * NAME:        load
+ * NAME:        load()
  * DESCRIPTION: find or compile an object
  */
 private object load(string path)
@@ -30,8 +30,8 @@ private object load(string path)
 }
 
 /*
- * NAME:        create
- * DESCRIPTION: initialize system initd
+ * NAME:        create()
+ * DESCRIPTION: initialize system
  */
 static void create()
 {

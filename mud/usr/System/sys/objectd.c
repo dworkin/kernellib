@@ -118,92 +118,90 @@ int add_data(string owner, object env)
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(env);
     uid = uids_[owner];
-    if (!uid) {
+    if (uid) {
+        ownerobj = ownerobjs_[uid];
+        DEBUG_ASSERT(ownerobj);
+    } else {
 	/* create owner object for owner */
 	uid = uids_[owner] = next_uid_++;
-
-        ownerobj = clone_object(OWNEROBJ, owner);
-        ownerobj->set_uid(uid);
-        ownerobjs_[uid] = ownerobj;
+        ownerobj = ownerobjs_[uid] = clone_object(OWNEROBJ, owner);
     }
-
-    DEBUG_ASSERT(ownerobjs_[uid]);
-    return ownerobjs_[uid]->add_data(env);
+    return ownerobj->add_data(uid, env);
 }
 
 /*
  * NAME:        find_data()
  * DESCRIPTION: find a managed LWO
  */
-object find_data(int oid)
+object find_data(int onumber)
 {
     int     uid;
     object  ownerobj;
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    DEBUG_ASSERT(oid);
-    uid = uid(oid);
+    DEBUG_ASSERT(onumber);
+    uid = uid(onumber);
     ownerobj = ownerobjs_[uid];
-    return ownerobj ? ownerobj->find_data(oid) : nil;
+    return ownerobj ? ownerobj->find_data(onumber) : nil;
 }
 
 /*
  * NAME:        move_data()
  * DESCRIPTION: move or remove a managed LWO
  */
-void move_data(int oid, object env)
+void move_data(int onumber, object env)
 {
     int uid;
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    DEBUG_ASSERT(oid);
+    DEBUG_ASSERT(onumber);
     DEBUG_ASSERT(env);
-    uid = uid(oid);
+    uid = uid(onumber);
     DEBUG_ASSERT(ownerobjs_[uid]);
-    ownerobjs_[uid]->move_data(oid, env);
+    ownerobjs_[uid]->move_data(onumber, env);
 }
 
 /*
  * NAME:        data_callout()
  * DESCRIPTION: make a call-out for a managed LWO
  */
-int data_callout(int oid, string func, mixed delay, mixed *args)
+int data_callout(int onumber, string func, mixed delay, mixed *args)
 {
     int uid;
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    DEBUG_ASSERT(oid);
-    uid = uid(oid);
+    DEBUG_ASSERT(onumber);
+    uid = uid(onumber);
     DEBUG_ASSERT(ownerobjs_[uid]);
-    return ownerobjs_[uid]->data_callout(oid, func, delay, args);
+    return ownerobjs_[uid]->data_callout(onumber, func, delay, args);
 }
 
 /*
  * NAME:        remove_data_callout()
  * DESCRIPTION: remove a call-out for a managed LWO
  */
-mixed remove_data_callout(int oid, int handle)
+mixed remove_data_callout(int onumber, int handle)
 {
     int uid;
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    DEBUG_ASSERT(oid);
-    uid = uid(oid);
+    DEBUG_ASSERT(onumber);
+    uid = uid(onumber);
     DEBUG_ASSERT(ownerobjs_[uid]);
-    return ownerobjs_[uid]->remove_data_callout(oid, handle);
+    return ownerobjs_[uid]->remove_data_callout(onumber, handle);
 }
 
 /*
  * NAME:        query_data_callouts()
  * DESCRIPTION: return the call-outs for a managed LWO
  */
-mixed *query_data_callouts(string owner, int oid)
+mixed *query_data_callouts(string owner, int onumber)
 {
     int uid;
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    DEBUG_ASSERT(oid);
-    uid = uid(oid);
+    DEBUG_ASSERT(onumber);
+    uid = uid(onumber);
     DEBUG_ASSERT(ownerobjs_[uid]);
-    return ownerobjs_[uid]->query_data_callouts(owner, oid);
+    return ownerobjs_[uid]->query_data_callouts(owner, onumber);
 }
