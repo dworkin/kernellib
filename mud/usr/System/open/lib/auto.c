@@ -2,12 +2,14 @@
 # include <type.h>
 # include <kernel/kernel.h>
 # include <system/assert.h>
-# include <system/path.h>
 # include <system/object.h>
 # include <system/system.h>
 # include <system/tls.h>
 
-private inherit path UTIL_PATH;
+# define PT_DEFAULT      0
+# define PT_INHERITABLE  1
+# define PT_CLONABLE     2
+# define PT_LIGHTWEIGHT  3
 
 private int      onumber_;  /* object number */
 private object   env_;      /* environment */
@@ -41,6 +43,26 @@ private string normalize_path(string path)
 }
 
 /*
+ * NAME:        path_type()
+ * DESCRIPTION: return the path type of a path
+ */
+private int path_type(string path)
+{
+    DEBUG_ASSERT(path);
+    if (sscanf(path, "%*s" + INHERITABLE_SUBDIR) != 0) {
+	return PT_INHERITABLE;
+    } else if (sscanf(path, "%*s" + CLONABLE_SUBDIR) != 0) {
+	/* clonable path cannot have light-weight subdirectory */
+	return (sscanf(path, "%*s" + LIGHTWEIGHT_SUBDIR) != 0) ? PT_DEFAULT
+	    : PT_CLONABLE;
+    } else if (sscanf(path, "%*s" + LIGHTWEIGHT_SUBDIR) != 0) {
+	return PT_LIGHTWEIGHT;
+    } else {
+	return PT_DEFAULT;
+    }
+}
+
+/*
  * NAME:        create()
  * DESCRIPTION: dummy initialization function
  */
@@ -58,14 +80,13 @@ nomask int _F_system_create(varargs int clone)
 
     ASSERT_ACCESS(previous_program() == AUTO);
     oname = ::object_name(this_object());
-    ptype = path::type(oname);
+    ptype = path_type(oname);
     if (clone) {
 	mixed *args;
 
-        onumber_ = path::number(oname);
-
+        sscanf(oname, "%*s#%d", onumber_);
 	args = ::call_other(OBJECTD, "get_tlvar", SYSTEM_TLS_CREATE_ARGS);
-	if (args) {
+	if (args != nil) {
             /* pass arguments to create() */
 	    DEBUG_ASSERT(typeof(args) == T_ARRAY);
 	    ::call_other(OBJECTD, "set_tlvar", SYSTEM_TLS_CREATE_ARGS, nil);
@@ -76,7 +97,6 @@ nomask int _F_system_create(varargs int clone)
 	}
     } else if (ptype == PT_DEFAULT) {
         onumber_ = ::status(this_object())[O_INDEX];
-
 	call_limited("create"); 
     }
 
@@ -108,13 +128,13 @@ nomask void _F_move(object env)
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     _Q_number();  /* update environment */
-    if (env_) {
+    if (env_ != nil) {
         DEBUG_ASSERT(onumber_ != -1);
         ::call_other(env_, "_F_leave", onumber_);
     }
 
     env_ = env;
-    if (env) {
+    if (env != nil) {
         if (onumber_ == -1) {
             onumber_ = ::call_other(OBJECTD, "add_data", query_owner(), env);
         } else if (onumber_ <= -2) {
@@ -133,9 +153,9 @@ nomask void _F_move(object env)
 nomask void _F_enter(int onumber, object obj)
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    DEBUG_ASSERT(onumber);
-    DEBUG_ASSERT(obj);
-    if (!inv_) {
+    DEBUG_ASSERT(onumber != 0);
+    DEBUG_ASSERT(obj != nil);
+    if (inv_ == nil) {
         inv_ = ([ ]);
     }
     DEBUG_ASSERT(!inv_[onumber]);
@@ -149,8 +169,8 @@ nomask void _F_enter(int onumber, object obj)
 nomask void _F_leave(int onumber)
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    DEBUG_ASSERT(onumber);
-    DEBUG_ASSERT(inv_ && inv_[onumber]);
+    DEBUG_ASSERT(onumber != 0);
+    DEBUG_ASSERT(inv_ != nil && inv_[onumber] != nil);
     inv_[onumber] = nil;
 }
 
@@ -163,7 +183,7 @@ nomask object _F_find(int onumber)
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO
                   || previous_program() == OWNEROBJ);
     DEBUG_ASSERT(onumber <= -2);
-    return (inv_) ? inv_[onumber] : nil;
+    return (inv_ != nil) ? inv_[onumber] : nil;
 }
 
 /*
@@ -173,7 +193,7 @@ nomask object _F_find(int onumber)
 nomask object *_Q_inv()
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    return inv_ ? map_values(inv_) : ({ });
+    return (inv_ != nil) ? map_values(inv_) : ({ });
 }
 
 /*
@@ -196,29 +216,31 @@ static mixed call_other(mixed obj, string func, mixed args...)
     string prog;
 
     /* resolve and validate object */
-    ASSERT_ARG_1(obj);
     if (typeof(obj) == T_STRING) {
-        int ptype, onumber;
+        int     ptype, onumber;
+        string  master;
 
         obj = normalize_path(obj);
-	ptype = path::type(obj);
-        onumber = path::number(obj);
-        if (ptype == PT_LIGHTWEIGHT && onumber <= -2) {
-            string master;
-            
+	ptype = path_type(obj);
+        if (sscanf(obj, "%s#%d", master, onumber) == 2
+            && ptype == PT_LIGHTWEIGHT && onumber <= -2)
+        {
+            string omaster;
+
             /* find distinct LWO */
-            master = path::master(obj);
             obj = ::call_other(OBJECTD, "find_data", onumber);
-            ASSERT_ARG_1(obj && path::master(::object_name(obj)) == master);
+            ASSERT_ARG_1(obj != nil);
+            sscanf(::object_name(obj), "%s#", omaster);
+            ASSERT_ARG_1(master == omaster);
         } else {
             ASSERT_ARG_1(ptype == PT_DEFAULT
                          || ptype == PT_CLONABLE && onumber);
 	    obj = ::find_object(obj);
-            ASSERT_ARG_1(obj);
+            ASSERT_ARG_1(obj != nil);
 	}
     } else {
         ASSERT_ARG_1(typeof(obj) == T_OBJECT);
-        if (path::type(::object_name(obj)) == PT_LIGHTWEIGHT) {
+        if (path_type(::object_name(obj)) == PT_LIGHTWEIGHT) {
             ::call_other(obj, "_Q_number");  /* update environment */
         }
     }
@@ -226,7 +248,8 @@ static mixed call_other(mixed obj, string func, mixed args...)
     /* function must be callable */
     ASSERT_ARG_2(func);
     prog = ::function_object(func, obj);
-    ASSERT_ARG_2(prog && (creator(prog) != "System" || func == "create"));
+    ASSERT_ARG_2(prog != nil
+                 && (creator(prog) != "System" || func == "create"));
 
     return ::call_other(obj, func, args...);
 }
@@ -248,6 +271,7 @@ int object_number(object obj)
 static object find_object(mixed oname)
 {
     int     onumber, ptype;
+    string  master;
     object  obj;
 
     /* find object by number */
@@ -263,17 +287,22 @@ static object find_object(mixed oname)
 
     ASSERT_ARG(typeof(oname) == T_STRING);
     oname = normalize_path(oname);
-    ptype = path::type(oname);
-    onumber = path::number(oname);
-
+    ptype = path_type(oname);
     /*
      * Find a distinct LWO by name: First attempt to find it by number, then
      * verify that the master name matches.
      */
-    if (ptype == PT_LIGHTWEIGHT && onumber <= -2) {
+    if (sscanf(oname, "%s#%d", master, onumber) == 2
+        && ptype == PT_LIGHTWEIGHT && onumber <= -2)
+    {
+        string omaster;
+
         obj = ::call_other(OBJECTD, "find_data", onumber);
-        return (obj && path::master(::object_name(obj)) == path::master(oname))
-            ? obj : nil;
+        if (obj == nil) {
+            return nil;
+        }
+        sscanf(::object_name(obj), "%s#", omaster);
+        return (master == omaster) ? obj : nil;
     }
 
     /* cannot find inheritable objects or clonable master objects */
@@ -316,16 +345,16 @@ static atomic object new_object(mixed master, varargs mixed args...)
 {
     if (typeof(master) == T_STRING) {  /* create new LWO */
         /* pass arguments to create() via TLS */
-	if (sizeof(args)) {
+	if (sizeof(args) != 0) {
             ::call_other(OBJECTD, "set_tlvar", SYSTEM_TLS_CREATE_ARGS,
                          args);
 	}
     } else {  /* copy existant LWO */
         ASSERT_ARG_1(typeof(master) == T_OBJECT
-                     && path::number(::object_name(master)) == -1);
+                     && sscanf(::object_name(master), "%*s#-1") == 1);
 
         /* cannot pass arguments when copying LWO */
-        ASSERT_MESSAGE(!sizeof(args), "Cannot pass arguments");
+        ASSERT_MESSAGE(sizeof(args) == 0, "Cannot pass arguments");
     }
     return ::new_object(master);
 }
@@ -340,15 +369,15 @@ static string object_name(object obj)
 
     ASSERT_ARG(obj);
     oname = ::object_name(obj);
-    if (path::number(oname) == -1) {
-        return path::master(oname) + "#" + ::call_other(obj, "_Q_number");
+    if (sscanf(oname, "%s#-1", oname) == 1) {
+        return oname + "#" + ::call_other(obj, "_Q_number");
     }
     return oname;
 }
 
 /*
  * NAME:        status()
- * DESCRIPTION: return information about the system or an object
+ * DESCRIPTION: return information about an object or the system
  */
 static mixed *status(varargs mixed obj)
 {
@@ -356,17 +385,22 @@ static mixed *status(varargs mixed obj)
     mixed  *status;
 
     if (typeof(obj) == T_STRING) {
-        int ptype;
+        int     ptype;
+        string  master;
 
         obj = normalize_path(obj);
-        ptype = path::type(obj);
-        onumber = path::number(obj);
-        if (ptype == PT_LIGHTWEIGHT && onumber <= -2) {
-            string master;
+        ptype = path_type(obj);
+        if (sscanf(obj, "%s#%d", master, onumber) == 2
+            && ptype == PT_LIGHTWEIGHT && onumber <= -2)
+        {
+            string omaster;
 
-            master = path::master(obj);
             obj = ::call_other(OBJECTD, "find_data", onumber);
-            if (!obj || path::master(::object_name(obj)) != master) {
+            if (obj == nil) {
+                return nil;
+            }
+            sscanf(::object_name(obj), "%s#", omaster);
+            if (omaster != master) {
                 return nil;
             }
         }
@@ -389,7 +423,7 @@ static mixed *status(varargs mixed obj)
 static void move_object(object obj, object env)
 {
     ASSERT_ARG_1(obj);
-    ASSERT_ARG_2(!env || path::number(::object_name(env)) != -1);
+    ASSERT_ARG_2(env == nil || sscanf(::object_name(env), "%*s#-1") == 0);
     ::call_other(obj, "_F_move", env);
 }
 
@@ -424,12 +458,12 @@ static atomic object compile_object(string path, varargs string source)
     ASSERT_ARG_1(path);
     path = normalize_path(path);
     obj = ::compile_object(path, source);
-    if (obj && status(obj)[O_UNDEFINED]) {
+    if (obj != nil && status(obj)[O_UNDEFINED] != nil) {
 	error("Non-inheritable object cannot have undefined functions");
     }
 
     /* hide clonable and light-weight master objects */
-    return (obj && path::type(path) == PT_DEFAULT) ? obj : nil;
+    return (obj != nil && path_type(path) == PT_DEFAULT) ? obj : nil;
 }
 
 /*
@@ -446,12 +480,12 @@ static mixed **get_dir(string path)
     list = ::get_dir(path);
 
     /* hide clonable and light-weight master objects */
-    ptype = path::type(path);
+    ptype = path_type(path);
     if (ptype == PT_CLONABLE || ptype == PT_LIGHTWEIGHT) {
         int i, size;
 
         for (i = 0; i < size; ++i) {
-            if (list[3][i]) {
+            if (list[3][i] != nil) {
                 list[3][i] = TRUE;
             }
         }
@@ -475,7 +509,7 @@ static mixed *file_info(string path)
         int ptype;
 
         /* hide clonable and light-weight master objects */
-        ptype = path::type(::object_name(info[2]));
+        ptype = path_type(::object_name(info[2]));
         if (ptype == PT_CLONABLE || ptype == PT_LIGHTWEIGHT) {
             info[2] = TRUE;
         }
@@ -532,7 +566,7 @@ nomask void _F_call_data(string func, mixed *args)
      * Make sure that it is still safe to call the function. This object may
      * have been recompiled after the call was scheduled.
      */
-    if (prog && (creator(prog) != "System" || func == "create")) {
+    if (prog != nil && (creator(prog) != "System" || func == "create")) {
         ::call_other(this_object(), func, args...);
     }
 }

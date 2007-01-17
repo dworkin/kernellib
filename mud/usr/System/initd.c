@@ -4,7 +4,6 @@
 # include <kernel/tls.h>
 # include <kernel/user.h>
 # include <system/object.h>
-# include <system/path.h>
 # include <system/system.h>
 # include <system/user.h>
 
