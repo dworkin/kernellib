@@ -35,6 +35,7 @@ static void create()
     ASSERT(sizeof(inventory(elf)) == 1);
     ASSERT(object_number(sword) < -1);
     ASSERT(find_object(object_name(sword)) == sword);
+    ASSERT(find_object(object_number(sword)) == sword);
 
     move_object(sword, temple);
     ASSERT(environment(sword) == temple);

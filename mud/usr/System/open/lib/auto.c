@@ -9,9 +9,9 @@
 
 private inherit path UTIL_PATH;
 
-private int      oid_;
-private object   env_;
-private mapping  inv_;
+private int      onumber_;  /* object number */
+private object   env_;      /* environment */
+private mapping  inv_;      /* ([ int onumber: object obj ]) */
 
 /*
  * NAME:        create()
@@ -35,166 +35,230 @@ nomask int _F_system_create(varargs int clone)
     if (clone) {
 	mixed *args;
 
-        oid_ = path::number(oname);
+        onumber_ = path::number(oname);
 
 	args = ::call_other(OBJECTD, "get_tlvar", SYSTEM_TLS_CREATE_ARGS);
 	if (args) {
+            /* pass arguments to create() */
 	    DEBUG_ASSERT(typeof(args) == T_ARRAY);
 	    ::call_other(OBJECTD, "set_tlvar", SYSTEM_TLS_CREATE_ARGS, nil);
 	    call_limited("create", args...);
 	} else {
+            /* no arguments */
 	    call_limited("create");
 	}
     } else if (ptype == PT_DEFAULT) {
-        oid_ = ::status(this_object())[O_INDEX];
+        onumber_ = ::status(this_object())[O_INDEX];
 
-	call_limited("create");
+	call_limited("create"); 
     }
 
     /* kernel creator function should not call create() */
     return TRUE;
 }
 
-nomask int _Q_oid()
+/*
+ * NAME:        _Q_number()
+ * DESCRIPTION: return the object number for this object
+ */
+nomask int _Q_number()
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    if (oid_ < -1
-        && (!env_ || ::call_other(env_, "_F_find", oid_) != this_object()))
+    if (onumber_ <= -2
+        && (!env_ || ::call_other(env_, "_F_find", onumber_) != this_object()))
     {
-        oid_ = -1;
+        onumber_ = -1;
         env_ = nil;
     }
-    return oid_;
+    return onumber_;
 }
 
+/*
+ * NAME:        _F_move()
+ * DESCRIPTION: move this object to another environment
+ */
 nomask void _F_move(object env)
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    _Q_oid(); /* update environment */
+    _Q_number();  /* update environment */
     if (env_) {
-        DEBUG_ASSERT(oid_ != -1);
-        ::call_other(env_, "_F_leave", oid_);
+        DEBUG_ASSERT(onumber_ != -1);
+        ::call_other(env_, "_F_leave", onumber_);
     }
 
     env_ = env;
     if (env) {
-        if (oid_ == -1) {
-            oid_ = ::call_other(OBJECTD, "add_data", query_owner(), env);
-        } else if (oid_ < -1) {
-            ::call_other(OBJECTD, "move_data", oid_, env);
+        if (onumber_ == -1) {
+            onumber_ = ::call_other(OBJECTD, "add_data", query_owner(), env);
+        } else if (onumber_ <= -2) {
+            ::call_other(OBJECTD, "move_data", onumber_, env);
         }
-        ::call_other(env, "_F_enter", oid_, this_object());
-    } else if (oid_ < -1) {
-        ::call_other(OBJECTD, "move_data", oid_, nil);
+        ::call_other(env, "_F_enter", onumber_, this_object());
+    } else if (onumber_ <= -2) {
+        ::call_other(OBJECTD, "move_data", onumber_, nil);
     }
 }
 
-nomask void _F_enter(int oid, object obj)
+/*
+ * NAME:        _F_enter()
+ * DESCRIPTION: add an object to the inventory of this object
+ */
+nomask void _F_enter(int onumber, object obj)
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    DEBUG_ASSERT(oid);
+    DEBUG_ASSERT(onumber);
     DEBUG_ASSERT(obj);
     if (!inv_) {
         inv_ = ([ ]);
     }
-    DEBUG_ASSERT(!inv_[oid]);
-    inv_[oid] = obj;
+    DEBUG_ASSERT(!inv_[onumber]);
+    inv_[onumber] = obj;
 }
 
-nomask void _F_leave(int oid)
+/*
+ * NAME:        _F_leave()
+ * DESCRIPTION: remove an object from the inventory of this object
+ */
+nomask void _F_leave(int onumber)
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    DEBUG_ASSERT(oid);
-    DEBUG_ASSERT(inv_ && inv_[oid]);
-    inv_[oid] = nil;
+    DEBUG_ASSERT(onumber);
+    DEBUG_ASSERT(inv_ && inv_[onumber]);
+    inv_[onumber] = nil;
 }
 
-nomask object _F_find(int oid)
+/*
+ * NAME:        _F_find()
+ * DESCRIPTION: find a distinct LWO by number in this object
+ */
+nomask object _F_find(int onumber)
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO
                   || previous_program() == OWNEROBJ);
-    DEBUG_ASSERT(oid < -1);
-    return (inv_) ? inv_[oid] : nil;
+    DEBUG_ASSERT(onumber <= -2);
+    return (inv_) ? inv_[onumber] : nil;
 }
 
+/*
+ * NAME:        _Q_inv()
+ * DESCRIPTION: return the inventory of this object
+ */
 nomask object *_Q_inv()
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     return inv_ ? map_values(inv_) : ({ });
 }
 
+/*
+ * NAME:        _Q_env()
+ * DESCRIPTION: return the environment of this object
+ */
 nomask object _Q_env()
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    _Q_oid(); /* update environment */
+    _Q_number();  /* update environment */
     return env_;
 }
 
+/*
+ * NAME:        call_other()
+ * DESCRIPTION: call a named function in an object
+ */
 static mixed call_other(mixed obj, string func, mixed args...)
 {
     string prog;
 
-    /*
-     * resolve and validate object
-     */
+    /* resolve and validate object */
     ASSERT_ARG_1(obj);
     if (typeof(obj) == T_STRING) {
-        int ptype, oid;
+        int ptype, onumber;
 
         obj = path::normalize(obj);
 	ptype = path::type(obj);
-        oid = path::number(obj);
-        if (ptype == PT_LIGHTWEIGHT && oid < -1) {
+        onumber = path::number(obj);
+        if (ptype == PT_LIGHTWEIGHT && onumber <= -2) {
             string master;
             
-            /*
-             * find managed light-weight object
-             */
+            /* find distinct LWO */
             master = path::master(obj);
-            obj = ::call_other(OBJECTD, "find_data", oid);
-            ASSERT_ARG_1(obj && path::master(::object_name(obj)) != master);
+            obj = ::call_other(OBJECTD, "find_data", onumber);
+            ASSERT_ARG_1(obj && path::master(::object_name(obj)) == master);
         } else {
-            ASSERT_ARG_1(ptype == PT_DEFAULT || ptype == PT_CLONABLE && oid);
+            ASSERT_ARG_1(ptype == PT_DEFAULT
+                         || ptype == PT_CLONABLE && onumber);
 	    obj = ::find_object(obj);
             ASSERT_ARG_1(obj);
 	}
     } else {
         ASSERT_ARG_1(typeof(obj) == T_OBJECT);
         if (path::type(::object_name(obj)) == PT_LIGHTWEIGHT) {
-            ::call_other(obj, "_Q_oid"); /* update environment */
+            ::call_other(obj, "_Q_number");  /* update environment */
         }
     }
 
-    /* 
-     * function must be callable
-     */
+    /* function must be callable */
     ASSERT_ARG_2(func);
     prog = ::function_object(func, obj);
-    ASSERT_ARG_2(prog && path::creator(prog) != "System");
+    ASSERT_ARG_2(prog && (path::creator(prog) != "System"
+                          || func == "create"));
 
     return ::call_other(obj, func, args...);
 }
 
-static object find_object(string oname)
+/*
+ * NAME:        object_number()
+ * DESCRIPTION: return the object number of an object
+ */
+int object_number(object obj)
 {
-    int     oid, ptype;
+    ASSERT_ARG(obj);
+    return obj <- SYSTEM_AUTO ? ::call_other(obj, "_Q_number") : 0;
+}
+
+/*
+ * NAME:        find_object()
+ * DESCRIPTION: find an object by name or number
+ */
+static object find_object(mixed oname)
+{
+    int     onumber, ptype;
     object  obj;
 
-    ASSERT_ARG(oname);
+    /* find object by number */
+    if (typeof(oname) == T_INT) {
+        if (oname <= -2) {  /* distinct LWO */
+            return ::call_other(OBJECTD, "find_data", oname);
+        } else if (oname >= 1) {  /* persistent object */
+            return ::call_other(OBJECTD, "find_obj", oname);
+        } else {
+            return nil;
+        }
+    }
+
+    ASSERT_ARG(typeof(oname) == T_STRING);
     oname = path::normalize(oname);
     ptype = path::type(oname);
-    oid = path::number(oname);
-    if (ptype == PT_LIGHTWEIGHT && oid < -1) {
-        obj = ::call_other(OBJECTD, "find_data", oid);
+    onumber = path::number(oname);
+
+    /*
+     * Find a distinct LWO by name: First attempt to find it by number, then
+     * verify that the master name matches.
+     */
+    if (ptype == PT_LIGHTWEIGHT && onumber <= -2) {
+        obj = ::call_other(OBJECTD, "find_data", onumber);
         return (obj && path::master(::object_name(obj)) == path::master(oname))
             ? obj : nil;
     }
 
     /* cannot find inheritable objects or clonable master objects */
-    return (ptype == PT_DEFAULT || ptype == PT_CLONABLE && oid)
+    return (ptype == PT_DEFAULT || ptype == PT_CLONABLE && onumber)
 	? ::find_object(oname) : nil;
 }
 
+/*
+ * NAME:        message()
+ * DESCRIPTION: write a message to the console
+ */
 static void message(string message)
 {
     ASSERT_ARG(message);
@@ -202,13 +266,15 @@ static void message(string message)
 		 previous_program() + ": " + message + "\n");
 }
 
+/*
+ * NAME:        clone_object()
+ * DESCRIPTION: create a new persistent clone
+ */
 static atomic object clone_object(string master, varargs mixed args...)
 {
     ASSERT_ARG_1(master);
 
-    /*
-     * pass create() arguments using TLS
-     */
+    /* pass arguments to create() via TLS */
     if (sizeof(args)) {
 	::call_other(OBJECTD, "set_tlvar", SYSTEM_TLS_CREATE_ARGS, args);
     }
@@ -216,30 +282,32 @@ static atomic object clone_object(string master, varargs mixed args...)
     return ::clone_object(master);
 }
 
+/*
+ * NAME:        new_object()
+ * DESCRIPTION: create or copy a light-weight object
+ */
 static atomic object new_object(mixed master, varargs mixed args...)
 {
-    if (typeof(master) == T_STRING) {
-        /*
-         * pass create() arguments using TLS
-         */
+    if (typeof(master) == T_STRING) {  /* create new LWO */
+        /* pass arguments to create() via TLS */
 	if (sizeof(args)) {
-            if (sizeof(args)) {
-                ::call_other(OBJECTD, "set_tlvar", SYSTEM_TLS_CREATE_ARGS,
-                             args);
-            }
+            ::call_other(OBJECTD, "set_tlvar", SYSTEM_TLS_CREATE_ARGS,
+                         args);
 	}
-    } else {
+    } else {  /* copy existant LWO */
         ASSERT_ARG_1(typeof(master) == T_OBJECT
                      && path::number(::object_name(master)) == -1);
 
-        /*
-         * cannot pass arguments when copying
-         */
+        /* cannot pass arguments when copying LWO */
         ASSERT_MESSAGE(!sizeof(args), "Cannot pass arguments");
     }
     return ::new_object(master);
 }
 
+/*
+ * NAME:        object_name()
+ * DESCRIPTION: return the object name of an object
+ */
 static string object_name(object obj)
 {
     string oname;
@@ -247,18 +315,18 @@ static string object_name(object obj)
     ASSERT_ARG(obj);
     oname = ::object_name(obj);
     if (path::number(oname) == -1) {
-        return path::master(oname) + "#" + ::call_other(obj, "_Q_oid");
+        return path::master(oname) + "#" + ::call_other(obj, "_Q_number");
     }
     return oname;
 }
 
 /*
- * TODO: find inventory light-weight object by name
- * TODO: call-out information for inventory light-weight object
+ * NAME:        status()
+ * DESCRIPTION: return information about the system or an object
  */
 static mixed *status(varargs mixed obj)
 {
-    int     oid;
+    int     onumber;
     mixed  *status;
 
     if (typeof(obj) == T_STRING) {
@@ -266,28 +334,32 @@ static mixed *status(varargs mixed obj)
 
         obj = path::normalize(obj);
         ptype = path::type(obj);
-        oid = path::number(obj);
-        if (ptype == PT_LIGHTWEIGHT && oid < -1) {
+        onumber = path::number(obj);
+        if (ptype == PT_LIGHTWEIGHT && onumber <= -2) {
             string master;
 
             master = path::master(obj);
-            obj = ::call_other(OBJECTD, "find_data", oid);
+            obj = ::call_other(OBJECTD, "find_data", onumber);
             if (!obj || path::master(::object_name(obj)) != master) {
                 return nil;
             }
         }
     } else if (typeof(obj) == T_OBJECT) {
-        oid = ::call_other(obj, "_Q_oid");
+        onumber = ::call_other(obj, "_Q_number");
     }
     status = ::status(obj);
-    if (oid < -1) {
+    if (onumber <= -2) {
         DEBUG_ASSERT(status);
         status[O_CALLOUTS] = ::call_other(OBJECTD, "query_data_callouts",
-                                          query_owner(), oid);
+                                          query_owner(), onumber);
     }
     return status;
 }
 
+/*
+ * NAME:        move_object()
+ * DESCRIPTION: move an object to another environment
+ */
 static void move_object(object obj, object env)
 {
     ASSERT_ARG_1(obj);
@@ -295,18 +367,30 @@ static void move_object(object obj, object env)
     ::call_other(obj, "_F_move", env);
 }
 
+/*
+ * NAME:        environment()
+ * DESCRIPTION: return the environment of an object
+ */
 static object environment(object obj)
 {
     ASSERT_ARG(obj);
     return ::call_other(obj, "_Q_env");
 }
 
+/*
+ * NAME:        inventory()
+ * DESCRIPTION: return the inventory of an object
+ */
 static object *inventory(object obj)
 {
     ASSERT_ARG(obj);
     return ::call_other(obj, "_Q_inv");
 }
 
+/*
+ * NAME:        compile_object()
+ * DESCRIPTION: compile an object
+ */
 static atomic object compile_object(string path, varargs string source)
 {
     object obj;
@@ -315,13 +399,17 @@ static atomic object compile_object(string path, varargs string source)
     path = path::normalize(path);
     obj = ::compile_object(path, source);
     if (obj && status(obj)[O_UNDEFINED]) {
-	error("Non-inheritable object cannot be abstract");
+	error("Non-inheritable object cannot have undefined functions");
     }
 
     /* hide clonable and light-weight master objects */
     return (obj && path::type(path) == PT_DEFAULT) ? obj : nil;
 }
 
+/*
+ * NAME:        get_dir()
+ * DESCRIPTION: list the contents of a directory
+ */
 static mixed **get_dir(string path)
 {
     int      ptype;
@@ -346,6 +434,10 @@ static mixed **get_dir(string path)
     return list;
 }
 
+/*
+ * NAME:        file_info()
+ * DESCRIPTION: return information for a file or directory
+ */
 static mixed *file_info(string path)
 {
     mixed *info;
@@ -365,6 +457,10 @@ static mixed *file_info(string path)
     return info;
 }
 
+/*
+ * NAME:        call_out()
+ * DESCRIPTION: schedule a function call
+ */
 static int call_out(string func, mixed delay, mixed args...)
 {
     string prog;
@@ -373,29 +469,44 @@ static int call_out(string func, mixed delay, mixed args...)
     prog = ::function_object(func, this_object());
     ASSERT_ARG_1(prog && path::creator(prog) != "System");
     ASSERT_ARG_2(typeof(delay) == T_INT || typeof(delay) == T_FLOAT);
-    DEBUG_ASSERT(oid_ == _Q_oid());
-    if (oid_ < -1) {
-        return ::call_other(OBJECTD, "data_callout", oid_, func, delay, args);
+    DEBUG_ASSERT(onumber_ == _Q_number());
+    if (onumber_ <= -2) {
+        return ::call_other(OBJECTD, "data_callout", onumber_, func, delay,
+                            args);
     }
     return ::call_out(func, delay, args...);
 }
 
+/*
+ * NAME:        remove_call_out()
+ * DESCRIPTION: remove a scheduled function call
+ */
 static mixed remove_call_out(int handle)
 {
-    DEBUG_ASSERT(oid_ == _Q_oid());
-    if (oid_ < -1) {
-        return ::call_other(OBJECTD, "remove_data_callout", oid_, handle);
+    DEBUG_ASSERT(onumber_ == _Q_number());
+    if (onumber_ <= -2) {
+        return ::call_other(OBJECTD, "remove_data_callout", onumber_, handle);
     }
     return ::remove_call_out(handle);
 }
 
+/*
+ * NAME:        _F_call_data()
+ * DESCRIPTION: dispatch a scheduled function call
+ */
 nomask void _F_call_data(string func, mixed *args)
 {
     string prog;
 
     ASSERT_ACCESS(previous_program() == OWNEROBJ);
+    DEBUG_ASSERT(onumber_ <= -2);
     prog = ::function_object(func, this_object());
-    if (prog && path::creator(prog) != "System") {
+
+    /*
+     * Make sure that it is still safe to call the function. This object may
+     * have been recompiled since the call was scheduled.
+     */
+    if (prog && (path::creator(prog) != "System" || func == "create")) {
         ::call_other(this_object(), func, args...);
     }
 }
