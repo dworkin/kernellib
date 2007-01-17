@@ -1,28 +1,5 @@
-# include <kernel/kernel.h>
 # include <system/assert.h>
 # include <system/path.h>
-
-static string creator(string path)
-{
-    DEBUG_ASSERT(path);
-    return DRIVER->creator(path);
-}
-
-static string normalize(string path, varargs string dir, string uid)
-{
-    object driver;
-
-    DEBUG_ASSERT(path);
-    driver = find_object(DRIVER);
-    if (!dir) {
-        string oname;
-
-        oname = ::object_name(::this_object());
-        dir = oname + "/..";
-        uid = driver->creator(oname);
-    }
-    return driver->normalize_path(path, dir, uid);
-}
 
 static string master(string path)
 {

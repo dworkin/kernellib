@@ -3,15 +3,14 @@
 # include <kernel/tls.h>
 # include <system/assert.h>
 # include <system/object.h>
-# include <system/path.h>
 # include <system/system.h>
 
-private inherit path  UTIL_PATH;
 private inherit tls   API_TLS;
 
-int      next_uid_;
-mapping  uids_;
-mapping  ownerobjs_;
+int      next_uid_;   /* next user ID */
+object   driver_;     /* driver object */
+mapping  uids_;       /* ([ string owner: int uid ]) */
+mapping  ownerobjs_;  /* ([ int uid: object ownerobj ]) */
 
 /*
  * NAME:        create()
@@ -21,17 +20,9 @@ static void create()
 {
     tls::create();
     next_uid_ = 1;
+    driver_ = find_object(DRIVER);
     uids_ = ([ ]);
     ownerobjs_ = ([ ]);
-}
-
-/*
- * NAME:        compiling()
- * DESCRIPTION: the specified object is about to be compiled
- */
-void compiling(string path)
-{
-    ASSERT_ACCESS(previous_program() == DRIVER);
 }
 
 /*
@@ -40,7 +31,7 @@ void compiling(string path)
  */
 string path_special(string compiled)
 {
-    ASSERT_ACCESS(previous_program() == DRIVER);
+    ASSERT_ACCESS(previous_object() == driver_);
     return "/include/system/auto.h";
 }
 
@@ -50,13 +41,14 @@ string path_special(string compiled)
  */
 int forbid_inherit(string from, string path, int priv)
 {
-    ASSERT_ACCESS(previous_program() == DRIVER);
+    ASSERT_ACCESS(previous_object() == driver_);
 
     /*
      * user objects cannot inherit system objects, except for objects in
      * ~System/open
      */
-    if (path::creator(from) != "System" && path::creator(path) == "System"
+    if (driver_->creator(from) != "System"
+        && driver_->creator(path) == "System"
         && !sscanf(path, "/usr/System/open/%*s"))
     {
         return TRUE;
@@ -68,7 +60,7 @@ int forbid_inherit(string from, string path, int priv)
     
         status = status(path);
         if (status && status[O_UNDEFINED]) {
-            DRIVER->message("Abstract object cannot be privately "
+            driver_->message("Abstract object cannot be privately "
                             + "inherited\n");
             return TRUE;
         }

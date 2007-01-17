@@ -14,6 +14,33 @@ private object   env_;      /* environment */
 private mapping  inv_;      /* ([ int onumber: object obj ]) */
 
 /*
+ * NAME:	creator()
+ * DESCRIPTION:	get creator of file
+ */
+private string creator(string path)
+{
+    DEBUG_ASSERT(path);
+    return ::call_other(DRIVER, "creator", path);
+}
+
+/*
+ * NAME:        normalize_path()
+ * DESCRIPTION:	normalize a path relative to this object
+ */
+private string normalize_path(string path)
+{
+    string  oname, creator;
+    object  driver;
+
+    DEBUG_ASSERT(path);
+    driver = ::find_object(DRIVER);
+    oname = ::object_name(this_object());
+    creator = ::call_other(driver, "creator", oname);
+    return ::call_other(driver, "normalize_path", path, oname + "/..",
+                        creator);
+}
+
+/*
  * NAME:        create()
  * DESCRIPTION: dummy initialization function
  */
@@ -173,7 +200,7 @@ static mixed call_other(mixed obj, string func, mixed args...)
     if (typeof(obj) == T_STRING) {
         int ptype, onumber;
 
-        obj = path::normalize(obj);
+        obj = normalize_path(obj);
 	ptype = path::type(obj);
         onumber = path::number(obj);
         if (ptype == PT_LIGHTWEIGHT && onumber <= -2) {
@@ -199,8 +226,7 @@ static mixed call_other(mixed obj, string func, mixed args...)
     /* function must be callable */
     ASSERT_ARG_2(func);
     prog = ::function_object(func, obj);
-    ASSERT_ARG_2(prog && (path::creator(prog) != "System"
-                          || func == "create"));
+    ASSERT_ARG_2(prog && (creator(prog) != "System" || func == "create"));
 
     return ::call_other(obj, func, args...);
 }
@@ -236,7 +262,7 @@ static object find_object(mixed oname)
     }
 
     ASSERT_ARG(typeof(oname) == T_STRING);
-    oname = path::normalize(oname);
+    oname = normalize_path(oname);
     ptype = path::type(oname);
     onumber = path::number(oname);
 
@@ -332,7 +358,7 @@ static mixed *status(varargs mixed obj)
     if (typeof(obj) == T_STRING) {
         int ptype;
 
-        obj = path::normalize(obj);
+        obj = normalize_path(obj);
         ptype = path::type(obj);
         onumber = path::number(obj);
         if (ptype == PT_LIGHTWEIGHT && onumber <= -2) {
@@ -396,7 +422,7 @@ static atomic object compile_object(string path, varargs string source)
     object obj;
 
     ASSERT_ARG_1(path);
-    path = path::normalize(path);
+    path = normalize_path(path);
     obj = ::compile_object(path, source);
     if (obj && status(obj)[O_UNDEFINED]) {
 	error("Non-inheritable object cannot have undefined functions");
@@ -416,7 +442,7 @@ static mixed **get_dir(string path)
     mixed  **list;
 
     ASSERT_ARG(path);
-    path = path::normalize(path);
+    path = normalize_path(path);
     list = ::get_dir(path);
 
     /* hide clonable and light-weight master objects */
@@ -443,7 +469,7 @@ static mixed *file_info(string path)
     mixed *info;
 
     ASSERT_ARG(path);
-    path = path::normalize(path);
+    path = normalize_path(path);
     info = ::file_info(path);
     if (typeof(info[2]) == T_OBJECT) {
         int ptype;
@@ -467,7 +493,7 @@ static int call_out(string func, mixed delay, mixed args...)
 
     ASSERT_ARG_1(func);
     prog = ::function_object(func, this_object());
-    ASSERT_ARG_1(prog && path::creator(prog) != "System");
+    ASSERT_ARG_1(prog && creator(prog) != "System");
     ASSERT_ARG_2(typeof(delay) == T_INT || typeof(delay) == T_FLOAT);
     DEBUG_ASSERT(onumber_ == _Q_number());
     if (onumber_ <= -2) {
@@ -504,9 +530,9 @@ nomask void _F_call_data(string func, mixed *args)
 
     /*
      * Make sure that it is still safe to call the function. This object may
-     * have been recompiled since the call was scheduled.
+     * have been recompiled after the call was scheduled.
      */
-    if (prog && (path::creator(prog) != "System" || func == "create")) {
+    if (prog && (creator(prog) != "System" || func == "create")) {
         ::call_other(this_object(), func, args...);
     }
 }

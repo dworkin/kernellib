@@ -1,13 +1,9 @@
 # include <status.h>
-# include <kernel/kernel.h>
 # include <system/assert.h>
 # include <system/object.h>
-# include <system/path.h>
-# include <system/system.h>
-
-private inherit path UTIL_PATH;
 
 int      next_onumber_;  /* next object number */
+object   objectd_;       /* object manager */
 mapping  data_;          /* ([ int onumber: object env ]) */
 
 /*
@@ -18,6 +14,7 @@ static void create(int clone)
 {
     if (clone) {
 	next_onumber_ = 2;
+        objectd_ = find_object(OBJECTD);
 	data_ = ([ ]);
     }
 }
@@ -30,7 +27,7 @@ int add_data(int uid, object env)
 {
     int onumber;
 
-    ASSERT_ACCESS(previous_program() == OBJECTD);
+    ASSERT_ACCESS(previous_object() == objectd_);
     DEBUG_ASSERT(uid);
     DEBUG_ASSERT(env);
     onumber = -(uid * 1000000 + next_onumber_++);
@@ -46,7 +43,7 @@ object find_data(int onumber)
 {
     object env;
 
-    ASSERT_ACCESS(previous_program() == OBJECTD);
+    ASSERT_ACCESS(previous_object() == objectd_);
     DEBUG_ASSERT(onumber <= -2);
     env = data_[onumber];
     return env ? env->_F_find(onumber) : nil;
@@ -58,7 +55,7 @@ object find_data(int onumber)
  */
 void move_data(int onumber, object env)
 {
-    ASSERT_ACCESS(previous_program() == OBJECTD);
+    ASSERT_ACCESS(previous_object() == objectd_);
     DEBUG_ASSERT(onumber <= -2 && data_[onumber]);
     data_[onumber] = env;
 }
@@ -69,7 +66,7 @@ void move_data(int onumber, object env)
  */
 int data_callout(int onumber, string func, mixed delay, mixed *args)
 {
-    ASSERT_ACCESS(previous_program() == OBJECTD);
+    ASSERT_ACCESS(previous_object() == objectd_);
     DEBUG_ASSERT(onumber);
     DEBUG_ASSERT(func);
     DEBUG_ASSERT(args);
@@ -85,7 +82,7 @@ mixed remove_data_callout(int onumber, int handle)
     int      i, size;
     mixed  **callouts;
 
-    ASSERT_ACCESS(previous_program() == OBJECTD);
+    ASSERT_ACCESS(previous_object() == objectd_);
     DEBUG_ASSERT(onumber);
 
     callouts = status(this_object())[O_CALLOUTS];
@@ -112,7 +109,7 @@ mixed *query_data_callouts(string owner, int onumber)
     int      i, j, size, owned;
     mixed  **callouts;
 
-    ASSERT_ACCESS(previous_program() == OBJECTD);
+    ASSERT_ACCESS(previous_object() == objectd_);
 
     /* filter call-outs by object number */
     callouts = status(this_object())[O_CALLOUTS];
