@@ -11,9 +11,9 @@
 # define PT_CLONABLE     2
 # define PT_LIGHTWEIGHT  3
 
-private int      onumber_;  /* object number */
-private object   env_;      /* environment */
-private mapping  inv_;      /* ([ int onumber: object obj ]) */
+private int      oid;  /* object number */
+private object   env;  /* environment */
+private mapping  inv;  /* ([ int oid: object obj ]) */
 
 /*
  * NAME:	creator()
@@ -84,7 +84,7 @@ nomask int _F_system_create(varargs int clone)
     if (clone) {
 	mixed *args;
 
-        sscanf(oname, "%*s#%d", onumber_);
+        sscanf(oname, "%*s#%d", oid);
 	args = ::call_other(OBJECTD, "get_tlvar", SYSTEM_TLS_CREATE_ARGS);
 	if (args != nil) {
             /* pass arguments to create() */
@@ -96,7 +96,7 @@ nomask int _F_system_create(varargs int clone)
 	    call_limited("create");
 	}
     } else if (ptype == PT_DEFAULT) {
-        onumber_ = ::status(this_object())[O_INDEX];
+        oid = ::status(this_object())[O_INDEX];
 	call_limited("create"); 
     }
 
@@ -105,44 +105,44 @@ nomask int _F_system_create(varargs int clone)
 }
 
 /*
- * NAME:        _Q_number()
+ * NAME:        _Q_oid()
  * DESCRIPTION: return the object number for this object
  */
-nomask int _Q_number()
+nomask int _Q_oid()
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    if (onumber_ <= -2
-        && (!env_ || ::call_other(env_, "_F_find", onumber_) != this_object()))
+    if (oid <= -2
+        && (!env || ::call_other(env, "_F_find", oid) != this_object()))
     {
-        onumber_ = -1;
-        env_ = nil;
+        oid = -1;
+        env = nil;
     }
-    return onumber_;
+    return oid;
 }
 
 /*
  * NAME:        _F_move()
  * DESCRIPTION: move this object to another environment
  */
-nomask void _F_move(object env)
+nomask void _F_move(object dest)
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    _Q_number();  /* update environment */
-    if (env_ != nil) {
-        DEBUG_ASSERT(onumber_ != -1);
-        ::call_other(env_, "_F_leave", onumber_);
+    _Q_oid();  /* update environment */
+    if (env != nil) {
+        DEBUG_ASSERT(oid != -1);
+        ::call_other(env, "_F_leave", oid);
     }
 
-    env_ = env;
+    env = dest;
     if (env != nil) {
-        if (onumber_ == -1) {
-            onumber_ = ::call_other(OBJECTD, "add_data", query_owner(), env);
-        } else if (onumber_ <= -2) {
-            ::call_other(OBJECTD, "move_data", onumber_, env);
+        if (oid == -1) {
+            oid = ::call_other(OBJECTD, "add_data", query_owner(), env);
+        } else if (oid <= -2) {
+            ::call_other(OBJECTD, "move_data", oid, env);
         }
-        ::call_other(env, "_F_enter", onumber_, this_object());
-    } else if (onumber_ <= -2) {
-        ::call_other(OBJECTD, "move_data", onumber_, nil);
+        ::call_other(env, "_F_enter", oid, this_object());
+    } else if (oid <= -2) {
+        ::call_other(OBJECTD, "move_data", oid, nil);
     }
 }
 
@@ -155,11 +155,11 @@ nomask void _F_enter(int onumber, object obj)
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(onumber != 0);
     DEBUG_ASSERT(obj != nil);
-    if (inv_ == nil) {
-        inv_ = ([ ]);
+    if (inv == nil) {
+        inv = ([ ]);
     }
-    DEBUG_ASSERT(!inv_[onumber]);
-    inv_[onumber] = obj;
+    DEBUG_ASSERT(!inv[onumber]);
+    inv[onumber] = obj;
 }
 
 /*
@@ -170,8 +170,8 @@ nomask void _F_leave(int onumber)
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(onumber != 0);
-    DEBUG_ASSERT(inv_ != nil && inv_[onumber] != nil);
-    inv_[onumber] = nil;
+    DEBUG_ASSERT(inv != nil && inv[onumber] != nil);
+    inv[onumber] = nil;
 }
 
 /*
@@ -183,7 +183,7 @@ nomask object _F_find(int onumber)
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO
                   || previous_program() == OWNEROBJ);
     DEBUG_ASSERT(onumber <= -2);
-    return (inv_ != nil) ? inv_[onumber] : nil;
+    return (inv != nil) ? inv[onumber] : nil;
 }
 
 /*
@@ -193,7 +193,7 @@ nomask object _F_find(int onumber)
 nomask object *_Q_inv()
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    return (inv_ != nil) ? map_values(inv_) : ({ });
+    return (inv != nil) ? map_values(inv) : ({ });
 }
 
 /*
@@ -203,8 +203,8 @@ nomask object *_Q_inv()
 nomask object _Q_env()
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    _Q_number();  /* update environment */
-    return env_;
+    _Q_oid();  /* update environment */
+    return env;
 }
 
 /*
@@ -241,7 +241,7 @@ static mixed call_other(mixed obj, string func, mixed args...)
     } else {
         ASSERT_ARG_1(typeof(obj) == T_OBJECT);
         if (path_type(::object_name(obj)) == PT_LIGHTWEIGHT) {
-            ::call_other(obj, "_Q_number");  /* update environment */
+            ::call_other(obj, "_Q_oid");  /* update environment */
         }
     }
 
@@ -261,7 +261,7 @@ static mixed call_other(mixed obj, string func, mixed args...)
 int object_number(object obj)
 {
     ASSERT_ARG(obj);
-    return obj <- SYSTEM_AUTO ? ::call_other(obj, "_Q_number") : 0;
+    return obj <- SYSTEM_AUTO ? ::call_other(obj, "_Q_oid") : 0;
 }
 
 /*
@@ -270,7 +270,7 @@ int object_number(object obj)
  */
 static object find_object(mixed oname)
 {
-    int     onumber, ptype;
+    int     ptype, onumber;
     string  master;
     object  obj;
 
@@ -330,7 +330,7 @@ static atomic object clone_object(string master, varargs mixed args...)
     ASSERT_ARG_1(master);
 
     /* pass arguments to create() via TLS */
-    if (sizeof(args)) {
+    if (sizeof(args) != 0) {
 	::call_other(OBJECTD, "set_tlvar", SYSTEM_TLS_CREATE_ARGS, args);
     }
 
@@ -370,7 +370,7 @@ static string object_name(object obj)
     ASSERT_ARG(obj);
     oname = ::object_name(obj);
     if (sscanf(oname, "%s#-1", oname) == 1) {
-        return oname + "#" + ::call_other(obj, "_Q_number");
+        return oname + "#" + ::call_other(obj, "_Q_oid");
     }
     return oname;
 }
@@ -405,7 +405,7 @@ static mixed *status(varargs mixed obj)
             }
         }
     } else if (typeof(obj) == T_OBJECT) {
-        onumber = ::call_other(obj, "_Q_number");
+        onumber = ::call_other(obj, "_Q_oid");
     }
     status = ::status(obj);
     if (onumber <= -2) {
@@ -420,11 +420,11 @@ static mixed *status(varargs mixed obj)
  * NAME:        move_object()
  * DESCRIPTION: move an object to another environment
  */
-static void move_object(object obj, object env)
+static void move_object(object obj, object dest)
 {
     ASSERT_ARG_1(obj);
-    ASSERT_ARG_2(env == nil || sscanf(::object_name(env), "%*s#-1") == 0);
-    ::call_other(obj, "_F_move", env);
+    ASSERT_ARG_2(dest == nil || sscanf(::object_name(dest), "%*s#-1") == 0);
+    ::call_other(obj, "_F_move", dest);
 }
 
 /*
@@ -529,9 +529,9 @@ static int call_out(string func, mixed delay, mixed args...)
     prog = ::function_object(func, this_object());
     ASSERT_ARG_1(prog && creator(prog) != "System");
     ASSERT_ARG_2(typeof(delay) == T_INT || typeof(delay) == T_FLOAT);
-    DEBUG_ASSERT(onumber_ == _Q_number());
-    if (onumber_ <= -2) {
-        return ::call_other(OBJECTD, "data_callout", onumber_, func, delay,
+    DEBUG_ASSERT(oid == _Q_oid());
+    if (oid <= -2) {
+        return ::call_other(OBJECTD, "data_callout", oid, func, delay,
                             args);
     }
     return ::call_out(func, delay, args...);
@@ -543,9 +543,9 @@ static int call_out(string func, mixed delay, mixed args...)
  */
 static mixed remove_call_out(int handle)
 {
-    DEBUG_ASSERT(onumber_ == _Q_number());
-    if (onumber_ <= -2) {
-        return ::call_other(OBJECTD, "remove_data_callout", onumber_, handle);
+    DEBUG_ASSERT(oid == _Q_oid());
+    if (oid <= -2) {
+        return ::call_other(OBJECTD, "remove_data_callout", oid, handle);
     }
     return ::remove_call_out(handle);
 }
@@ -559,7 +559,7 @@ nomask void _F_call_data(string func, mixed *args)
     string prog;
 
     ASSERT_ACCESS(previous_program() == OWNEROBJ);
-    DEBUG_ASSERT(onumber_ <= -2);
+    DEBUG_ASSERT(oid <= -2);
     prog = ::function_object(func, this_object());
 
     /*

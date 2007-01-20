@@ -5,12 +5,12 @@
 # include <system/object.h>
 # include <system/system.h>
 
-private inherit tls   API_TLS;
+private inherit tls API_TLS;
 
-int      next_uid_;   /* next user ID */
-object   driver_;     /* driver object */
-mapping  uids_;       /* ([ string owner: int uid ]) */
-mapping  ownerobjs_;  /* ([ int uid: object ownerobj ]) */
+int      nextuid;    /* next user ID */
+object   driver;     /* driver object */
+mapping  uids;       /* ([ string owner: int uid ]) */
+mapping  ownerobjs;  /* ([ int uid: object ownerobj ]) */
 
 /*
  * NAME:        create()
@@ -19,10 +19,10 @@ mapping  ownerobjs_;  /* ([ int uid: object ownerobj ]) */
 static void create()
 {
     tls::create();
-    next_uid_ = 1;
-    driver_ = find_object(DRIVER);
-    uids_ = ([ ]);
-    ownerobjs_ = ([ ]);
+    nextuid = 1;
+    driver = find_object(DRIVER);
+    uids = ([ ]);
+    ownerobjs = ([ ]);
 }
 
 /*
@@ -31,7 +31,7 @@ static void create()
  */
 string path_special(string compiled)
 {
-    ASSERT_ACCESS(previous_object() == driver_);
+    ASSERT_ACCESS(previous_object() == driver);
     return "/include/system/auto.h";
 }
 
@@ -41,14 +41,13 @@ string path_special(string compiled)
  */
 int forbid_inherit(string from, string path, int priv)
 {
-    ASSERT_ACCESS(previous_object() == driver_);
+    ASSERT_ACCESS(previous_object() == driver);
 
     /*
      * user objects cannot inherit system objects, except for objects in
      * ~System/open
      */
-    if (driver_->creator(from) != "System"
-        && driver_->creator(path) == "System"
+    if (driver->creator(from) != "System" && driver->creator(path) == "System"
         && !sscanf(path, "/usr/System/open/%*s"))
     {
         return TRUE;
@@ -60,7 +59,7 @@ int forbid_inherit(string from, string path, int priv)
     
         status = status(path);
         if (status && status[O_UNDEFINED]) {
-            driver_->message("Abstract object cannot be privately "
+            driver->message("Abstract object cannot be privately "
                             + "inherited\n");
             return TRUE;
         }
@@ -109,14 +108,14 @@ int add_data(string owner, object env)
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(env);
-    uid = uids_[owner];
+    uid = uids[owner];
     if (uid) {
-        ownerobj = ownerobjs_[uid];
+        ownerobj = ownerobjs[uid];
         DEBUG_ASSERT(ownerobj);
     } else {
 	/* create owner object for owner */
-	uid = uids_[owner] = next_uid_++;
-        ownerobj = ownerobjs_[uid] = clone_object(OWNEROBJ, owner);
+	uid = uids[owner] = nextuid++;
+        ownerobj = ownerobjs[uid] = clone_object(OWNEROBJ, owner);
     }
     return ownerobj->add_data(uid, env);
 }
@@ -125,75 +124,75 @@ int add_data(string owner, object env)
  * NAME:        find_data()
  * DESCRIPTION: find a managed LWO
  */
-object find_data(int onumber)
+object find_data(int oid)
 {
     int     uid;
     object  ownerobj;
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    DEBUG_ASSERT(onumber);
-    uid = uid(onumber);
-    ownerobj = ownerobjs_[uid];
-    return ownerobj ? ownerobj->find_data(onumber) : nil;
+    DEBUG_ASSERT(oid <= -2);
+    uid = uid(oid);
+    ownerobj = ownerobjs[uid];
+    return ownerobj ? ownerobj->find_data(oid) : nil;
 }
 
 /*
  * NAME:        move_data()
  * DESCRIPTION: move or remove a managed LWO
  */
-void move_data(int onumber, object env)
+void move_data(int oid, object env)
 {
     int uid;
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    DEBUG_ASSERT(onumber);
+    DEBUG_ASSERT(oid <= -2);
     DEBUG_ASSERT(env);
-    uid = uid(onumber);
-    DEBUG_ASSERT(ownerobjs_[uid]);
-    ownerobjs_[uid]->move_data(onumber, env);
+    uid = uid(oid);
+    DEBUG_ASSERT(ownerobjs[uid]);
+    ownerobjs[uid]->move_data(oid, env);
 }
 
 /*
  * NAME:        data_callout()
  * DESCRIPTION: make a call-out for a managed LWO
  */
-int data_callout(int onumber, string func, mixed delay, mixed *args)
+int data_callout(int oid, string func, mixed delay, mixed *args)
 {
     int uid;
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    DEBUG_ASSERT(onumber);
-    uid = uid(onumber);
-    DEBUG_ASSERT(ownerobjs_[uid]);
-    return ownerobjs_[uid]->data_callout(onumber, func, delay, args);
+    DEBUG_ASSERT(oid <= -2);
+    uid = uid(oid);
+    DEBUG_ASSERT(ownerobjs[uid]);
+    return ownerobjs[uid]->data_callout(oid, func, delay, args);
 }
 
 /*
  * NAME:        remove_data_callout()
  * DESCRIPTION: remove a call-out for a managed LWO
  */
-mixed remove_data_callout(int onumber, int handle)
+mixed remove_data_callout(int oid, int handle)
 {
     int uid;
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    DEBUG_ASSERT(onumber);
-    uid = uid(onumber);
-    DEBUG_ASSERT(ownerobjs_[uid]);
-    return ownerobjs_[uid]->remove_data_callout(onumber, handle);
+    DEBUG_ASSERT(oid <= -2);
+    uid = uid(oid);
+    DEBUG_ASSERT(ownerobjs[uid]);
+    return ownerobjs[uid]->remove_data_callout(oid, handle);
 }
 
 /*
  * NAME:        query_data_callouts()
  * DESCRIPTION: return the call-outs for a managed LWO
  */
-mixed *query_data_callouts(string owner, int onumber)
+mixed *query_data_callouts(string owner, int oid)
 {
     int uid;
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    DEBUG_ASSERT(onumber);
-    uid = uid(onumber);
-    DEBUG_ASSERT(ownerobjs_[uid]);
-    return ownerobjs_[uid]->query_data_callouts(owner, onumber);
+    DEBUG_ASSERT(oid <= -2);
+    uid = uid(oid);
+    DEBUG_ASSERT(ownerobjs[uid]);
+    return ownerobjs[uid]->query_data_callouts(owner, oid);
 }
