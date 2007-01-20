@@ -2,9 +2,11 @@
 # include <system/assert.h>
 # include <system/object.h>
 
-int      nextoid;  /* next object number */
-object   objectd;  /* object manager */
-mapping  envs;     /* ([ int oid: object env ]) */
+object   objectd;    /* object manager */
+int      uid;        /* user ID of owner */
+mapping  programs;   /* ([ int oid: mixed *progent ]) */
+int      nextindex;  /* index for the next managed LWO */
+mapping  envs;       /* ([ int oid: object env ]) */
 
 /*
  * NAME:        create()
@@ -13,24 +15,53 @@ mapping  envs;     /* ([ int oid: object env ]) */
 static void create(int clone)
 {
     if (clone) {
-	nextoid = 2;
         objectd = find_object(OBJECTD);
+        uid = objectd->query_uid(query_owner());
+        programs = ([ ]);
+	nextindex = -2;
 	envs = ([ ]);
     }
+}
+
+/*
+ * NAME:        compile()
+ * DESCRIPTION: the given object has just been compiled
+ */
+void compile(mixed obj, string *inherited)
+{
+    int oid, i, size;
+
+    ASSERT_ACCESS(previous_object() == objectd);
+    oid = objectd->join_oid(uid, status(obj)[O_INDEX]);
+    size = sizeof(inherited);
+    for (i = 0; i < size; ++i) {
+    }
+}
+
+/*
+ * NAME:        remove_program()
+ * DESCRIPTION: the last reference to the given program has been removed
+ */
+void remove_program(int uid, int index)
+{
+    int oid;
+
+    ASSERT_ACCESS(previous_object() == objectd);
+    oid = objectd->join_oid(uid, index);
 }
 
 /*
  * NAME:        add_data()
  * DESCRIPTION: register an LWO for management
  */
-int add_data(int uid, object env)
+int add_data(object env)
 {
     int oid;
 
     ASSERT_ACCESS(previous_object() == objectd);
     DEBUG_ASSERT(uid);
     DEBUG_ASSERT(env);
-    oid = -(uid * 1000000 + nextoid++);
+    oid = objectd->join_oid(uid, nextindex--);
     envs[oid] = env;
     return oid;
 }
