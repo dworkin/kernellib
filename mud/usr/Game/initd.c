@@ -49,4 +49,5 @@ static void create()
 static void copy(object sword)
 {
     ASSERT(object_number(sword) == -1);
+    destruct_object("~/room/temple");
 }

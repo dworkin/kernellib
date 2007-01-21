@@ -7,7 +7,7 @@
 object   driver;     /* driver object */
 object   objectd;    /* object manager */
 int      uid;        /* user ID of owner */
-mapping  programs;   /* ([ int oid: mixed *program ]) */
+mapping  progents;   /* ([ int oid: mixed *progent ]) */
 int      nextindex;  /* index for the next managed LWO */
 mapping  envs;       /* ([ int oid: object env ]) */
 
@@ -21,29 +21,42 @@ static void create(int clone)
         driver = find_object(DRIVER);
         objectd = find_object(OBJECTD);
         uid = objectd->query_uid(query_owner());
-        programs = ([ ]);
+        progents = ([ ]);
 	nextindex = -2;
 	envs = ([ ]);
     }
 }
 
-private int *program_numbers(string *programs)
+private void link_child(int childoid, mixed *childent, string parname)
 {
-    int i, size, *oids;
+    int      paruid, index, paroid;
+    string   creator;
+    mixed   *parent;
 
-    size = sizeof(programs);
-    oids = allocate_int(size);
-    for (i = 0; i < size; ++i) {
-        int     proguid, index;
-        string  creator;
+    /* get program entry for parent */
+    creator = driver->creator(parname);
+    paruid = objectd->query_uid(creator);
+    DEBUG_ASSERT(paruid >= 1);
+    index = status(parname)[O_INDEX];
+    paroid = objectd->join_oid(paruid, index);
+    parent = objectd->find_program(paroid);
+    DEBUG_ASSERT(parent != nil);
 
-        creator = driver->creator(programs[i]);
-        proguid = objectd->query_uid(creator);
-        DEBUG_ASSERT(proguid);
-        index = status(programs[i])[O_INDEX];
-        oids[i] = objectd->join_oid(proguid, index);
+    /* link child */
+    if (parent[PROG_FIRSTCHILD] == nil) {
+        /* first child: create chain */
+        parent[PROG_FIRSTCHILD] = childoid;
+        childent[PROG_PREVSIB][paroid] = childoid;
+        childent[PROG_NEXTSIB][paroid] = childoid;
+    } else {
+        mixed *firstent, *prevent;
+        
+        /* add to chain */
+        firstent = objectd->find_program(parent[PROG_FIRSTCHILD]);
+        prevent = objectd->find_program(firstent[PROG_PREVSIB][paroid]);
+        firstent[PROG_PREVSIB][paroid] = childoid;
+        prevent[PROG_NEXTSIB][paroid] = childoid;
     }
-    return oids;
 }
 
 /*
@@ -52,9 +65,9 @@ private int *program_numbers(string *programs)
  */
 void compile(mixed obj, string *inherited)
 {
-    int      oid, *parents, i, size;
+    int      oid, i, size;
     string   oname, message;
-    mixed   *program;
+    mixed   *progent;
 
     ASSERT_ACCESS(previous_object() == objectd);
     oname = (typeof(obj) == T_STRING) ? obj : object_name(obj);
@@ -65,19 +78,42 @@ void compile(mixed obj, string *inherited)
     driver->message("OBJECTD: " + message + "\n");
 
     oid = objectd->join_oid(uid, status(obj)[O_INDEX]);
-    program = programs[oid] = ({ oname, ([ ]), ([ ]), 0 });
-
-    parents = program_numbers(inherited);
-    size = sizeof(parents);
+    progent = progents[oid] = ({ oname, ([ ]), ([ ]), nil });
+    size = sizeof(inherited);
     for (i = 0; i < size; ++i) {
-        mixed *parent;
+        link_child(oid, progent, inherited[i]);
+    }
+}
 
-        parent = objectd->find_program(parents[i]);
-        if (parent == nil) {
-            driver->message("OWNEROBJ: could not find parent " + inherited[i]
-                            + " with object ID " + parents[i] + "\n");
+private void unlink_child(int childoid, mixed *childent, int paroid)
+{
+    int     prevoid;
+    mixed  *parent;
+
+    parent = objectd->find_program(paroid);
+    DEBUG_ASSERT(parent != nil);
+    prevoid = childent[PROG_PREVSIB][paroid];
+    if (childoid == prevoid) {
+        /* only link: remove chain */
+        DEBUG_ASSERT(childoid == parent[PROG_FIRSTCHILD]);
+        parent[PROG_FIRSTCHILD] = nil;
+    } else {
+        int     nextoid;
+        mixed  *prevent, *nextent;
+
+        /* unlink child */
+        nextoid = childent[PROG_NEXTSIB][paroid];
+        prevent = objectd->find_program(prevoid);
+        DEBUG_ASSERT(prevent != nil);
+        nextent = objectd->find_program(nextoid);
+        DEBUG_ASSERT(nextent != nil);
+        prevent[PROG_NEXTSIB][paroid] = nextoid;
+        nextent[PROG_PREVSIB][paroid] = prevoid;
+
+        if (parent[PROG_FIRSTCHILD] == childoid) {
+            /* child was first in chain: appoint next child instead */
+            parent[PROG_FIRSTCHILD] = nextoid;
         }
-        DEBUG_ASSERT(parent != nil);
     }
 }
 
@@ -87,10 +123,22 @@ void compile(mixed obj, string *inherited)
  */
 void remove_program(int index)
 {
-    int oid;
+    int     oid, i, size, *paroids;
+    mixed  *progent;
 
     ASSERT_ACCESS(previous_object() == objectd);
     oid = objectd->join_oid(uid, index);
+    progent = progents[oid];
+    DEBUG_ASSERT(progent != nil);
+    driver->message("OBJECTD: removing program " + progent[PROG_OBJNAME]
+                    + "\n");
+
+    paroids = map_indices(progent[PROG_PREVSIB]);
+    size = sizeof(paroids);
+    for (i = 0; i < size; ++i) {
+        unlink_child(oid, progent, paroids[i]);
+    }
+    progents[oid] = nil;
 }
 
 /*
@@ -101,8 +149,8 @@ mixed *find_program(int oid)
 {
     ASSERT_ACCESS(previous_object() == objectd);
     DEBUG_ASSERT(oid >= 0);
-    DEBUG_ASSERT(programs[oid] != nil);
-    return programs[oid];
+    DEBUG_ASSERT(progents[oid] != nil);
+    return progents[oid];
 }
 
 /*
