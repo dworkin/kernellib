@@ -7,8 +7,9 @@
 
 private inherit tls API_TLS;
 
-int      nextuid;    /* next user ID */
 object   driver;     /* driver object */
+object   initd;      /* system initialization manager */
+int      nextuid;    /* next user ID */
 mapping  uids;       /* ([ string owner: int uid ]) */
 mapping  ownerobjs;  /* ([ int uid: object ownerobj ]) */
 
@@ -19,25 +20,34 @@ mapping  ownerobjs;  /* ([ int uid: object ownerobj ]) */
 static void create()
 {
     tls::create();
-    nextuid = 1;
     driver = find_object(DRIVER);
+    initd = find_object(INITD);
+    nextuid = 1;
     uids = ([ ]);
     ownerobjs = ([ ]);
 }
 
+/*
+ * NAME:        add_owner()
+ * DESCRIPTION: register a new or existing owner
+ */
 private int add_owner(string owner)
 {
     mixed uid;
 
     uid = uids[owner];
     if (uid == nil) {
-	/* create owner object for owner */
+	/* new owner: register and create owner object */
 	uid = uids[owner] = nextuid++;
         ownerobjs[uid] = clone_object(OWNEROBJ, owner);
     }
     return uid;
 }
 
+/*
+ * NAME:        query_uid()
+ * DESCRIPTION: return the user ID of an owner
+ */
 int query_uid(string owner)
 {
     mixed uid;
@@ -46,18 +56,26 @@ int query_uid(string owner)
     return uid ? uid : 0;
 }
 
+/*
+ * NAME:        join_oid()
+ * DESCRIPTION: join a user ID and an object index into an object ID
+ */
 int join_oid(int uid, int index)
 {
     ASSERT_ARG_1(uid >= 0);
     if (index <= -2) {
         return -uid * 1000000 + index;
-    } else if (index >= 1) {
+    } else if (index >= 0) {
         return uid * 1000000 + index;
     } else {
         ASSERT_ARG_2(0);
     }
 }
 
+/*
+ * NAME:        split_oid()
+ * DESCRIPTION: split an object ID into a user ID and an object index
+ */
 int *split_oid(int oid)
 {
     if (oid <= -2) {
@@ -77,7 +95,10 @@ void compile(string owner, object obj, string source, string inherited...)
 {
     int uid;
 
-    ASSERT_ACCESS(previous_object() == driver);
+    ASSERT_ACCESS(previous_object() == driver || previous_object() == initd);
+    if (object_name(obj) != DRIVER && sizeof(inherited) == 0) {
+        inherited = ({ AUTO });
+    }
     uid = add_owner(owner);
     DEBUG_ASSERT(ownerobjs[uid]);
     ownerobjs[uid]->compile(obj, inherited);
@@ -91,7 +112,10 @@ void compile_lib(string owner, string path, string source, string inherited...)
 {
     int uid;
 
-    ASSERT_ACCESS(previous_object() == driver);
+    ASSERT_ACCESS(previous_object() == driver || previous_object() == initd);
+    if (path != AUTO && sizeof(inherited) == 0) {
+        inherited = ({ AUTO });
+    }
     uid = add_owner(owner);
     DEBUG_ASSERT(ownerobjs[uid]);
     ownerobjs[uid]->compile(path, inherited);
@@ -176,12 +200,18 @@ void set_tlvar(int index, mixed value)
 }
 
 /*
- * NAME:        uid()
- * DESCRIPTION: return user ID for object ID
+ * NAME:        find_program()
+ * DESCRIPTION: find a program by object ID
  */
-private int uid(int oid)
+mixed *find_program(int oid)
 {
-    return -oid / 1000000;
+    int uid;
+
+    ASSERT_ACCESS(previous_program() == OWNEROBJ);
+    DEBUG_ASSERT(oid >= 1);
+    uid = split_oid(oid)[0];
+    DEBUG_ASSERT(ownerobjs[uid] != nil);
+    return ownerobjs[uid]->find_program(oid);
 }
 
 /*
@@ -190,15 +220,13 @@ private int uid(int oid)
  */
 int add_data(string owner, object env)
 {
-    int     uid;
-    object  ownerobj;
+    int uid;
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(env);
     uid = add_owner(owner);
-    ownerobj = ownerobjs[uid];
-    DEBUG_ASSERT(ownerobj);
-    return ownerobj->add_data(env);
+    DEBUG_ASSERT(ownerobjs[uid] != nil);
+    return ownerobjs[uid]->add_data(env);
 }
 
 /*
@@ -212,7 +240,7 @@ object find_data(int oid)
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(oid <= -2);
-    uid = uid(oid);
+    uid = split_oid(oid)[0];
     ownerobj = ownerobjs[uid];
     return ownerobj ? ownerobj->find_data(oid) : nil;
 }
@@ -227,9 +255,8 @@ void move_data(int oid, object env)
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(oid <= -2);
-    DEBUG_ASSERT(env);
-    uid = uid(oid);
-    DEBUG_ASSERT(ownerobjs[uid]);
+    uid = split_oid(oid)[0];
+    DEBUG_ASSERT(ownerobjs[uid] != nil);
     ownerobjs[uid]->move_data(oid, env);
 }
 
@@ -243,8 +270,8 @@ int data_callout(int oid, string func, mixed delay, mixed *args)
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(oid <= -2);
-    uid = uid(oid);
-    DEBUG_ASSERT(ownerobjs[uid]);
+    uid = split_oid(oid)[0];
+    DEBUG_ASSERT(ownerobjs[uid] != nil);
     return ownerobjs[uid]->data_callout(oid, func, delay, args);
 }
 
@@ -258,8 +285,8 @@ mixed remove_data_callout(int oid, int handle)
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(oid <= -2);
-    uid = uid(oid);
-    DEBUG_ASSERT(ownerobjs[uid]);
+    uid = split_oid(oid)[0];
+    DEBUG_ASSERT(ownerobjs[uid] != nil);
     return ownerobjs[uid]->remove_data_callout(oid, handle);
 }
 
@@ -273,7 +300,7 @@ mixed *query_data_callouts(string owner, int oid)
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     DEBUG_ASSERT(oid <= -2);
-    uid = uid(oid);
-    DEBUG_ASSERT(ownerobjs[uid]);
+    uid = split_oid(oid)[0];
+    DEBUG_ASSERT(ownerobjs[uid] != nil);
     return ownerobjs[uid]->query_data_callouts(owner, oid);
 }

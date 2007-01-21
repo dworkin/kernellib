@@ -1,10 +1,13 @@
 # include <status.h>
+# include <type.h>
+# include <kernel/kernel.h>
 # include <system/assert.h>
 # include <system/object.h>
 
+object   driver;     /* driver object */
 object   objectd;    /* object manager */
 int      uid;        /* user ID of owner */
-mapping  programs;   /* ([ int oid: mixed *progent ]) */
+mapping  programs;   /* ([ int oid: mixed *program ]) */
 int      nextindex;  /* index for the next managed LWO */
 mapping  envs;       /* ([ int oid: object env ]) */
 
@@ -15,6 +18,7 @@ mapping  envs;       /* ([ int oid: object env ]) */
 static void create(int clone)
 {
     if (clone) {
+        driver = find_object(DRIVER);
         objectd = find_object(OBJECTD);
         uid = objectd->query_uid(query_owner());
         programs = ([ ]);
@@ -23,18 +27,57 @@ static void create(int clone)
     }
 }
 
+private int *program_numbers(string *programs)
+{
+    int i, size, *oids;
+
+    size = sizeof(programs);
+    oids = allocate_int(size);
+    for (i = 0; i < size; ++i) {
+        int     proguid, index;
+        string  creator;
+
+        creator = driver->creator(programs[i]);
+        proguid = objectd->query_uid(creator);
+        DEBUG_ASSERT(proguid);
+        index = status(programs[i])[O_INDEX];
+        oids[i] = objectd->join_oid(proguid, index);
+    }
+    return oids;
+}
+
 /*
  * NAME:        compile()
  * DESCRIPTION: the given object has just been compiled
  */
 void compile(mixed obj, string *inherited)
 {
-    int oid, i, size;
+    int      oid, *parents, i, size;
+    string   oname, message;
+    mixed   *program;
 
     ASSERT_ACCESS(previous_object() == objectd);
+    oname = (typeof(obj) == T_STRING) ? obj : object_name(obj);
+    message = "compiled " + oname;
+    if (sizeof(inherited) != 0) {
+        message += "; inherited " + implode(inherited, ", ");
+    }
+    driver->message("OBJECTD: " + message + "\n");
+
     oid = objectd->join_oid(uid, status(obj)[O_INDEX]);
-    size = sizeof(inherited);
+    program = programs[oid] = ({ oname, ([ ]), ([ ]), 0 });
+
+    parents = program_numbers(inherited);
+    size = sizeof(parents);
     for (i = 0; i < size; ++i) {
+        mixed *parent;
+
+        parent = objectd->find_program(parents[i]);
+        if (parent == nil) {
+            driver->message("OWNEROBJ: could not find parent " + inherited[i]
+                            + " with object ID " + parents[i] + "\n");
+        }
+        DEBUG_ASSERT(parent != nil);
     }
 }
 
@@ -42,12 +85,24 @@ void compile(mixed obj, string *inherited)
  * NAME:        remove_program()
  * DESCRIPTION: the last reference to the given program has been removed
  */
-void remove_program(int uid, int index)
+void remove_program(int index)
 {
     int oid;
 
     ASSERT_ACCESS(previous_object() == objectd);
     oid = objectd->join_oid(uid, index);
+}
+
+/*
+ * NAME:        find_program()
+ * DESCRIPTION: find a program by object ID
+ */
+mixed *find_program(int oid)
+{
+    ASSERT_ACCESS(previous_object() == objectd);
+    DEBUG_ASSERT(oid >= 0);
+    DEBUG_ASSERT(programs[oid] != nil);
+    return programs[oid];
 }
 
 /*
