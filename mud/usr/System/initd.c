@@ -97,6 +97,17 @@ private void init_telnet_manager()
     USERD->set_telnet_manager(0, telnetd);
 }
 
+private void test_program_dir(string path)
+{
+    string   *paths;
+    mapping   progs;
+
+    progs = OBJECTD->get_program_dir(path);
+    paths = map_indices(progs);
+    driver->message("INITD: listing " + path + ": " + implode(paths, ", ")
+                    + "\n");
+}
+
 /*
  * NAME:        create()
  * DESCRIPTION: initialize system
@@ -132,6 +143,8 @@ static void create()
 	    call_out("init", 0, path);
         }
     }
+
+    test_program_dir("/kernel/lib");
 }
 
 /*

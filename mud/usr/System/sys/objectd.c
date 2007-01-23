@@ -215,6 +215,26 @@ mixed *find_program(int oid)
 }
 
 /*
+ * NAME:        get_program_dir()
+ * DESCRIPTION: return all programs within a parent directory
+ */
+mapping get_program_dir(string path)
+{
+    string  creator;
+    mixed   uid;
+
+    ASSERT_ACCESS(previous_object() == initd);
+    DEBUG_ASSERT(path);
+    creator = driver->creator(path + "/");
+    uid = uids[creator];
+    if (uid == nil) {
+        return ([ ]);
+    }
+    DEBUG_ASSERT(ownerobjs[uid]);
+    return ownerobjs[uid]->get_program_dir(path);
+}
+
+/*
  * NAME:        add_data()
  * DESCRIPTION: add a managed LWO
  */

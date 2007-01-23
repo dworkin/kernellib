@@ -8,6 +8,7 @@ object   driver;     /* driver object */
 object   objectd;    /* object manager */
 int      uid;        /* user ID of owner */
 mapping  progents;   /* ([ int oid: mixed *progent ]) */
+mapping  prognames;  /* ([ string progname: ({ int oid, ... }) ]) */
 int      nextindex;  /* index for the next managed LWO */
 mapping  envs;       /* ([ int oid: object env ]) */
 
@@ -22,6 +23,7 @@ static void create(int clone)
         objectd = find_object(OBJECTD);
         uid = objectd->query_uid(query_owner());
         progents = ([ ]);
+        prognames = ([ ]);
 	nextindex = -2;
 	envs = ([ ]);
     }
@@ -83,6 +85,12 @@ void compile(mixed obj, string *inherited)
     for (i = 0; i < size; ++i) {
         link_child(oid, progent, inherited[i]);
     }
+
+    if (prognames[oname]) {
+        prognames[oname] += ({ oid });
+    } else {
+        prognames[oname] = ({ oid });
+    }
 }
 
 private void unlink_child(int childoid, mixed *childent, int paroid)
@@ -123,8 +131,9 @@ private void unlink_child(int childoid, mixed *childent, int paroid)
  */
 void remove_program(int index)
 {
-    int     oid, i, size, *paroids;
-    mixed  *progent;
+    int      oid, i, size, *paroids;
+    string   oname;
+    mixed   *progent;
 
     ASSERT_ACCESS(previous_object() == objectd);
     oid = objectd->join_oid(uid, index);
@@ -132,6 +141,13 @@ void remove_program(int index)
     DEBUG_ASSERT(progent != nil);
     driver->message("OBJECTD: removing program " + progent[PROG_OBJNAME]
                     + "\n");
+
+    oname = progent[PROG_OBJNAME];
+    DEBUG_ASSERT(prognames[oname] != nil);
+    prognames[oname] -= ({ oid });
+    if (sizeof(prognames[oname]) == 0) {
+        prognames[oname] = nil;
+    }
 
     paroids = map_indices(progent[PROG_PREVSIB]);
     size = sizeof(paroids);
@@ -151,6 +167,47 @@ mixed *find_program(int oid)
     DEBUG_ASSERT(oid >= 0);
     DEBUG_ASSERT(progents[oid] != nil);
     return progents[oid];
+}
+
+/*
+ * NAME:        get_program_dir()
+ * DESCRIPTION: return all programs within a parent directory
+ */
+mapping get_program_dir(string path)
+{
+    int       i, size;
+    string   *paths;
+    mapping   names, dirs, progs;
+
+    ASSERT_ACCESS(previous_object() == objectd);
+    DEBUG_ASSERT(path);
+
+    names = prognames[path + "/" .. path + "0"] - ({ path + "0" }); 
+    paths = map_indices(names);
+    dirs = ([ ]);
+    progs = ([ ]);
+    size = sizeof(paths);
+    for (i = 0; i < size; ++i) {
+        string base;
+
+        base = paths[i][strlen(path) + 1 ..];
+        if (sscanf(base, "%s/", base) == 1) {
+            dirs[base] = TRUE;
+        } else {
+            progs[base] = names[paths[i]];
+        }
+    }
+
+    paths = map_indices(dirs);
+    size = sizeof(paths);
+    for (i = 0; i < size; ++i) {
+        if (progs[paths[i]] == nil) {
+            progs[paths[i]] = ({ -2 });
+        } else {
+            progs[paths[i]] = ({ -2 }) + progs[paths[i]];
+        }
+    }
+    return progs;
 }
 
 /*
