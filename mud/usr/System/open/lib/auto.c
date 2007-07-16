@@ -451,13 +451,13 @@ static object *inventory(object obj)
  * NAME:        compile_object()
  * DESCRIPTION: compile an object
  */
-static atomic object compile_object(string path, varargs string source)
+static atomic object compile_object(string path, varargs string source...)
 {
     object obj;
 
     ASSERT_ARG_1(path);
     path = normalize_path(path);
-    obj = ::compile_object(path, source);
+    obj = ::compile_object(path, source...);
     if (obj != nil && status(obj)[O_UNDEFINED] != nil) {
 	error("Non-inheritable object cannot have undefined functions");
     }

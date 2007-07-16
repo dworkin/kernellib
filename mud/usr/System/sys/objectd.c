@@ -147,7 +147,7 @@ void remove_program(string owner, string path, int timestamp, int index)
 mixed include_file(string compiled, string from, string path)
 {
     ASSERT_ACCESS(previous_object() == driver);
-    if (from == "/include/std.h" && path == "AUTO"
+    if (from == "/include/std.h" && path == "/include/AUTO"
         && driver->creator(compiled) != "System")
     {
         return ({ "inherit \"" + SYSTEM_AUTO + "\";\n" });
