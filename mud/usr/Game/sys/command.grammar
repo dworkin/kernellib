@@ -1,0 +1,79 @@
+word = /[a-z]+/
+whitespace = / /
+
+COMMAND : 'go' DIRECTION ? cmd_go_direction
+
+COMMAND : 'look' ? cmd_look
+COMMAND : 'look' 'at' THING ? cmd_look_at_thing
+
+COMMAND : 'listen' ? cmd_listen
+COMMAND : 'listen' 'to' THING ? cmd_listen_to_thing
+
+COMMAND : 'smell' ? cmd_smell
+COMMAND : 'smell' THING ? cmd_smell_thing
+
+COMMAND : 'touch' THING ? cmd_touch_thing
+COMMAND : 'feel' THING ? cmd_feel_thing
+COMMAND : 'taste' THING ? cmd_taste_thing
+
+COMMAND : 'take' THING ? cmd_take_thing
+COMMAND : 'get' THING ? cmd_get_thing
+COMMAND : 'pick' 'up' THING ? cmd_pick_up_thing
+COMMAND : 'pick' THING 'up' ? cmd_pick_thing_up
+
+COMMAND : 'drop' THING ? cmd_drop_thing
+COMMAND : 'put' 'down' THING ? cmd_put_down_thing
+COMMAND : 'put' THINGS 'down' ? cmd_put_things_down
+
+COMMAND : 'put' THING 'in' THING ? cmd_put_thing_in_thing
+COMMAND : 'insert' THING 'into' THING ? cmd_insert_thing_into_thing
+
+COMMAND : 'get' THING 'from' THING ? cmd_get_thing_from_thing
+COMMAND : 'get' THING 'out' 'of' THING ? cmd_get_thing_out_of_thing
+COMMAND : 'take' THING 'from' THING ? cmd_take_thing_from_thing
+COMMAND : 'take' THING 'out' 'of' THING ? cmd_take_thing_out_of_thing
+COMMAND : 'remove' THING 'from' THING ? cmd_remove_thing_from_thing
+
+COMMAND : 'wear' THING ? cmd_wear_thing
+COMMAND : 'put' 'on' THING ? cmd_put_on_thing
+COMMAND : 'put' THING 'on' ? cmd_put_thing_on
+
+COMMAND : 'remove' THING ? cmd_remove_thing
+COMMAND : 'remove' THING ? cmd_remove_thing
+COMMAND : 'take' 'off' THING ? cmd_take_off_thing
+COMMAND : 'take' THING 'off' ? cmd_take_thing_off
+
+COMMAND : 'wield' THING ? cmd_wield_thing
+COMMAND : 'draw' THING ? cmd_draw_thing
+COMMAND : 'hold' THING ? cmd_hold_thing
+
+COMMAND : 'release' THING ? cmd_release_thing
+COMMAND : 'put' 'away' THING ? cmd_put_away_thing
+COMMAND : 'put' THING 'away' ? cmd_put_thing_away
+COMMAND : 'put' 'aside' THING ? cmd_put_aside_thing
+COMMAND : 'put' THING 'aside' ? cmd_put_thing_aside
+
+COMMAND : 'give' THING 'to' THING ? cmd_give_thing_to_thing
+COMMAND : 'attack' THING ? cmd_attack_thing
+
+WORD : word
+WORD_LIST : WORD
+WORD_LIST : WORD_LIST WORD
+WORDS: WORD_LIST ? word_list_to_words
+
+THING : WORDS ? words_to_thing
+THING_LIST : THING
+THING_LIST : THING_LIST ',' THING
+THING_LIST : THING_LIST 'and' THING
+THINGS : THING_LIST ? thing_list_to_things
+
+DIRECTION : 'north'
+DIRECTION : 'south'
+DIRECTION : 'east'
+DIRECTION : 'west'
+DIRECTION : 'northwest'
+DIRECTION : 'northeast'
+DIRECTION : 'southwest'
+DIRECTION : 'southeast'
+DIRECTION : 'up'
+DIRECTION : 'down'

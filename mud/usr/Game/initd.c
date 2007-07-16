@@ -1,53 +1,24 @@
 # include <system/assert.h>
+# include <game/action.h>
+# include <game/command.h>
 
-private int object_number(object obj)
+object commandd_;
+
+static void test_command(string command)
 {
-    int onumber;
-
-    DEBUG_ASSERT(obj);
-    sscanf(object_name(obj), "%*s#%d", onumber);
-    return onumber;
+    ASSERT(commandd_->parse(command));
 }
 
 static void create()
 {
-    object temple, elf, sword;
+    compile_object(GO_DIRECTION_ACTION);
+    compile_object(LOOK_ACTION);
+    compile_object(LOOK_AT_THING_ACTION);
 
-    temple = compile_object("~/room/temple");
-    ASSERT(temple);
-    elf = compile_object("~/obj/elf");
-    ASSERT(!elf); /* hidden master object */
-    sword = compile_object("~/data/sword");
-    ASSERT(!sword); /* hidden master object */
+    commandd_ = compile_object(COMMANDD);
 
-    elf = clone_object("~/obj/elf", 9);
-    ASSERT(elf);
-    ASSERT(elf->query_level() == 9);
+    test_command("go west");
 
-    sword = new_object("~/data/sword", 10);
-    ASSERT(sword);
-    ASSERT(sword->query_class() == 10);
-    ASSERT(object_number(sword) == -1);
-    ASSERT(!find_object(object_name(sword)));
-
-    move_object(sword, elf);
-    ASSERT(environment(sword) == elf);
-    ASSERT(sizeof(inventory(elf)) == 1);
-    ASSERT(object_number(sword) < -1);
-    ASSERT(find_object(object_name(sword)) == sword);
-    ASSERT(find_object(object_number(sword)) == sword);
-
-    move_object(sword, temple);
-    ASSERT(environment(sword) == temple);
-    ASSERT(sizeof(inventory(temple)) == 1);
-    ASSERT(!sizeof(inventory(elf)));
-
-    call_out("copy", 0, sword);
-    sword->start();
-}
-
-static void copy(object sword)
-{
-    ASSERT(object_number(sword) == -1);
-    destruct_object("~/room/temple");
+    test_command("look");
+    test_command("look at rusty cage");
 }
