@@ -75,7 +75,7 @@ void compile(mixed obj, string *inherited)
     oname = (typeof(obj) == T_STRING) ? obj : object_name(obj);
     message = "compiled " + oname;
     if (sizeof(inherited) != 0) {
-        message += "; inherited " + implode(inherited, ", ");
+        message += " (inherited " + implode(inherited, ", ") + ")";
     }
     driver->message("OBJECTD: " + message + "\n");
 

@@ -75,7 +75,7 @@ private void init_object_manager()
 
     /* register system objects */
     objectd->compile("System", this_object(), nil, API_RSRC, API_TLS);
-    objectd->compile("System", objectd, nil, API_TLS);
+    objectd->compile("System", objectd, nil, API_RSRC, API_TLS);
     objectd->compile("System", ownerobj, nil);
 
     /* install object manager */
@@ -143,8 +143,6 @@ static void create()
 	    call_out("init", 0, path);
         }
     }
-
-    test_program_dir("/kernel/lib");
 }
 
 /*

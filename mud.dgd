@@ -1,6 +1,6 @@
 telnet_port	= 6047;			/* telnet port number */
 binary_port	= 6048;			/* binary port number */
-directory	= "/home/Mikael/project/leprechaun/mud";
+directory	= "/home/elemel/work/leprechaun/mud";
                                         /* base directory (MUST be absolute) */
 users		= 255;			/* max # of users */
 editors		= 255;			/* max # of editor sessions */

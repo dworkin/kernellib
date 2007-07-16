@@ -1,11 +1,13 @@
 # include <status.h>
 # include <kernel/kernel.h>
+# include <kernel/rsrc.h>
 # include <kernel/tls.h>
 # include <system/assert.h>
 # include <system/object.h>
 # include <system/system.h>
 
-private inherit tls API_TLS;
+private inherit rsrc  API_RSRC;
+private inherit tls   API_TLS;
 
 object   driver;     /* driver object */
 object   initd;      /* system initialization manager */
@@ -19,6 +21,7 @@ mapping  ownerobjs;  /* ([ int uid: object ownerobj ]) */
  */
 static void create()
 {
+    rsrc::create();
     tls::create();
     driver = find_object(DRIVER);
     initd = find_object(INITD);
@@ -91,7 +94,7 @@ int *split_oid(int oid)
  * NAME:        compile()
  * DESCRIPTION: the given object has just been compiled
  */
-void compile(string owner, object obj, string source, string inherited...)
+void compile(string owner, object obj, string *source, string inherited...)
 {
     int uid;
 
@@ -108,7 +111,8 @@ void compile(string owner, object obj, string source, string inherited...)
  * NAME:        compile_lib()
  * DESCRIPTION: the given inheritable object has just been compiled
  */
-void compile_lib(string owner, string path, string source, string inherited...)
+void compile_lib(string owner, string path, string *source,
+                 string inherited...)
 {
     int uid;
 
@@ -137,13 +141,19 @@ void remove_program(string owner, string path, int timestamp, int index)
 }
 
 /*
- * NAME:        path_special()
+ * NAME:        include_file()
  * DESCRIPTION: returns an include path that depends on the compiled path
  */
-string path_special(string compiled)
+mixed include_file(string compiled, string from, string path)
 {
     ASSERT_ACCESS(previous_object() == driver);
-    return "/include/system/auto.h";
+    if (from == "/include/std.h" && path == "AUTO"
+        && driver->creator(compiled) != "System")
+    {
+        return ({ "inherit \"" + SYSTEM_AUTO + "\";\n" });
+    } else {
+        return path;
+    }
 }
 
 /*
@@ -214,6 +224,19 @@ mixed *find_program(int oid)
     return ownerobjs[uid]->find_program(oid);
 }
 
+static mapping program_dir_map(string *dirs)
+{
+    int      i, size;
+    mapping  map;
+
+    map = ([ ]);
+    size = sizeof(dirs);
+    for (i = 0; i < size; ++i) {
+        map[dirs[i]] = -2;
+    }
+    return map;
+}
+
 /*
  * NAME:        get_program_dir()
  * DESCRIPTION: return all programs within a parent directory
@@ -225,6 +248,12 @@ mapping get_program_dir(string path)
 
     ASSERT_ACCESS(previous_object() == initd);
     DEBUG_ASSERT(path);
+    if (path == "/") {
+        return program_dir_map(({ "kernel", USR_DIR[1 ..] }));
+    } else if (path == USR_DIR) {
+        return program_dir_map(query_owners() - ({ nil }));
+    }
+
     creator = driver->creator(path + "/");
     uid = uids[creator];
     if (uid == nil) {
