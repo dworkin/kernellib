@@ -1,8 +1,7 @@
-# define GO_DIRECTION_ACTION       "/usr/Game/data/action/go_direction"
+# define GO_ACTION       "/usr/Game/data/action/go"
 
-# define LOOK_ACTION               "/usr/Game/data/action/look"
-# define LOOK_AT_SELECTION_ACTION  "/usr/Game/data/action/look_at_selection"
+# define LOOK_ACTION     "/usr/Game/data/action/look"
+# define LOOK_AT_ACTION  "/usr/Game/data/action/look_at"
 
-# define SAY_QUOTE_ACTION          "/usr/Game/data/action/say_quote"
-# define SAY_QUOTE_TO_SELECTION_ACTION \
-    "/usr/Game/data/action/say_quote_to_selection"
+# define SAY_ACTION      "/usr/Game/data/action/say"
+# define SAY_TO_ACTION   "/usr/Game/data/action/say_to"

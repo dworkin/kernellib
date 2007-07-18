@@ -13,10 +13,10 @@ object *parse(string command)
     return parse_string(grammar_, command);
 }
 
-static mixed *parse_go_direction_command(mixed *tree)
+static mixed *parse_go_command(mixed *tree)
 {
     return tree;
-    return ({ new_object(GO_DIRECTION_ACTION, tree[1]) });
+    return ({ new_object(GO_ACTION, tree[1]) });
 }
 
 static mixed *parse_look_command(mixed *tree)
@@ -25,22 +25,22 @@ static mixed *parse_look_command(mixed *tree)
     return ({ new_object(LOOK_ACTION) });
 }
 
-static mixed *parse_look_at_selection_command(mixed *tree)
+static mixed *parse_look_at_command(mixed *tree)
 {
     return tree;
-    return ({ new_object(LOOK_AT_SELECTION_ACTION, tree[2]) });
+    return ({ new_object(LOOK_AT_ACTION, tree[2]) });
 }
 
-static mixed *parse_say_quote_command(mixed *tree)
+static mixed *parse_say_command(mixed *tree)
 {
     return tree;
-    return ({ new_object(SAY_QUOTE_ACTION, tree[1]) });
+    return ({ new_object(SAY_ACTION, tree[1]) });
 }
 
-static mixed *parse_say_quote_to_selection_command(mixed *tree)
+static mixed *parse_say_to_command(mixed *tree)
 {
     return tree;
-    return ({ new_object(SAY_QUOTE_TO_SELECTION_ACTION, tree[1], tree[2]) });
+    return ({ new_object(SAY_TO_ACTION, tree[1], tree[2]) });
 }
 
 static mixed *parse_words(mixed *tree)
