@@ -1,79 +1,78 @@
 word = /[a-z]+/
+quote = /'[^']+'?|"[^"]+"?/
 whitespace = / /
+dummy = nomatch
 
-COMMAND : 'go' DIRECTION ? cmd_go_direction
+CMD : 'go' DIR ? parse_go_direction_command
 
-COMMAND : 'look' ? cmd_look
-COMMAND : 'look' 'at' THING ? cmd_look_at_thing
+CMD : 'look' ? parse_look_command
+CMD : 'look' 'at' SEL ? parse_look_at_selection_command
+CMD : 'listen' ? parse_listen_command
+CMD : 'listen' 'to' SEL ? parse_listen_to_selection_command
+CMD : 'smell' ? parse_smell_command
+CMD : 'smell' SEL ? parse_smell_selection_command
+CMD : 'touch' SEL ? parse_touch_selection_command
+CMD : 'taste' SEL ? parse_taste_selection_command
 
-COMMAND : 'listen' ? cmd_listen
-COMMAND : 'listen' 'to' THING ? cmd_listen_to_thing
+CMD : 'take' SEL ? parse_take_selection_command
+CMD : 'drop' SEL ? parse_drop_selection_command
+CMD : 'put' SEL 'in' SEL ? parse_put_selection_in_selection_command
+CMD : 'get' SEL 'from' SEL ? parse_get_selection_from_selection_command
 
-COMMAND : 'smell' ? cmd_smell
-COMMAND : 'smell' THING ? cmd_smell_thing
+CMD : 'wield' SEL ? parse_wield_selection_command
+CMD : 'release' SEL ? parse_release_selection_command
+CMD : 'wear' SEL ? parse_wear_selection_command
+CMD : 'remove' SEL ? parse_remove_selection_command
 
-COMMAND : 'touch' THING ? cmd_touch_thing
-COMMAND : 'feel' THING ? cmd_feel_thing
-COMMAND : 'taste' THING ? cmd_taste_thing
+CMD : 'give' SEL 'to' SEL ? parse_give_selection_to_selection_command
+CMD : 'attack' SEL ? parse_attack_selection_command
 
-COMMAND : 'take' THING ? cmd_take_thing
-COMMAND : 'get' THING ? cmd_get_thing
-COMMAND : 'pick' 'up' THING ? cmd_pick_up_thing
-COMMAND : 'pick' THING 'up' ? cmd_pick_thing_up
+CMD : 'say' QUOTE ? parse_say_quote_command
+CMD : 'say' QUOTE 'to' SEL ? parse_say_quote_to_selection_command
 
-COMMAND : 'drop' THING ? cmd_drop_thing
-COMMAND : 'put' 'down' THING ? cmd_put_down_thing
-COMMAND : 'put' THINGS 'down' ? cmd_put_things_down
+SEL: OPT_THE OPT_ADJS NOUNS ? parse_selection
+SEL: OPT_THE ORD OPT_ADJS NOUNS ? parse_selection_with_ordinal
 
-COMMAND : 'put' THING 'in' THING ? cmd_put_thing_in_thing
-COMMAND : 'insert' THING 'into' THING ? cmd_insert_thing_into_thing
+SEL: A_OR_AN OPT_ADJS NOUNS ? parse_selection_with_a_or_an
+SEL: OPT_THE COUNT OPT_ADJS NOUNS ? parse_selection_with_count
+SEL: COUNT 'of' 'the' OPT_ADJS NOUNS ? parse_selection_with_count_of_the
 
-COMMAND : 'get' THING 'from' THING ? cmd_get_thing_from_thing
-COMMAND : 'get' THING 'out' 'of' THING ? cmd_get_thing_out_of_thing
-COMMAND : 'take' THING 'from' THING ? cmd_take_thing_from_thing
-COMMAND : 'take' THING 'out' 'of' THING ? cmd_take_thing_out_of_thing
-COMMAND : 'remove' THING 'from' THING ? cmd_remove_thing_from_thing
+SEL : 'all' ? parse_all_selection
+SEL: 'all' OPT_THE OPT_ADJS NOUNS ? parse_selection_with_all
+SEL : 'all' 'of' 'the' OPT_ADJS NOUNS ? parse_selection_with_all_of_the
+SEL : 'each' OPT_ADJS NOUNS ? parse_selection_with_each
+SEL : 'each' 'of' 'the' OPT_ADJS NOUNS ? parse_selection_with_each_of_the
+SEL : 'every' OPT_ADJS NOUNS ? parse_selection_with_every
 
-COMMAND : 'wear' THING ? cmd_wear_thing
-COMMAND : 'put' 'on' THING ? cmd_put_on_thing
-COMMAND : 'put' THING 'on' ? cmd_put_thing_on
+SEL_LIST : SEL
+SEL_LIST : SEL_LIST ',' SEL
+SEL_LIST : SEL_LIST 'and' SEL
+SEL_LIST : SEL_LIST ',' 'and' SEL
+SELS : SEL_LIST ? parse_selections
 
-COMMAND : 'remove' THING ? cmd_remove_thing
-COMMAND : 'remove' THING ? cmd_remove_thing
-COMMAND : 'take' 'off' THING ? cmd_take_off_thing
-COMMAND : 'take' THING 'off' ? cmd_take_thing_off
+ADJ : word ? parse_adjective
+ADJ_LIST : ADJ
+ADJ_LIST : ADJ_LIST ADJ
+ADJ_LIST : ADJ_LIST ',' ADJ
+ADJ_LIST : ADJ_LIST 'and' ADJ
+ADJ_LIST : ADJ_LIST ',' 'and' ADJ
+ADJS : ADJ_LIST ? parse_adjectives
 
-COMMAND : 'wield' THING ? cmd_wield_thing
-COMMAND : 'draw' THING ? cmd_draw_thing
-COMMAND : 'hold' THING ? cmd_hold_thing
+OPT_ADJS : ? parse_optional_adjectives
+OPT_ADJS : ADJS
 
-COMMAND : 'release' THING ? cmd_release_thing
-COMMAND : 'put' 'away' THING ? cmd_put_away_thing
-COMMAND : 'put' THING 'away' ? cmd_put_thing_away
-COMMAND : 'put' 'aside' THING ? cmd_put_aside_thing
-COMMAND : 'put' THING 'aside' ? cmd_put_thing_aside
+NOUN : word ? parse_noun
+NOUN_LIST : NOUN
+NOUN_LIST : NOUN_LIST NOUN
+NOUNS : NOUN_LIST ? parse_nouns
 
-COMMAND : 'give' THING 'to' THING ? cmd_give_thing_to_thing
-COMMAND : 'attack' THING ? cmd_attack_thing
+A_OR_AN : 'a'
+A_OR_AN : 'an'
 
-WORD : word
-WORD_LIST : WORD
-WORD_LIST : WORD_LIST WORD
-WORDS: WORD_LIST ? word_list_to_words
+OPT_THE :
+OPT_THE : 'the' ? parse_optional_the
 
-THING : WORDS ? words_to_thing
-THING_LIST : THING
-THING_LIST : THING_LIST ',' THING
-THING_LIST : THING_LIST 'and' THING
-THINGS : THING_LIST ? thing_list_to_things
-
-DIRECTION : 'north'
-DIRECTION : 'south'
-DIRECTION : 'east'
-DIRECTION : 'west'
-DIRECTION : 'northwest'
-DIRECTION : 'northeast'
-DIRECTION : 'southwest'
-DIRECTION : 'southeast'
-DIRECTION : 'up'
-DIRECTION : 'down'
+COUNT : word ? parse_count
+ORD : word ? parse_ordinal
+DIR : word ? parse_direction
+QUOTE : quote ? parse_quote
