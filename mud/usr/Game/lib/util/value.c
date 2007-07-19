@@ -64,8 +64,11 @@ static string dump_array(mixed *arr, varargs mapping seen)
     }
     seen[arr] = map_sizeof(seen) + 1;
 
-    str = "({ ";
     size = sizeof(arr);
+    if (!size) {
+        return "({ })";
+    }
+    str = "({ ";
     for (i = 0; i < size; ++i) {
         if (i) {
             str += ", ";
@@ -89,11 +92,13 @@ static string dump_mapping(mapping map, varargs mapping seen)
     }
     seen[map] = map_sizeof(seen) + 1;
 
+    size = map_sizeof(map);
+    if (!size) {
+        return "([ ])";
+    }
     inds = map_indices(map);
     vals = map_values(map);
     str = "([ ";
-
-    size = sizeof(inds);
     for (i = 0; i < size; ++i) {
         if (i) {
             str += ", ";
