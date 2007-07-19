@@ -15,12 +15,17 @@ static string normalize_whitespace(string str)
     return str;
 }
 
+static int has_substring(string str, string sub)
+{
+    if (sscanf(sub, "%*s%%")) {
+        sub = implode(explode("%" + sub + "%", "%"), "%%");
+    }
+    return sscanf(str, "%*s" + sub);
+}
+
 static string replace_string(string str, string from, string to)
 {
-    if (sscanf(from, "%*s%%")) {
-        from = implode(explode("%" + from + "%", "%"), "%%");
-    }
-    if (sscanf(str, "%*s" + from)) {
+    if (has_substring(str, from)) {
         str = implode(explode(from + str + from, from), to);
     }
     return str;

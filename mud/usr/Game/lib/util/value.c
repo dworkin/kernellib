@@ -31,7 +31,7 @@ static string dump_float(float f)
     string str;
 
     str = (string) f;
-    if (!sscanf(str, "%*s.") && !sscanf(str, "%*se")) {
+    if (!has_substring(str, ".") && !has_substring(str, "e")) {
         str += ".0";
     }
     return str;
@@ -53,11 +53,11 @@ static string dump_object(object obj)
 
 static string dump_array(mixed *arr, varargs mapping seen)
 {
-    string str;
-    int i, size;
+    string  str;
+    int     i, size;
 
     if (seen && seen[arr]) {
-        return "#" + seen[arr];
+        return "#" + (seen[arr] - 1);
     }
     if (!seen) {
         seen = ([ ]);
@@ -77,12 +77,12 @@ static string dump_array(mixed *arr, varargs mapping seen)
 
 static string dump_mapping(mapping map, varargs mapping seen)
 {
-    mixed *inds, *vals;
-    string str;
-    int i, size;
+    mixed  *inds, *vals;
+    string  str;
+    int     i, size;
 
     if (seen && seen[map]) {
-        return "@" + seen[map];
+        return "@" + (seen[map] - 1);
     }
     if (!seen) {
         seen = ([ ]);

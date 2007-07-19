@@ -100,7 +100,7 @@ static mixed *parse_selector_2(mixed *tree)
 
 static mixed *parse_except_selector(mixed *tree)
 {
-    return ({ tree - ({ "except", "but", "not" }) });
+    return ({ tree });
 }
 
 static mixed *parse_top_selector(mixed *tree)
