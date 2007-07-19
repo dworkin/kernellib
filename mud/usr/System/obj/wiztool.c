@@ -1,3 +1,4 @@
+# include <type.h>
 # include <kernel/kernel.h>
 # include <kernel/user.h>
 
@@ -73,6 +74,7 @@ static void process(string str)
     case "compile":
     case "clone":
     case "destruct":
+    case "find":
 
     case "cd":
     case "pwd":
@@ -103,4 +105,43 @@ static void process(string str)
 	message("No command: " + str + "\n");
 	break;
     }
+}
+
+static void cmd_find(object user, string cmd, string str)
+{
+    int i;
+    mixed obj;
+
+    i = -1;
+    if (!str || (sscanf(str, "$%d%s", i, str) != 0 && (i < 0 || str != "")))
+    {
+        message("Usage: " + cmd + " [<obj> | $<ident>]\n");
+        return;
+    }
+
+    if (i >= 0) {
+        str = catch(obj = fetch(i));
+        if (str) {
+            message("Error: " + str + "\n");
+            return;
+        }
+        if (typeof(obj) != T_OBJECT) {
+            message("Not an object.\n");
+            return;
+        }
+    } else if (sscanf(str, "$%s", str) != 0) {
+        obj = ident(str);
+        if (!obj) {
+            message("Unknown $ident.\n");
+            return;
+        }
+    } else {
+        str = DRIVER->normalize_path(str, query_directory(), query_owner());
+        obj = find_object(str);
+        if (!obj) {
+            message("No such object.\n");
+            return;
+        }
+    }
+    store(obj);
 }
