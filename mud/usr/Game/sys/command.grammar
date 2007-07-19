@@ -1,78 +1,118 @@
-word = /[a-z]+/
+word = /[0-9a-z]+(-[0-9a-z]+)*/
 quote = /'[^']+'?|"[^"]+"?/
-whitespace = / /
-dummy = nomatch
+whitespace = / +/
 
-CMD : 'go' DIR ? parse_go_command
+CMD: 'go' DIR ? parse_go_command
+CMD: DIR ? parse_go_command
 
-CMD : 'look' ? parse_look_command
-CMD : 'look' 'at' SEL ? parse_look_at_command
-CMD : 'listen' ? parse_listen_command
-CMD : 'listen' 'to' SEL ? parse_listen_to_command
-CMD : 'smell' ? parse_smell_command
-CMD : 'smell' SEL ? parse_smell_command
-CMD : 'touch' SEL ? parse_touch_command
-CMD : 'taste' SEL ? parse_taste_command
+CMD: 'look' ? parse_look_command
+CMD: 'look' 'at' SEL ? parse_look_command
+CMD: 'listen' ? parse_listen_command
+CMD: 'listen' 'to' SEL ? parse_listen_command
+CMD: 'smell' ? parse_smell_command
+CMD: 'smell' SEL ? parse_smell_command
+CMD: 'touch' SEL ? parse_touch_command
+CMD: 'taste' SEL ? parse_taste_command
 
-CMD : 'take' SEL ? parse_take_command
-CMD : 'drop' SEL ? parse_drop_command
-CMD : 'put' SEL 'in' SEL ? parse_put_in_command
-CMD : 'get' SEL 'from' SEL ? parse_get_from_command
+CMD: 'pick' 'up' SEL ? parse_pick_up_command
+CMD: 'take' SEL ? parse_pick_up_command
+CMD: 'get' SEL ? parse_pick_up_command
+CMD: 'put' 'down' SEL ? parse_put_down_command
+CMD: 'drop' SEL ? parse_put_down_command
+ 
+CMD: 'put' SEL 'in' SEL ? parse_put_in_command
+CMD: 'take' SEL 'out' 'of' SEL ? parse_take_out_command
+CMD: 'take' SEL 'from' SEL ? parse_take_out_command
+CMD: 'get' SEL 'out' 'of' SEL ? parse_take_out_command
+CMD: 'get' SEL 'from' SEL ? parse_take_out_command
 
-CMD : 'wield' SEL ? parse_wield_command
-CMD : 'release' SEL ? parse_release_command
-CMD : 'wear' SEL ? parse_wear_command
-CMD : 'remove' SEL ? parse_remove_command
+CMD: 'put' 'on' SEL ? parse_put_on_command
+CMD: 'wear' SEL ? parse_put_on_command
+CMD: 'take' 'off' SEL ? parse_take_off_command
+CMD: 'remove' SEL ? parse_take_off_command
 
-CMD : 'give' SEL 'to' SEL ? parse_give_command
-CMD : 'attack' SEL ? parse_attack_command
+CMD: 'wield' SEL ? parse_wield_command
+CMD: 'release' ? parse_release_command
 
-CMD : 'say' QUOTE ? parse_say_command
-CMD : 'say' QUOTE 'to' SEL ? parse_say_to_command
+CMD: 'eat' SEL ? parse_eat_command
+CMD: 'drink' SEL ? parse_drink_command
 
-SEL: OPT_THE OPT_ADJS NOUNS ? parse_selection
-SEL: OPT_THE ORD OPT_ADJS NOUNS ? parse_selection_with_ordinal
+CMD: 'open' SEL ? parse_open_command
+CMD: 'close' SEL ? parse_close_command
 
-SEL: A_OR_AN OPT_ADJS NOUNS ? parse_selection_with_a_or_an
-SEL: OPT_THE COUNT OPT_ADJS NOUNS ? parse_selection_with_count
-SEL: COUNT 'of' 'the' OPT_ADJS NOUNS ? parse_selection_with_count_of_the
+CMD: 'lock' SEL ? parse_lock_command
+CMD: 'lock' SEL 'with' SEL ? parse_lock_command
+CMD: 'unlock' SEL ? parse_unlock_command
+CMD: 'unlock' SEL 'with' SEL ? parse_unlock_command
 
-SEL : 'all' ? parse_all_selection
-SEL: 'all' OPT_THE OPT_ADJS NOUNS ? parse_selection_with_all
-SEL : 'all' 'of' 'the' OPT_ADJS NOUNS ? parse_selection_with_all_of_the
-SEL : 'each' OPT_ADJS NOUNS ? parse_selection_with_each
-SEL : 'each' 'of' 'the' OPT_ADJS NOUNS ? parse_selection_with_each_of_the
-SEL : 'every' OPT_ADJS NOUNS ? parse_selection_with_every
+CMD: 'give' SEL 'to' SEL ? parse_give_command
+CMD: 'attack' SEL ? parse_attack_command
 
-SEL_LIST : SEL
-SEL_LIST : SEL_LIST ',' SEL
-SEL_LIST : SEL_LIST 'and' SEL
-SEL_LIST : SEL_LIST ',' 'and' SEL
-SELS : SEL_LIST ? parse_selections
+CMD: 'read' SEL ? parse_read_command
+CMD: 'write' QUOTE 'on' SEL ? parse_write_command
 
-ADJ : word ? parse_adjective
-ADJ_LIST : ADJ
-ADJ_LIST : ADJ_LIST ADJ
-ADJ_LIST : ADJ_LIST ',' ADJ
-ADJ_LIST : ADJ_LIST 'and' ADJ
-ADJ_LIST : ADJ_LIST ',' 'and' ADJ
-ADJS : ADJ_LIST ? parse_adjectives
+CMD: 'push' SEL ? parse_push_command
+CMD: 'pull' SEL ? parse_pull_command
 
-OPT_ADJS : ? parse_optional_adjectives
-OPT_ADJS : ADJS
+CMD: 'invite' SEL ? parse_invite_command
+CMD: 'join' SEL ? parse_join_command
+CMD: 'appoint' SEL ? parse_appoint_command
+CMD: 'resign' ? parse_resign_command
+CMD: 'dismiss' SEL ? parse_dismiss_command
+CMD: 'disband' ? parse_disband_command
 
-NOUN : word ? parse_noun
-NOUN_LIST : NOUN
-NOUN_LIST : NOUN_LIST NOUN
-NOUNS : NOUN_LIST ? parse_nouns
+CMD: 'whisper' QUOTE ? parse_whisper_command
+CMD: 'whisper' QUOTE 'to' SEL ? parse_whisper_command
 
-A_OR_AN : 'a'
-A_OR_AN : 'an'
+CMD: 'say' QUOTE ? parse_say_command
+CMD: 'say' QUOTE 'to' SEL ? parse_say_command
+CMD: QUOTE ? parse_say_command
+CMD: QUOTE 'to' SEL ? parse_say_command
 
-OPT_THE :
-OPT_THE : 'the' ? parse_optional_the
+CMD: 'shout' QUOTE ? parse_shout_command
+CMD: 'shout' QUOTE 'to' SEL ? parse_shout_command
 
-COUNT : word ? parse_count
-ORD : word ? parse_ordinal
-DIR : word ? parse_direction
-QUOTE : quote ? parse_quote
+WORD: word ? parse_word
+REC_WORD: WORD
+REC_WORD: REC_WORD WORD
+WORDS: REC_WORD ? parse_words
+
+OPT_THE:
+OPT_THE: 'the'
+OPT_A:
+OPT_A: 'a'
+
+SEL_1: OPT_THE WORDS ? parse_selector
+SEL_1: OPT_THE ORD WORDS ? parse_ordinal_selector
+SEL_1: OPT_THE ORD 'of' OPT_THE WORDS ? parse_ordinal_selector
+
+SEL_1: 'a' WORDS ? parse_a_selector
+SEL_1: 'an' WORDS ? parse_a_selector
+SEL_1: COUNT WORDS ? parse_count_selector
+SEL_1: COUNT 'of' OPT_THE WORDS ? parse_count_selector
+
+SEL_1: 'all' ? parse_all_selector
+SEL_1: 'all' OPT_THE WORDS ? parse_all_of_selector
+SEL_1: 'all' 'of' OPT_THE WORDS ? parse_all_of_selector
+SEL_1: 'each' WORDS ? parse_all_of_selector
+SEL_1: 'each' 'of' OPT_THE WORDS ? parse_all_of_selector
+SEL_1: 'every' WORDS ? parse_all_of_selector
+
+REC_SEL_1: SEL_1
+REC_SEL_1: REC_SEL_1 ',' SEL_1
+REC_SEL_1: REC_SEL_1 'and' SEL_1
+REC_SEL_1: REC_SEL_1 ',' 'and' SEL_1
+REC_SEL_1: REC_SEL_1 'or' SEL_1
+REC_SEL_1: REC_SEL_1 ',' 'or' SEL_1
+SEL_2: REC_SEL_1 ? parse_selector_2
+
+SEL_3: SEL_2
+SEL_3: SEL_2 'except' SEL_2 ? parse_except_selector
+SEL_3: SEL_2 'but' SEL_2 ? parse_except_selector
+SEL_3: SEL_2 'but' 'not' SEL_2 ? parse_except_selector
+SEL: SEL_3 ? parse_top_selector
+
+COUNT: word ? parse_count
+ORD: word ? parse_ordinal
+DIR: word ? parse_direction
+QUOTE: quote ? parse_quote

@@ -1,5 +1,8 @@
 # include <config.h>
 # include <type.h>
+# include <game/string.h>
+
+private inherit UTIL_STRING;
 
 static mixed min_value(mixed a, mixed b)
 {
@@ -11,19 +14,19 @@ static mixed max_value(mixed a, mixed b)
     return a > b ? a : b;
 }
 
-static string format_value(mixed val, varargs mapping seen);
+static string dump_value(mixed val, varargs mapping seen);
 
-static string format_nil()
+static string dump_nil()
 {
     return "nil";
 }
 
-static string format_int(int i)
+static string dump_int(int i)
 {
     return (string) i;
 }
 
-static string format_float(float f)
+static string dump_float(float f)
 {
     string str;
 
@@ -34,28 +37,32 @@ static string format_float(float f)
     return str;
 }
 
-static string format_string(string str)
+static string dump_string(string str)
 {
+    str = replace_string(str, "\\", "\\\\");
+    str = replace_string(str, "\"", "\\\"");
+    str = replace_string(str, "\n", "\\n");
+    str = replace_string(str, "\t", "\\t");
     return "\"" + str + "\"";
 }
 
-static string format_object(object obj)
+static string dump_object(object obj)
 {
     return "<" + object_name(obj) + ">";
 }
 
-static string format_array(mixed *arr, varargs mapping seen)
+static string dump_array(mixed *arr, varargs mapping seen)
 {
     string str;
     int i, size;
 
     if (seen && seen[arr]) {
-        return "({ ... })";
+        return "#" + seen[arr];
     }
     if (!seen) {
         seen = ([ ]);
     }
-    seen[arr] = TRUE;
+    seen[arr] = map_sizeof(seen) + 1;
 
     str = "({ ";
     size = sizeof(arr);
@@ -63,24 +70,24 @@ static string format_array(mixed *arr, varargs mapping seen)
         if (i) {
             str += ", ";
         }
-        str += format_value(arr[i], seen);
+        str += dump_value(arr[i], seen);
     }
     return str + " })";
 }
 
-static string format_mapping(mapping map, varargs mapping seen)
+static string dump_mapping(mapping map, varargs mapping seen)
 {
     mixed *inds, *vals;
     string str;
     int i, size;
 
     if (seen && seen[map]) {
-        return "([ ... ])";
+        return "@" + seen[map];
     }
     if (!seen) {
         seen = ([ ]);
     }
-    seen[map] = TRUE;
+    seen[map] = map_sizeof(seen) + 1;
 
     inds = map_indices(map);
     vals = map_values(map);
@@ -91,21 +98,21 @@ static string format_mapping(mapping map, varargs mapping seen)
         if (i) {
             str += ", ";
         }
-        str += format_value(inds[i], seen) + ": "
-            + format_value(vals[i], seen);
+        str += dump_value(inds[i], seen) + ": "
+            + dump_value(vals[i], seen);
     }
     return str + " ])";
 }
 
-static string format_value(mixed val, varargs mapping seen)
+static string dump_value(mixed val, varargs mapping seen)
 {
     switch (typeof(val)) {
-    case T_NIL:     return format_nil();
-    case T_INT:     return format_int(val);
-    case T_FLOAT:   return format_float(val);
-    case T_STRING:  return format_string(val);
-    case T_OBJECT:  return format_object(val);
-    case T_ARRAY:   return format_array(val, seen);
-    case T_MAPPING: return format_mapping(val, seen);
+    case T_NIL:     return dump_nil();
+    case T_INT:     return dump_int(val);
+    case T_FLOAT:   return dump_float(val);
+    case T_STRING:  return dump_string(val);
+    case T_OBJECT:  return dump_object(val);
+    case T_ARRAY:   return dump_array(val, seen);
+    case T_MAPPING: return dump_mapping(val, seen);
     }
 }

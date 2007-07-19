@@ -1,5 +1,10 @@
 # include <game/action.h>
+# include <game/direction.h>
+# include <game/string.h>
 # include <system/system.h>
+
+inherit UTIL_DIRECTION;
+inherit UTIL_STRING;
 
 string grammar_;
 
@@ -43,154 +48,64 @@ static mixed *parse_say_to_command(mixed *tree)
     return ({ new_object(SAY_TO_ACTION, tree[1], tree[2]) });
 }
 
+static mixed *parse_word(mixed *tree)
+{
+    return tree;
+}
+
 static mixed *parse_words(mixed *tree)
 {
     return ({ tree });
 }
 
-static int is_adjective(string str)
+static mixed *parse_selector(mixed *tree)
 {
-    switch (str) {
-    case "bald":
-    case "big":
-    case "black":
-    case "blue":
-    case "bright":
-    case "brown":
-    case "clean":
-    case "clever":
-    case "dark":
-    case "dirty":
-    case "dull":
-    case "fat":
-    case "fast":
-    case "furry":
-    case "gray":
-    case "green":
-    case "hairy":
-    case "happy":
-    case "heavy":
-    case "light":
-    case "loud":
-    case "old":
-    case "orange":
-    case "pink":
-    case "red":
-    case "rusty":
-    case "sharp":
-    case "shiny":
-    case "shy":
-    case "slow":
-    case "small":
-    case "strong":
-    case "stupid":
-    case "thin":
-    case "two-headed":
-    case "weak":
-    case "white":
-    case "yellow":
-    case "young":
-        return TRUE;
-
-    default:
-        return FALSE;
-    }
+    tree -= ({ "the" });
+    return ({ ([ "words": tree[0] ]) });
 }
 
-static mixed *parse_adjective(mixed *tree)
+static mixed *parse_ordinal_selector(mixed *tree)
 {
-    return is_adjective(tree[0]) ? tree : nil;
+    tree -= ({ "of", "the" });
+    return ({ ([ "ord": tree[0], "words": tree[1] ]) });
 }
 
-static mixed *parse_adjectives(mixed *tree)
+static mixed *parse_a_selector(mixed *tree)
 {
-    return ({ tree - ({ ",", "and" }) });
+    return ({ ([ "count": 1, "words": tree[1] ]) });
 }
 
-static mixed *parse_optional_adjectives(mixed *tree)
+static mixed *parse_count_selector(mixed *tree)
 {
-    return ({ ({ }) });
+    tree -= ({ "of", "the" });
+    return ({ ([ "count": tree[0], "words": tree[1] ]) });
 }
 
-static int is_noun(string str)
+static mixed *parse_all_selector(mixed *tree)
 {
-    switch (str) {
-    case "amulet":
-    case "arm":
-    case "armor":
-    case "axe":
-    case "body":
-    case "boot":
-    case "boy":
-    case "bracelet":
-    case "cage":
-    case "child":
-    case "cloak":
-    case "dragon":
-    case "dwarf":
-    case "ear":
-    case "elf":
-    case "eye":
-    case "finger":
-    case "foot":
-    case "gauntlet":
-    case "giant":
-    case "girl":
-    case "glove":
-    case "goblin":
-    case "greave":
-    case "guard":
-    case "head":
-    case "helmet":
-    case "hand":
-    case "human":
-    case "hunter":
-    case "hydra":
-    case "knife":
-    case "leg":
-    case "man":
-    case "mouth":
-    case "neck":
-    case "nose":
-    case "priest":
-    case "ranger":
-    case "ring":
-    case "shield":
-    case "shirt":
-    case "shoe":
-    case "spear":
-    case "sword":
-    case "throat":
-    case "toe":
-    case "troll":
-    case "warrior":
-    case "wizard":
-    case "woman":
-        return TRUE;
-
-    default:
-        return FALSE;
-    }
+    return ({ ([ "count": -1 ]) });
 }
 
-static mixed *parse_noun(mixed *tree)
+static mixed *parse_all_of_selector(mixed *tree)
 {
-    return is_noun(tree[0]) ? tree : nil;
+    tree -= ({ "of", "the" });
+    return ({ ([ "count": -1, "words": tree[1] ]) });
 }
 
-static mixed *parse_nouns(mixed *tree)
+static mixed *parse_selector_2(mixed *tree)
 {
+    tree -= ({ ",", "and", "or" });
     return ({ tree });
 }
 
-static mixed *parse_optional_the(mixed *tree)
+static mixed *parse_except_selector(mixed *tree)
 {
-    return ({ });
+    return ({ tree - ({ "except", "but", "not" }) });
 }
 
-static mixed *parse_selection(mixed *tree)
+static mixed *parse_top_selector(mixed *tree)
 {
-    return ({ tree });
+    return tree;
 }
 
 static mixed *parse_count(mixed *tree)
@@ -248,43 +163,9 @@ static mixed *parse_ordinal(mixed *tree)
     }
 }
 
-static int is_direction(string str)
-{
-    switch (str) {
-    case "east":
-    case "north":
-    case "northeast":
-    case "northwest":
-    case "south":
-    case "southeast":
-    case "southwest":
-    case "west":
-
-    case "down":
-    case "up":
-        return TRUE;
-
-    default:
-        return FALSE;
-    }
-}
-
 static mixed *parse_direction(mixed *tree)
 {
     return is_direction(tree[0]) ? tree : nil;
-}
-
-static string remove_suffix(string str, string suffix)
-{
-    int len, suffix_len;
-
-    len = strlen(str);
-    suffix_len = strlen(suffix);
-    if (len >= suffix_len && str[len - suffix_len ..] == suffix) {
-        return str[.. len - suffix_len - 1];
-    } else {
-        return str;
-    }
 }
 
 static mixed *parse_quote(mixed *tree)

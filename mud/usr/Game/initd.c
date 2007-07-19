@@ -11,7 +11,7 @@ object commandd_;
 
 static void test_command(string command)
 {
-    message(format_value(commandd_->parse(command)));
+    message(dump_value(commandd_->parse(command)));
 }
 
 static void create()
@@ -32,4 +32,5 @@ static void create()
 
     test_command("say 'Hello, World!");
     test_command("say 'Hello, World!' to elf");
+    test_command("say 'Hello, World!' to elves except orcs");
 }
