@@ -62,3 +62,11 @@ static string add_suffix(string str, string suffix)
 {
     return has_suffix(str, suffix) ? str : str + suffix;
 }
+
+static string capitalize(string str)
+{
+    if (strlen(str) && str[0] >= 'a' && str[0] <= 'z') {
+        str[0] = str[0] - 'a' + 'A';
+    }
+    return str;
+}

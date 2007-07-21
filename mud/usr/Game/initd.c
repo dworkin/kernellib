@@ -1,5 +1,6 @@
 # include <game/action.h>
 # include <game/command.h>
+# include <game/selector.h>
 # include <game/value.h>
 # include <game/word.h>
 # include <system/assert.h>
@@ -16,11 +17,20 @@ static void test_command(string command)
 
 static void create()
 {
-    compile_object(GO_ACTION);
     compile_object(LOOK_ACTION);
     compile_object(LOOK_AT_ACTION);
+    compile_object(GO_ACTION);
+    compile_object(PICK_UP_ACTION);
     compile_object(SAY_ACTION);
     compile_object(SAY_TO_ACTION);
+    compile_object(GIVE_ACTION);
+
+    compile_object(SELECTOR);
+    compile_object(ORDINAL_SELECTOR);
+    compile_object(COUNT_SELECTOR);
+    compile_object(ALL_OF_SELECTOR);
+    compile_object(ALL_SELECTOR);
+    compile_object(EXCEPT_SELECTOR);
 
     wordd_ = compile_object(WORDD);
     commandd_ = compile_object(COMMANDD);

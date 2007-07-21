@@ -420,11 +420,12 @@ static mixed *status(varargs mixed obj)
  * NAME:        move_object()
  * DESCRIPTION: move an object to another environment
  */
-static void move_object(object obj, object dest)
+static int move_object(object obj, object dest)
 {
     ASSERT_ARG_1(obj);
     ASSERT_ARG_2(dest == nil || sscanf(::object_name(dest), "%*s#-1") == 0);
     ::call_other(obj, "_F_move", dest);
+    return TRUE;
 }
 
 /*

@@ -1,0 +1,1 @@
+void observe(string mess);
