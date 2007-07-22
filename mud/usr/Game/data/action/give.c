@@ -30,7 +30,7 @@ static object give(object obj, object *inds)
     return nil;
 }
 
-static void perform(object LIB_CREATURE actor)
+void perform(object LIB_CREATURE actor)
 {
     object *objs, env, *inds;
     int i, size;

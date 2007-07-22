@@ -3,12 +3,17 @@
 # include <game/selector.h>
 # include <game/value.h>
 # include <game/word.h>
+# include <game/thing.h>
 # include <system/assert.h>
 
 inherit UTIL_VALUE;
 
+# define ELF     "/usr/Game/obj/elf"
+# define TEMPLE  "/usr/Game/room/temple"
+
 object wordd_;
 object commandd_;
+object temple_;
 
 static void test_command(string command)
 {
@@ -35,6 +40,9 @@ static void create()
     wordd_ = compile_object(WORDD);
     commandd_ = compile_object(COMMANDD);
 
+    compile_object(ELF);
+    temple_ = compile_object(TEMPLE);
+
     test_command("go west");
 
     test_command("look");
@@ -43,4 +51,19 @@ static void create()
     test_command("say 'Hello, World!");
     test_command("say 'Hello, World!' to elf");
     test_command("say 'Hello, World!' to elves except orcs");
+}
+
+object LIB_CREATURE make_creature()
+{
+    object creature;
+
+    creature = clone_object(ELF, 7);
+    
+    move_object(creature, temple_);
+    return creature;
+}
+
+string dump(mixed val)
+{
+    return dump_value(val);
 }

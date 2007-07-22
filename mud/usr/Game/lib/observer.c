@@ -1,1 +1,1 @@
-void observe(string mess);
+void observe(string mess) { }

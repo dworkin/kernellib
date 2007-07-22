@@ -25,7 +25,7 @@ static string arrival_direction(string dir)
     }
 }
 
-static void perform(object LIB_CREATURE actor)
+void perform(object LIB_CREATURE actor)
 {
     object env, dest;
 

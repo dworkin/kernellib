@@ -162,25 +162,35 @@ mixed include_file(string compiled, string from, string path)
  */
 int forbid_inherit(string from, string path, int priv)
 {
+    string fcreator, pcreator;
+
     ASSERT_ACCESS(previous_object() == driver);
+
+    fcreator = driver->creator(from);
+    pcreator = driver->creator(path);
+
+    /* system objects cannot inherit user objects */
+    if (fcreator == "System" && pcreator != "System") {
+        return TRUE;
+    }
 
     /*
      * user objects cannot inherit system objects, except for objects in
      * ~System/open
      */
-    if (driver->creator(from) != "System" && driver->creator(path) == "System"
+    if (fcreator != "System" && pcreator == "System"
         && !sscanf(path, "/usr/System/open/%*s"))
     {
         return TRUE;
     }
 
-    /* forbid private inheritance of objects with undefined functions */
+    /* forbid private inheritance of undefined functions */
     if (priv) {
         mixed *status;
     
         status = status(path);
         if (status && status[O_UNDEFINED]) {
-            driver->message("Abstract object cannot be privately "
+            driver->message("Undefined functions cannot be privately "
                             + "inherited\n");
             return TRUE;
         }

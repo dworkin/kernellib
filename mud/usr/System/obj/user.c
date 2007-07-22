@@ -2,11 +2,14 @@
 # include <kernel/user.h>
 # include <kernel/access.h>
 # include <system/user.h>
+# include <system/system.h>
+
+# include <game/command.h>
+# include <game/game.h>
 
 inherit LIB_USER;
 inherit user API_USER;
 inherit access API_ACCESS;
-
 
 # define STATE_NORMAL		0
 # define STATE_LOGIN		1
@@ -21,7 +24,8 @@ string password;		/* user password */
 static string newpasswd;	/* new password */
 static object wiztool;		/* command handler */
 static int nconn;		/* # of connections */
-static int accinit;		/* access interface initialized */
+
+static object creature;
 
 /*
  * NAME:	create()
@@ -32,7 +36,6 @@ static void create(int clone)
     if (clone) {
 	user::create();
 	access::create();
-	accinit = TRUE;
 	state = ([ ]);
     }
 }
@@ -85,11 +88,8 @@ int login(string str)
 	    /* no password; login immediately */
 	    connection(previous_object());
 	    tell_audience(Name + " logs in.\n");
-	    if (!accinit) {
-		access::create();
-		accinit = TRUE;
-	    }
 	    if (str != "admin" && sizeof(query_users() & ({ str })) == 0) {
+                creature = GAME_INITD->make_creature();
 		message("> ");
 		state[previous_object()] = STATE_NORMAL;
 		return MODE_ECHO;
@@ -144,7 +144,13 @@ int receive_message(string str)
 		cmd = cmd[1 ..];
 	    }
 
-	    if (!wiztool || !query_editor(wiztool) || cmd != str) {
+            if (creature && cmd == str) {
+                object action;
+
+                action = COMMANDD->parse(cmd);
+                message("Action: " + GAME_INITD->dump(action) + "\n");
+                str = nil;
+            } else if (!wiztool || !query_editor(wiztool) || cmd != str) {
 		/* check standard commands */
 		if (strlen(cmd) != 0) {
 		    switch (cmd[0]) {
@@ -244,10 +250,6 @@ int receive_message(string str)
 	    connection(previous_object());
 	    message("\n");
 	    tell_audience(Name + " logs in.\n");
-	    if (!accinit) {
-		access::create();
-		accinit = TRUE;
-	    }
 	    if (!wiztool &&
 		(name == "admin" || sizeof(query_users() & ({ name })) != 0)) {
 		wiztool = clone_object(SYSTEM_WIZTOOL, name);
@@ -292,5 +294,12 @@ int receive_message(string str)
 	}
 	state[previous_object()] = STATE_NORMAL;
 	return MODE_ECHO;
+    }
+}
+
+void observe(string mess)
+{
+    if (previous_object() == creature) {
+        message(mess);
     }
 }

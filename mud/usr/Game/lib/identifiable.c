@@ -1,4 +1,4 @@
-# include <game/actor.h>
+# include <game/thing.h>
 
 mapping adj_;
 mapping sing_;
@@ -37,7 +37,7 @@ static void add_noun(string sing, varargs string plur)
     add_plural_noun(plur ? plur : plural_form(sing));
 }
 
-int singular_identify(string *words, varargs object LIB_ACTOR actor)
+int singular_identify(string *words, varargs object LIB_CREATURE actor)
 {
     int size;
 
@@ -49,7 +49,7 @@ int singular_identify(string *words, varargs object LIB_ACTOR actor)
                    - map_indices(sing_));
 }
 
-int plural_identify(string *words, varargs object LIB_ACTOR actor)
+int plural_identify(string *words, varargs object LIB_CREATURE actor)
 {
     int size;
 
@@ -61,7 +61,7 @@ int plural_identify(string *words, varargs object LIB_ACTOR actor)
                    - map_indices(sing_));
 }
 
-int identify(string *words, varargs object LIB_ACTOR actor)
+int identify(string *words, varargs object LIB_CREATURE actor)
 {
     int size;
 

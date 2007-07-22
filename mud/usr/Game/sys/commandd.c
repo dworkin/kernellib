@@ -13,38 +13,36 @@ static void create()
     grammar_ = read_file("command.grammar");
 }
 
-object *parse(string command)
+object LIB_ACTION parse(string command)
 {
-    return parse_string(grammar_, command);
+    mixed *tree;
+
+    tree = parse_string(grammar_, command);
+    return tree ? tree[0] : nil;
 }
 
 static mixed *parse_go_command(mixed *tree)
 {
-    return tree;
     return ({ new_object(GO_ACTION, tree[1]) });
 }
 
 static mixed *parse_look_command(mixed *tree)
 {
-    return tree;
     return ({ new_object(LOOK_ACTION) });
 }
 
 static mixed *parse_look_at_command(mixed *tree)
 {
-    return tree;
     return ({ new_object(LOOK_AT_ACTION, tree[2]) });
 }
 
 static mixed *parse_say_command(mixed *tree)
 {
-    return tree;
     return ({ new_object(SAY_ACTION, tree[1]) });
 }
 
 static mixed *parse_say_to_command(mixed *tree)
 {
-    return tree;
     return ({ new_object(SAY_TO_ACTION, tree[1], tree[2]) });
 }
 

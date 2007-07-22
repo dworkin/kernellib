@@ -15,7 +15,7 @@ static void create(object LIB_SELECTOR obj)
     obj_ = obj;
 }
 
-static void perform(object LIB_CREATURE actor)
+void perform(object LIB_CREATURE actor)
 {
     object LIB_ROOM    env;
     object LIB_THING  *objs;

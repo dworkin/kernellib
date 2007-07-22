@@ -95,9 +95,38 @@ nomask int _F_system_create(varargs int clone)
             /* no arguments */
 	    call_limited("create");
 	}
-    } else if (ptype == PT_DEFAULT) {
-        oid = ::status(this_object())[O_INDEX];
-	call_limited("create"); 
+    } else {
+        mapping undef;
+
+        undef = status(this_object())[O_UNDEFINED];
+        if (undef) {
+            string *progs, **funcs;
+            int i, size;
+            
+            progs = map_indices(undef);
+            funcs = map_values(undef);
+            size = sizeof(progs);
+            for (i = 0; i < size; ++i) {
+                string mess;
+
+                mess = "undefined function";
+                if (sizeof(funcs[i]) == 1) {
+                    mess += " " + funcs[i][0];
+                } else {
+                    mess += "s " + implode(funcs[i], ", ");
+                }
+                if (progs[i] != oname) {
+                    mess += " (declared in " + progs[i] + ")";
+                }
+                ::call_other(DRIVER, "message",
+                             object_name(this_object()) + ": " + mess + "\n");
+            }
+            error("Non-inheritable object cannot have undefined functions");
+        }
+        if (ptype == PT_DEFAULT) {
+            oid = ::status(this_object())[O_INDEX];
+            call_limited("create"); 
+        }
     }
 
     /* kernel creator function should not call create() */
@@ -459,12 +488,9 @@ static atomic object compile_object(string path, varargs string source...)
     ASSERT_ARG_1(path);
     path = normalize_path(path);
     obj = ::compile_object(path, source...);
-    if (obj != nil && status(obj)[O_UNDEFINED] != nil) {
-	error("Non-inheritable object cannot have undefined functions");
-    }
 
     /* hide clonable and light-weight master objects */
-    return (obj != nil && path_type(path) == PT_DEFAULT) ? obj : nil;
+    return (obj && path_type(path) == PT_DEFAULT) ? obj : nil;
 }
 
 /*
