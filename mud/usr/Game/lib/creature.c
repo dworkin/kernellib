@@ -1,17 +1,37 @@
+# include <game/action.h>
 # include <game/thing.h>
+# include <system/assert.h>
 
 inherit LIB_THING;
 
-object user_;
-
-void set_user(object user)
+static void create()
 {
-    user_ = user;
+    add_event("observe");
+    add_event("error");
+}
+
+int allow_subscribe(object obj, string name)
+{
+    return TRUE;
 }
 
 void observe(string mess)
 {
-    if (user_) {
-        user_->observe(mess);
+    event("observe", mess);
+}
+
+void add_action(object LIB_ACTION action)
+{
+    ASSERT_ARG(action);
+    call_out("act", 0, action);
+}
+
+static void act(object LIB_ACTION action)
+{
+    string error;
+
+    error = catch(action->perform(this_object()));
+    if (error) {
+        event("error", error);
     }
 }

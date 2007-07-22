@@ -24,3 +24,8 @@ string query_exit(string dir)
     }
     return dest;
 }
+
+string *query_exits()
+{
+    return map_indices(exits_);
+}

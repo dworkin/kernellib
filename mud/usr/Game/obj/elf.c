@@ -6,6 +6,7 @@ int level_;
 
 static void create(int level)
 {
+    ::create();
     level_ = level;
 }
 

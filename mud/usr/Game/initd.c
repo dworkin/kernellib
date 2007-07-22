@@ -35,6 +35,7 @@ static void create()
     compile_object(COUNT_SELECTOR);
     compile_object(ALL_OF_SELECTOR);
     compile_object(ALL_SELECTOR);
+    compile_object(LIST_SELECTOR);
     compile_object(EXCEPT_SELECTOR);
 
     wordd_ = compile_object(WORDD);

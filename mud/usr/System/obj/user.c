@@ -90,6 +90,9 @@ int login(string str)
 	    tell_audience(Name + " logs in.\n");
 	    if (str != "admin" && sizeof(query_users() & ({ str })) == 0) {
                 creature = GAME_INITD->make_creature();
+                subscribe_event(creature, "observe");
+                subscribe_event(creature, "error");
+
 		message("> ");
 		state[previous_object()] = STATE_NORMAL;
 		return MODE_ECHO;
@@ -148,7 +151,11 @@ int receive_message(string str)
                 object action;
 
                 action = COMMANDD->parse(cmd);
-                message("Action: " + GAME_INITD->dump(action) + "\n");
+                if (!action) {
+                    message("No such command: " + cmd + "\n");
+                } else {
+                    creature->add_action(action);
+                }
                 str = nil;
             } else if (!wiztool || !query_editor(wiztool) || cmd != str) {
 		/* check standard commands */
@@ -297,9 +304,12 @@ int receive_message(string str)
     }
 }
 
-void observe(string mess)
+static void evt_observe(object sender, string mess)
 {
-    if (previous_object() == creature) {
-        message(mess);
-    }
+    message(mess);
+}
+
+static void evt_error(object sender, string mess)
+{
+    message("Error: " + mess + ".\n");
 }

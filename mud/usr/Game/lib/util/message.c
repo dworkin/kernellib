@@ -6,6 +6,7 @@ private inherit UTIL_STRING;
 static string normalize_message(string mess)
 {
     if (has_suffix(mess, "\n")) {
+        /* preformatted message: do nothing */
         return mess;
     }
 

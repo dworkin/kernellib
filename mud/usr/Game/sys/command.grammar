@@ -104,13 +104,13 @@ REC_SEL_1: REC_SEL_1 'and' SEL_1
 REC_SEL_1: REC_SEL_1 ',' 'and' SEL_1
 REC_SEL_1: REC_SEL_1 'or' SEL_1
 REC_SEL_1: REC_SEL_1 ',' 'or' SEL_1
-SEL_2: REC_SEL_1 ? parse_selector_2
+SEL_2: REC_SEL_1 ? parse_list_selector
 
 SEL_3: SEL_2
 SEL_3: SEL_2 'except' SEL_2 ? parse_except_selector
 SEL_3: SEL_2 'but' SEL_2 ? parse_except_selector
 SEL_3: SEL_2 'but' 'not' SEL_2 ? parse_except_selector
-SEL: SEL_3 ? parse_top_selector
+SEL: SEL_3
 
 COUNT: word ? parse_count
 ORD: word ? parse_ordinal

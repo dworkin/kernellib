@@ -258,27 +258,42 @@ static mixed call_other(mixed obj, string func, mixed args...)
 
             /* find distinct LWO */
             obj = ::call_other(OBJECTD, "find_data", onumber);
-            ASSERT_ARG_1(obj != nil);
-            sscanf(::object_name(obj), "%s#", omaster);
-            ASSERT_ARG_1(master == omaster);
+            if (obj) {
+                sscanf(::object_name(obj), "%s#", omaster);
+                if (master != omaster) {
+                    obj = nil;
+                }
+            }
+            if (!obj) {
+                error("No such object");
+            }
         } else {
-            ASSERT_ARG_1(ptype == PT_DEFAULT
-                         || ptype == PT_CLONABLE && onumber);
+            if (ptype != PT_DEFAULT && (ptype != PT_CLONABLE || !onumber)) {
+                error("Bad object argument for call_other()");
+            }
 	    obj = ::find_object(obj);
-            ASSERT_ARG_1(obj != nil);
+            if (!obj) {
+                error("No such object");
+            }
 	}
     } else {
-        ASSERT_ARG_1(typeof(obj) == T_OBJECT);
+        if (typeof(obj) != T_OBJECT) {
+            error("Bad object argument for call_other()");
+        }
         if (path_type(::object_name(obj)) == PT_LIGHTWEIGHT) {
             ::call_other(obj, "_Q_oid");  /* update environment */
         }
     }
 
     /* function must be callable */
-    ASSERT_ARG_2(func);
+    if (!func) {
+        error("Bad function argument for call_other()");
+    }
     prog = ::function_object(func, obj);
-    ASSERT_ARG_2(prog != nil
-                 && (creator(prog) != "System" || func == "create"));
+    if (!prog) {
+        error("No such function");
+    }
+    ASSERT_ACCESS(creator(prog) != "System" || func == "create");
 
     return ::call_other(obj, func, args...);
 }

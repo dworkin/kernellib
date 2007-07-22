@@ -37,7 +37,7 @@ void perform(object LIB_CREATURE actor)
 
     dest = env->query_exit(dir_);
     if (!dest) {
-        tell_object(actor, "You cannot go there.");
+        tell_object(actor, "You cannot go " + dir_ + " from here.");
         return;
     }
 
