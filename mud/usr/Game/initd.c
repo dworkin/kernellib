@@ -9,6 +9,7 @@
 inherit UTIL_VALUE;
 
 # define ELF     "/usr/Game/obj/elf"
+# define SWORD   "/usr/Game/data/sword"
 # define TEMPLE  "/usr/Game/room/temple"
 
 object wordd_;
@@ -41,8 +42,11 @@ static void create()
     wordd_ = compile_object(WORDD);
     commandd_ = compile_object(COMMANDD);
 
-    compile_object(ELF);
     temple_ = compile_object(TEMPLE);
+    compile_object(SWORD);
+    compile_object(ELF);
+
+    move_object(new_object(SWORD), temple_);
 
     test_command("go west");
 
@@ -58,7 +62,7 @@ object LIB_CREATURE make_creature()
 {
     object creature;
 
-    creature = clone_object(ELF, 7);
+    creature = clone_object(ELF);
     
     move_object(creature, temple_);
     return creature;

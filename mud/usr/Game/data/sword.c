@@ -1,28 +1,8 @@
-# include <status.h>
-# include <system/assert.h>
+# include <game/thing.h>
 
-int class_;
+inherit LIB_ITEM;
 
-static void create(int class)
+static void create()
 {
-    class_ = class;
-}
-
-int query_class()
-{
-    return class_;
-}
-
-void start()
-{
-    ASSERT(!sizeof(status(this_object())[O_CALLOUTS]));
-    call_out("stop", 0, this_object());
-    ASSERT(sizeof(status(this_object())[O_CALLOUTS]) == 1);
-}
-
-static void stop(object obj)
-{
-    message("Call-out finished in <" + object_name(this_object()) + ">.");
-    ASSERT(!sizeof(status(this_object())[O_CALLOUTS]));
-    ASSERT(obj != this_object());
+    ::create();
 }

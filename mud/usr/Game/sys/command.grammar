@@ -6,9 +6,9 @@ CMD: 'go' DIR ? parse_go_command
 CMD: DIR ? parse_go_command
 
 CMD: 'look' ? parse_look_command
-CMD: 'look' 'at' SEL ? parse_look_command
+CMD: 'look' 'at' SEL ? parse_look_at_command
 CMD: 'listen' ? parse_listen_command
-CMD: 'listen' 'to' SEL ? parse_listen_command
+CMD: 'listen' 'to' SEL ? parse_listen_to_command
 CMD: 'smell' ? parse_smell_command
 CMD: 'smell' SEL ? parse_smell_command
 CMD: 'touch' SEL ? parse_touch_command
