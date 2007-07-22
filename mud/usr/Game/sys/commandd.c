@@ -38,12 +38,13 @@ static mixed *parse_look_at_command(mixed *tree)
 
 static mixed *parse_say_command(mixed *tree)
 {
-    return ({ new_object(SAY_ACTION, tree[1]) });
+    return ({ new_object(SAY_ACTION, tree[sizeof(tree) - 1]) });
 }
 
 static mixed *parse_say_to_command(mixed *tree)
 {
-    return ({ new_object(SAY_TO_ACTION, tree[1], tree[2]) });
+    return ({ new_object(SAY_TO_ACTION, tree[sizeof(tree) - 3],
+                         tree[sizeof(tree) - 1]) });
 }
 
 static mixed *parse_word(mixed *tree)
