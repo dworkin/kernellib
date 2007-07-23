@@ -8,7 +8,9 @@
 
 inherit UTIL_VALUE;
 
+# define CRYPT   "/usr/Game/room/crypt"
 # define ELF     "/usr/Game/obj/elf"
+# define SHIELD  "/usr/Game/data/shield"
 # define SWORD   "/usr/Game/data/sword"
 # define TEMPLE  "/usr/Game/room/temple"
 
@@ -23,6 +25,9 @@ static void test_command(string command)
 
 static void create()
 {
+    object LIB_ROOM crypt;
+
+    compile_object(INVENTORY_ACTION);
     compile_object(LOOK_ACTION);
     compile_object(LOOK_AT_ACTION);
     compile_object(GO_ACTION);
@@ -44,10 +49,13 @@ static void create()
     commandd_ = compile_object(COMMANDD);
 
     temple_ = compile_object(TEMPLE);
+    crypt = compile_object(CRYPT);
     compile_object(SWORD);
+    compile_object(SHIELD);
     compile_object(ELF);
 
-    move_object(new_object(SWORD), temple_);
+    move_object(new_object(SWORD), crypt);
+    move_object(new_object(SHIELD), crypt);
 
     test_command("go west");
 

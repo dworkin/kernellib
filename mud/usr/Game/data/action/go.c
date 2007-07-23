@@ -43,7 +43,7 @@ void perform(object LIB_CREATURE actor)
 
     if (move_object(actor, dest)) {
         tell_inventory(env, definite_description(actor) + " leaves " + dir_);
-        tell_object(actor, verbose_description(dest));
+        tell_object(actor, verbose_description(dest, actor));
         tell_audience(actor, indefinite_description(actor) + " arrives from "
                       + arrival_direction(dir_));
     } else {

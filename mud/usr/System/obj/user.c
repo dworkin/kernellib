@@ -25,6 +25,7 @@ static string newpasswd;	/* new password */
 static object wiztool;		/* command handler */
 static int nconn;		/* # of connections */
 
+mapping aliases;
 static object creature;
 
 /*
@@ -78,7 +79,14 @@ int login(string str)
 	if (Name[0] >= 'a' && Name[0] <= 'z') {
 	    Name[0] -= 'a' - 'A';
 	}
-	restore_object(SYSTEM_SAVE_DIR + "/" + str + ".pwd");
+	restore_object(SYSTEM_SAVE_DIR + "/" + str + ".save");
+        if (!aliases) {
+            aliases = ([ "d": "down", "e": "east", "i": "inventory",
+                         "l": "look", "la": "look at", "n": "north",
+                         "ne": "northeast", "nw": "northwest", "s": "south",
+                         "se": "southeast", "sw": "southwest", "u": "up",
+                         "w": "west" ]);
+        }
 
 	if (password) {
 	    /* check password */
@@ -129,6 +137,20 @@ void logout(int quit)
     }
 }
 
+static string alias_expand(string cmd)
+{
+    string arg;
+
+    if (!sscanf(cmd, "%s %s", cmd, arg)) {
+        arg = nil;
+    }
+    if (aliases[cmd]) {
+        cmd = aliases[cmd];
+    }
+    return arg ? cmd + " " + arg : cmd;
+}
+
+
 /*
  * NAME:	receive_message()
  * DESCRIPTION:	process a message from the user
@@ -150,9 +172,10 @@ int receive_message(string str)
             if (creature && cmd == str) {
                 object action;
 
+                cmd = alias_expand(cmd);
                 action = COMMANDD->parse(cmd);
                 if (!action) {
-                    message("No such command: " + cmd + "\n");
+                    message("Bad command: " + cmd + "\n");
                 } else {
                     creature->add_action(action);
                 }
@@ -283,7 +306,7 @@ int receive_message(string str)
 		password = hash_string("crypt", str);
 		if (wiztool) {
 		    /* save wizards only */
-		    save_object(SYSTEM_SAVE_DIR + "/" + name + ".pwd");
+		    save_object(SYSTEM_SAVE_DIR + "/" + name + ".save");
 		}
 		message("\nPassword changed.\n");
 	    } else {

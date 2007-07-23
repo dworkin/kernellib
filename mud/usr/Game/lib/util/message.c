@@ -6,8 +6,8 @@ private inherit UTIL_STRING;
 static string normalize_message(string mess)
 {
     if (has_suffix(mess, "\n")) {
-        /* preformatted message: do nothing */
-        return mess;
+        /* preformatted message: prepend blank line */
+        return "\n" + mess;
     }
 
     if (!has_suffix(mess, ".") && !has_suffix(mess, "!")
@@ -15,7 +15,7 @@ static string normalize_message(string mess)
     {
         mess += ".";
     }
-    return capitalize(mess) + "\n";
+    return "  " + capitalize(mess) + "\n";
 }
 
 static void tell_object(object LIB_THING obs, string mess)

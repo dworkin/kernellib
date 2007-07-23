@@ -6,6 +6,7 @@ mapping exits_;
 
 static void create()
 {
+    ::create();
     exits_ = ([ ]);
 }
 
@@ -14,15 +15,12 @@ static void set_exit(string dir, mixed dest)
     exits_[dir] = dest;
 }
 
-string query_exit(string dir)
+object query_exit(string dir)
 {
-    mixed dest;
+    string dest;
 
     dest = exits_[dir];
-    if (dest) {
-        dest = find_object(dest);
-    }
-    return dest;
+    return dest ? find_object(dest) : nil;
 }
 
 string *query_exits()

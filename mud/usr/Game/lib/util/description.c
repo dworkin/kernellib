@@ -129,12 +129,12 @@ static string describe_creatures_in_room(object LIB_ROOM room,
     size = sizeof(creatures);
     if (!size) {
         return "Noone is there.";
-    } else if (size == 1 && creatures[0] == observer) {
+    } else if (observer && size == 1 && creatures[0] == observer) {
         return "You are alone here.";
     }
     return capitalize(list_strings(describe_each_thing(creatures, observer)))
         + " " + ((size == 1) ? "is" : "are") + " "
-        + ((room == (object LIB_ROOM) environment(observer))
+        + ((observer && room == (object LIB_ROOM) environment(observer))
            ? "here" : "there") + ".";
 }
 
@@ -148,7 +148,7 @@ static string describe_items_in_room(object LIB_ROOM room,
     return "There " + ((size <= 1) ? "is" : "are") + " "
         + (size ? list_strings(describe_each_thing(items, observer))
            : "nothing") + " "
-        + ((room == (object LIB_ROOM) environment(observer))
+        + (observer && (room == (object LIB_ROOM) environment(observer))
            ? "here" : "there") + ".";
 }
 

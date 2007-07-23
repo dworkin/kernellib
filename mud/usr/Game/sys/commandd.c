@@ -22,9 +22,9 @@ object LIB_ACTION parse(string command)
     return tree ? tree[0] : nil;
 }
 
-static mixed *parse_go_command(mixed *tree)
+static mixed *parse_inventory_command(mixed *tree)
 {
-    return ({ new_object(GO_ACTION, tree[sizeof(tree) - 1]) });
+    return ({ new_object(INVENTORY_ACTION) });
 }
 
 static mixed *parse_look_command(mixed *tree)
@@ -37,14 +37,21 @@ static mixed *parse_look_at_command(mixed *tree)
     return ({ new_object(LOOK_AT_ACTION, tree[2]) });
 }
 
+static mixed *parse_go_command(mixed *tree)
+{
+    return ({ new_object(GO_ACTION, tree[sizeof(tree) - 1]) });
+}
+
 static mixed *parse_pick_up_command(mixed *tree)
 {
-    return ({ new_object(PICK_UP_ACTION, tree[sizeof(tree) - 1]) });
+    tree -= ({ "up" });
+    return ({ new_object(PICK_UP_ACTION, tree[1]) });
 }
 
 static mixed *parse_put_down_command(mixed *tree)
 {
-    return ({ new_object(PUT_DOWN_ACTION, tree[sizeof(tree) - 1]) });
+    tree -= ({ "down" });
+    return ({ new_object(PUT_DOWN_ACTION, tree[1]) });
 }
 
 static mixed *parse_say_command(mixed *tree)
