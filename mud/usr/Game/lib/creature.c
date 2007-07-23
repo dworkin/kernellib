@@ -6,6 +6,7 @@ inherit LIB_THING;
 
 static void create()
 {
+    ::create();
     add_event("observe");
     add_event("error");
 }

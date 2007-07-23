@@ -27,6 +27,7 @@ static void create()
     compile_object(LOOK_AT_ACTION);
     compile_object(GO_ACTION);
     compile_object(PICK_UP_ACTION);
+    compile_object(PUT_DOWN_ACTION);
     compile_object(SAY_ACTION);
     compile_object(SAY_TO_ACTION);
     compile_object(GIVE_ACTION);

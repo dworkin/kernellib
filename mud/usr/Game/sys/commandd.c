@@ -37,6 +37,16 @@ static mixed *parse_look_at_command(mixed *tree)
     return ({ new_object(LOOK_AT_ACTION, tree[2]) });
 }
 
+static mixed *parse_pick_up_command(mixed *tree)
+{
+    return ({ new_object(PICK_UP_ACTION, tree[sizeof(tree) - 1]) });
+}
+
+static mixed *parse_put_down_command(mixed *tree)
+{
+    return ({ new_object(PUT_DOWN_ACTION, tree[sizeof(tree) - 1]) });
+}
+
 static mixed *parse_say_command(mixed *tree)
 {
     return ({ new_object(SAY_ACTION, tree[sizeof(tree) - 1]) });

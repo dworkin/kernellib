@@ -23,32 +23,36 @@ static string list_strings(string *arr)
     }
 }
 
-static string definite_description(object LIB_THING obj,
-                                   varargs object LIB_THING observer)
-{
-    if (obj <- LIB_CREATURE) {
-        return "the creature";
-    } else if (obj <- LIB_ITEM) {
-        return "the item";
-    } else if (obj <- LIB_ROOM) {
-        return "the room";
-    } else {
-        return "the thing";
-    }
-}
-
 static string indefinite_description(object LIB_THING obj,
                                      varargs object LIB_THING observer)
 {
-    if (obj <- LIB_CREATURE) {
-        return "a creature";
-    } else if (obj <- LIB_ITEM) {
-        return "an item";
-    } else if (obj <- LIB_ROOM) {
-        return "a room";
-    } else {
-        return "a thing";
+    string desc;
+
+    desc = obj->query_look();
+    if (!desc) {
+        if (obj <- LIB_CREATURE) {
+            desc = "a creature";
+        } else if (obj <- LIB_ITEM) {
+            desc = "an item";
+        } else if (obj <- LIB_ROOM) {
+            desc = "a room";
+        } else {
+            desc = "a thing";
+        }
     }
+    return desc;
+}
+
+static string definite_description(object LIB_THING obj,
+                                   varargs object LIB_THING observer)
+{
+    string desc;
+
+    desc = indefinite_description(obj, observer);
+    if (sscanf(desc, "a %s", desc) || sscanf(desc, "an %s", desc)) {
+        desc = "the " + desc;
+    }
+    return desc;
 }
 
 static string describe_exits(object LIB_ROOM room)
@@ -177,7 +181,10 @@ static string verbose_description(object LIB_THING thing,
 {
     string desc;
 
-    desc = "You notice nothing special.";
+    desc = thing->query_verbose_look();
+    if (!desc) {
+        desc = "You see nothing special.";
+    }
     if (thing <- LIB_ROOM) {
         desc += " " + describe_exits(thing);
     }

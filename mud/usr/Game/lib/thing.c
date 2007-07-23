@@ -2,6 +2,12 @@
 # include <game/identity.h>
 # include <game/message.h>
 
-inherit LIB_DESCRIBABLE;
-inherit LIB_IDENTIFIABLE;
+inherit desc LIB_DESCRIBABLE;
+inherit id LIB_IDENTIFIABLE;
 inherit LIB_OBSERVER;
+
+static void create()
+{
+    desc::create();
+    id::create();
+}
