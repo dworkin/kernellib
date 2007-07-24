@@ -86,7 +86,7 @@ OPT_THE: 'the'
 OPT_A:
 OPT_A: 'a'
 
-SEL_1: OPT_THE WORDS ? parse_selector
+SEL_1: OPT_THE WORDS ? parse_simple_selector
 SEL_1: OPT_THE ORD WORDS ? parse_ordinal_selector
 SEL_1: OPT_THE ORD 'of' OPT_THE WORDS ? parse_ordinal_selector
 

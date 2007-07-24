@@ -18,11 +18,6 @@ object wordd_;
 object commandd_;
 object temple_;
 
-static void test_command(string command)
-{
-    message(dump_value(commandd_->parse(command)));
-}
-
 static void create()
 {
     object LIB_ROOM crypt;
@@ -37,7 +32,7 @@ static void create()
     compile_object(SAY_TO_ACTION);
     compile_object(GIVE_ACTION);
 
-    compile_object(SELECTOR);
+    compile_object(SIMPLE_SELECTOR);
     compile_object(ORDINAL_SELECTOR);
     compile_object(COUNT_SELECTOR);
     compile_object(ALL_OF_SELECTOR);
@@ -56,15 +51,6 @@ static void create()
 
     move_object(new_object(SWORD), crypt);
     move_object(new_object(SHIELD), crypt);
-
-    test_command("go west");
-
-    test_command("look");
-    test_command("look at rusty cage");
-
-    test_command("say 'Hello, World!");
-    test_command("say 'Hello, World!' to elf");
-    test_command("say 'Hello, World!' to elves except orcs");
 }
 
 object LIB_CREATURE make_creature()

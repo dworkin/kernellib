@@ -75,12 +75,12 @@ static mixed *parse_words(mixed *tree)
     return ({ tree });
 }
 
-static mixed *parse_selector(mixed *tree)
+static mixed *parse_simple_selector(mixed *tree)
 {
     string *words;
 
     words = tree[sizeof(tree) - 1];
-    return ({ new_object(SELECTOR, words) });
+    return ({ new_object(SIMPLE_SELECTOR, words) });
 }
 
 static mixed *parse_ordinal_selector(mixed *tree)
