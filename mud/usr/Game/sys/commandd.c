@@ -1,4 +1,4 @@
-# include <game/action.h>
+# include <game/command.h>
 # include <game/direction.h>
 # include <game/selector.h>
 # include <game/string.h>
@@ -14,7 +14,7 @@ static void create()
     grammar_ = read_file("command.grammar");
 }
 
-object LIB_ACTION parse(string command)
+object LIB_COMMAND parse(string command)
 {
     mixed *tree;
 
@@ -24,44 +24,44 @@ object LIB_ACTION parse(string command)
 
 static mixed *parse_inventory_command(mixed *tree)
 {
-    return ({ new_object(INVENTORY_ACTION) });
+    return ({ new_object(INVENTORY_COMMAND) });
 }
 
 static mixed *parse_look_command(mixed *tree)
 {
-    return ({ new_object(LOOK_ACTION) });
+    return ({ new_object(LOOK_COMMAND) });
 }
 
 static mixed *parse_look_at_command(mixed *tree)
 {
-    return ({ new_object(LOOK_AT_ACTION, tree[2]) });
+    return ({ new_object(LOOK_AT_COMMAND, tree[2]) });
 }
 
 static mixed *parse_go_command(mixed *tree)
 {
-    return ({ new_object(GO_ACTION, tree[sizeof(tree) - 1]) });
+    return ({ new_object(GO_COMMAND, tree[sizeof(tree) - 1]) });
 }
 
 static mixed *parse_pick_up_command(mixed *tree)
 {
     tree -= ({ "up" });
-    return ({ new_object(PICK_UP_ACTION, tree[1]) });
+    return ({ new_object(PICK_UP_COMMAND, tree[1]) });
 }
 
 static mixed *parse_put_down_command(mixed *tree)
 {
     tree -= ({ "down" });
-    return ({ new_object(PUT_DOWN_ACTION, tree[1]) });
+    return ({ new_object(PUT_DOWN_COMMAND, tree[1]) });
 }
 
 static mixed *parse_say_command(mixed *tree)
 {
-    return ({ new_object(SAY_ACTION, tree[sizeof(tree) - 1]) });
+    return ({ new_object(SAY_COMMAND, tree[sizeof(tree) - 1]) });
 }
 
 static mixed *parse_say_to_command(mixed *tree)
 {
-    return ({ new_object(SAY_TO_ACTION, tree[sizeof(tree) - 3],
+    return ({ new_object(SAY_TO_COMMAND, tree[sizeof(tree) - 3],
                          tree[sizeof(tree) - 1]) });
 }
 

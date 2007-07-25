@@ -170,14 +170,14 @@ int receive_message(string str)
 	    }
 
             if (creature && cmd == str) {
-                object action;
+                object command;
 
                 cmd = alias_expand(cmd);
-                action = COMMANDD->parse(cmd);
-                if (!action) {
+                command = COMMANDD->parse(cmd);
+                if (!command) {
                     message("Bad command: " + cmd + "\n");
                 } else {
-                    creature->add_action(action);
+                    creature->add_command(command);
                 }
                 str = nil;
             } else if (!wiztool || !query_editor(wiztool) || cmd != str) {

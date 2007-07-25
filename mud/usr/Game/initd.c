@@ -1,4 +1,3 @@
-# include <game/action.h>
 # include <game/command.h>
 # include <game/selector.h>
 # include <game/value.h>
@@ -22,16 +21,6 @@ static void create()
 {
     object LIB_ROOM crypt;
 
-    compile_object(INVENTORY_ACTION);
-    compile_object(LOOK_ACTION);
-    compile_object(LOOK_AT_ACTION);
-    compile_object(GO_ACTION);
-    compile_object(PICK_UP_ACTION);
-    compile_object(PUT_DOWN_ACTION);
-    compile_object(SAY_ACTION);
-    compile_object(SAY_TO_ACTION);
-    compile_object(GIVE_ACTION);
-
     compile_object(SIMPLE_SELECTOR);
     compile_object(ORDINAL_SELECTOR);
     compile_object(COUNT_SELECTOR);
@@ -39,6 +28,16 @@ static void create()
     compile_object(ALL_SELECTOR);
     compile_object(LIST_SELECTOR);
     compile_object(EXCEPT_SELECTOR);
+
+    compile_object(INVENTORY_COMMAND);
+    compile_object(LOOK_COMMAND);
+    compile_object(LOOK_AT_COMMAND);
+    compile_object(GO_COMMAND);
+    compile_object(PICK_UP_COMMAND);
+    compile_object(PUT_DOWN_COMMAND);
+    compile_object(SAY_COMMAND);
+    compile_object(SAY_TO_COMMAND);
+    compile_object(GIVE_COMMAND);
 
     wordd_ = compile_object(WORDD);
     commandd_ = compile_object(COMMANDD);

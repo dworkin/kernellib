@@ -1,7 +1,7 @@
-# include <game/action.h>
+# include <game/command.h>
 # include <game/thing.h>
 
-inherit LIB_ACTION;
+inherit LIB_COMMAND;
 
 void perform(object LIB_CREATURE actor)
 {

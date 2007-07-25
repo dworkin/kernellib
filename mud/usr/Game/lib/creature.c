@@ -1,4 +1,4 @@
-# include <game/action.h>
+# include <game/command.h>
 # include <game/thing.h>
 # include <system/assert.h>
 
@@ -21,17 +21,17 @@ void observe(string mess)
     event("observe", mess);
 }
 
-void add_action(object LIB_ACTION action)
+void add_command(object LIB_COMMAND command)
 {
-    ASSERT_ARG(action);
-    call_out("act", 0, action);
+    ASSERT_ARG(command);
+    call_out("act", 0, command);
 }
 
-static void act(object LIB_ACTION action)
+static void act(object LIB_COMMAND command)
 {
     string error;
 
-    error = catch(action->perform(this_object()));
+    error = catch(command->perform(this_object()));
     if (error) {
         event("error", error);
     }
