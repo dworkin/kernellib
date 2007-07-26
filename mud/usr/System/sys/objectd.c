@@ -14,6 +14,7 @@ object   initd;      /* system initialization manager */
 int      nextuid;    /* next user ID */
 mapping  uids;       /* ([ string owner: int uid ]) */
 mapping  ownerobjs;  /* ([ int uid: object ownerobj ]) */
+mapping  oids;       /* ([ int num: object obj ]), where obj is persistent */
 
 /*
  * NAME:        create()
@@ -28,6 +29,7 @@ static void create()
     nextuid = 1;
     uids = ([ ]);
     ownerobjs = ([ ]);
+    oids = ([ ]);
 }
 
 /*
@@ -105,6 +107,8 @@ void compile(string owner, object obj, string *source, string inherited...)
     uid = add_owner(owner);
     DEBUG_ASSERT(ownerobjs[uid]);
     ownerobjs[uid]->compile(obj, inherited);
+
+    oids[status(obj)[O_INDEX]] = obj;
 }
 
 /*
@@ -123,6 +127,34 @@ void compile_lib(string owner, string path, string *source,
     uid = add_owner(owner);
     DEBUG_ASSERT(ownerobjs[uid]);
     ownerobjs[uid]->compile(path, inherited);
+}
+
+/*
+ * NAME:        clone()
+ * DESCRIPTION: the given object has just been cloned
+ */
+void clone(string owner, object obj)
+{
+    int oid;
+
+    ASSERT_ACCESS(previous_object() == driver);
+    sscanf(object_name(obj), "%*s#%d", oid);
+    oids[oid] = obj;
+}
+
+/*
+ * NAME:        destruct()
+ * DESCRIPTION: the given object is about to be destructed
+ */
+void destruct(string owner, object obj)
+{
+    int oid;
+
+    ASSERT_ACCESS(previous_object() == driver);
+    if (!sscanf(object_name(obj), "%*s#%d", oid)) {
+        oid = status(obj)[O_INDEX];
+    }
+    oids[oid] = nil;
 }
 
 /*
@@ -286,6 +318,17 @@ int add_data(string owner, object env)
     uid = add_owner(owner);
     DEBUG_ASSERT(ownerobjs[uid] != nil);
     return ownerobjs[uid]->add_data(env);
+}
+
+/*
+ * NAME:        find_obj()
+ * DESCRIPTION: find a persistent object
+ */
+object find_obj(int oid)
+{
+    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
+    DEBUG_ASSERT(oid >= 0);
+    return oids[oid];
 }
 
 /*

@@ -1,3 +1,4 @@
+# include <game/action.h>
 # include <game/command.h>
 # include <game/description.h>
 # include <game/message.h>
@@ -40,15 +41,8 @@ void perform(object LIB_CREATURE actor)
             return;
         }
     }
+
     for (i = 0; i < size; ++i) {
-        if (move_object(objs[i], actor)) {
-            tell_object(actor, "You pick up "
-                        + definite_description(objs[i], actor));
-            tell_audience(actor, definite_description(actor) + " picks up "
-                          + indefinite_description(objs[i]));
-        } else {
-            tell_object(actor, "You cannot pick up "
-                        + definite_description(objs[i], actor));
-        }
+        actor->add_action(new_object(PICK_UP_ACTION, objs[i]));
     }
 }

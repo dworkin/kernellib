@@ -169,15 +169,15 @@ int receive_message(string str)
 		cmd = cmd[1 ..];
 	    }
 
-            if (creature && cmd == str) {
-                object command;
+            if (creature && cmd == str && strlen(cmd)) {
+                object action;
 
                 cmd = alias_expand(cmd);
-                command = COMMANDD->parse(cmd);
-                if (!command) {
+                action = COMMANDD->parse(cmd);
+                if (!action) {
                     message("Bad command: " + cmd + "\n");
                 } else {
-                    creature->add_command(command);
+                    creature->add_action(action);
                 }
                 str = nil;
             } else if (!wiztool || !query_editor(wiztool) || cmd != str) {

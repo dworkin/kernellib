@@ -1,8 +1,10 @@
+# include <game/action.h>
 # include <game/command.h>
 # include <game/description.h>
 # include <game/message.h>
 # include <game/selector.h>
 # include <game/thing.h>
+# include <system/assert.h>
 
 inherit LIB_COMMAND;
 inherit UTIL_DESCRIPTION;
@@ -13,26 +15,17 @@ object LIB_SELECTOR ind_;
 
 static void create(object LIB_SELECTOR obj, object LIB_SELECTOR ind)
 {
+    ASSERT_ARG_1(obj);
+    ASSERT_ARG_2(ind);
     obj_ = obj;
     ind_ = ind;
 }
 
-static object give(object obj, object *inds)
-{
-    int i, size;
-
-    size = sizeof(inds);
-    for (i = 0; i < size; ++i) {
-        if (move_object(obj, inds[i])) {
-            return inds[i];
-        }
-    }
-    return nil;
-}
-
 void perform(object LIB_CREATURE actor)
 {
-    object *objs, env, *inds;
+    object *objs, *inds;
+    object LIB_ROOM room;
+    object LIB_CREATURE ind;
     int i, size;
 
     objs = obj_->select(inventory(actor));
@@ -49,13 +42,13 @@ void perform(object LIB_CREATURE actor)
         }
     }
 
-    env = environment(actor);
-    if (!env) {
+    room = environment(actor);
+    if (!room) {
         tell_object(actor, "You are in the void.");
         return;
     }
 
-    inds = ind_->select(inventory(env));
+    inds = ind_->select(inventory(room));
     size = sizeof(inds);
     if (!size) {
         tell_object(actor, "They are not here.");
@@ -68,23 +61,10 @@ void perform(object LIB_CREATURE actor)
             return;
         }
     }
+    ind = inds[0];
 
     size = sizeof(objs);
     for (i = 0; i < size; ++i) {
-        object ind;
-
-        ind = give(objs[i], inds);
-        if (ind) {
-            tell_object(actor, "You give " + definite_description(objs[i])
-                        + " to " + definite_description(ind));
-            tell_object(ind, definite_description(actor) + " gives "
-                        + indefinite_description(objs[i]) + " to you.");
-            tell_audience_except(actor, ({ ind }), definite_description(actor)
-                                 + " gives " + indefinite_description(objs[i])
-                                 + " to " + indefinite_description(ind));
-        } else {
-            tell_object(actor, "You cannot give away "
-                        + definite_description(objs[i]));
-        }
+        actor->add_action(new_object(GIVE_ACTION, objs[i], ind));
     }
 }
