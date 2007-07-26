@@ -1,25 +1,30 @@
+# include <game/action.h>
 # include <game/command.h>
 # include <game/description.h>
 # include <game/message.h>
 # include <game/selector.h>
 # include <game/thing.h>
+# include <system/assert.h>
 
 inherit LIB_COMMAND;
 inherit UTIL_DESCRIPTION;
 inherit UTIL_MESSAGE;
 
-object LIB_SELECTOR obj_;
+object LIB_SELECTOR item_;
 
-static void create(object LIB_SELECTOR obj)
+static void create(object LIB_SELECTOR item)
 {
-    obj_ = obj;
+    ASSERT_ARG(item);
+    item_ = item;
 }
 
 void perform(object LIB_CREATURE actor)
 {
-    object LIB_ROOM    room;
-    object LIB_THING  *objs;
-    int                i, size;
+    object LIB_ROOM   room;
+    object LIB_ITEM  *items;
+    int               i, size;
+
+    ASSERT_ARG(actor);
 
     room = environment(actor);
     if (!room) {
@@ -27,21 +32,14 @@ void perform(object LIB_CREATURE actor)
         return;
     }
 
-    objs = obj_->select(inventory(actor));
-    size = sizeof(objs);
+    items = item_->select(inventory(actor));
+    size = sizeof(items);
     if (!size) {
         tell_object(actor, "You do not have that.");
         return;
     }
+
     for (i = 0; i < size; ++i) {
-        if (move_object(objs[i], room)) {
-            tell_object(actor, "You put down "
-                        + definite_description(objs[i], actor));
-            tell_audience(actor, definite_description(actor) + " puts down "
-                          + indefinite_description(objs[i]));
-        } else {
-            tell_object(actor, "You cannot put down "
-                        + definite_description(objs[i], actor));
-        }
+        actor->add_action(new_object(PUT_DOWN_ACTION, items[i]));
     }
 }

@@ -25,6 +25,7 @@ static void create()
 
     compile_object(GIVE_ACTION);
     compile_object(PICK_UP_ACTION);
+    compile_object(PUT_DOWN_ACTION);
 
     compile_object(SIMPLE_SELECTOR);
     compile_object(ORDINAL_SELECTOR);
