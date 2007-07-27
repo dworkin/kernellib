@@ -26,7 +26,7 @@ void perform(object LIB_CREATURE actor)
     object LIB_CREATURE ind;
 
     obj = find_object(obj_);
-    if (!obj || (object LIB_CREATURE) environment(obj) != actor) {
+    if (!obj || (object LIB_THING) environment(obj) != actor) {
         tell_object(actor, "You do not have that.");
         return;
     }

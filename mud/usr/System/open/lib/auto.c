@@ -157,6 +157,18 @@ nomask void _F_move(object dest)
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     _Q_oid();  /* update environment */
+
+    if (oid >= 0) {
+        object this, obj;
+
+        this = this_object();
+        for (obj = dest; obj; obj = ::call_other(obj, "_Q_env")) {
+            if (obj == this) {
+                error("Cannot move object into itself");
+            }
+        }
+    }
+
     if (env != nil) {
         DEBUG_ASSERT(oid != -1);
         ::call_other(env, "_F_leave", oid);
@@ -466,8 +478,10 @@ static mixed *status(varargs mixed obj)
  */
 static int move_object(object obj, object dest)
 {
+    object env;
+
     ASSERT_ARG_1(obj);
-    ASSERT_ARG_2(dest == nil || sscanf(::object_name(dest), "%*s#-1") == 0);
+    ASSERT_ARG_2(!dest || !sscanf(::object_name(dest), "%*s#-1"));
     ::call_other(obj, "_F_move", dest);
     return TRUE;
 }

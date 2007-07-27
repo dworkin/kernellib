@@ -59,6 +59,11 @@ static mixed *parse_put_down_command(mixed *tree)
     return ({ new_object(PUT_DOWN_COMMAND, tree[1]) });
 }
 
+static mixed *parse_put_in_command(mixed *tree)
+{
+    return ({ new_object(PUT_IN_COMMAND, tree[1], tree[3]) });
+}
+
 static mixed *parse_say_command(mixed *tree)
 {
     return ({ new_object(SAY_COMMAND, tree[sizeof(tree) - 1]) });
@@ -68,6 +73,11 @@ static mixed *parse_say_to_command(mixed *tree)
 {
     return ({ new_object(SAY_TO_COMMAND, tree[sizeof(tree) - 3],
                          tree[sizeof(tree) - 1]) });
+}
+
+static mixed *parse_take_out_command(mixed *tree)
+{
+    return ({ new_object(TAKE_OUT_COMMAND, tree[1], tree[sizeof(tree) - 1]) });
 }
 
 static mixed *parse_word(mixed *tree)

@@ -120,22 +120,37 @@ static string describe_creature_inventory(object LIB_CREATURE creature,
         + ".";
 }
 
+static string describe_container_inventory(object LIB_CONTAINER cont,
+                                           object LIB_THING observer)
+{
+    object LIB_THING *inv;
+
+    inv = inventory(cont);
+    if (sizeof(inv)) {
+        return "It contains "
+            + list_strings(describe_each_thing(inv, observer)) + ".";
+    } else {
+        return "It is empty.";
+    }
+}
+
 static string describe_creatures_in_room(object LIB_ROOM room,
                                          object LIB_CREATURE *creatures,
                                          object LIB_THING observer)
 {
-    int size;
+    int local, size;
 
+    local = (observer && room == (object LIB_ROOM) environment(observer));
+    if (local) {
+        creatures -= ({ observer });
+    }
     size = sizeof(creatures);
     if (!size) {
-        return "Noone is there.";
-    } else if (observer && size == 1 && creatures[0] == observer) {
-        return "You are alone here.";
+        return local ? "You are alone here." : "Noone is there.";
     }
-    return capitalize(list_strings(describe_each_thing(creatures, observer)))
-        + " " + ((size == 1) ? "is" : "are") + " "
-        + ((observer && room == (object LIB_ROOM) environment(observer))
-           ? "here" : "there") + ".";
+    return capitalize(list_strings(describe_each_thing(creatures, observer))
+                      + ((size == 1) ? " is" : " are")
+                      + (local ? " here with you." : " there."));
 }
 
 static string describe_items_in_room(object LIB_ROOM room,
@@ -171,9 +186,13 @@ static string describe_room_inventory(object LIB_ROOM room,
 static string describe_inventory(object LIB_THING thing,
                                  object LIB_THING observer)
 {
-    return (thing <- LIB_CREATURE)
-        ? describe_creature_inventory(thing, observer)
-        : describe_room_inventory(thing, observer);
+    if (thing <- LIB_CREATURE) {
+        return describe_creature_inventory(thing, observer);
+    } else if (thing <- LIB_CONTAINER) {
+        return describe_container_inventory(thing, observer);
+    } else  {
+        return describe_room_inventory(thing, observer);
+    }
 }
 
 static string verbose_description(object LIB_THING thing,
@@ -188,8 +207,25 @@ static string verbose_description(object LIB_THING thing,
     if (thing <- LIB_ROOM) {
         desc += " " + describe_exits(thing);
     }
-    if (thing <- LIB_ROOM || thing <- LIB_CREATURE) {
+    if (thing <- LIB_ROOM) {
+        desc += "\n  " + describe_inventory(thing, observer) + "\n";
+    } else if (thing <- LIB_CREATURE || thing <- LIB_CONTAINER) {
         desc += " " + describe_inventory(thing, observer);
     }
     return desc;
+}
+
+static string indefinite_article(string str)
+{
+    if (!strlen(str)) {
+        return "a";
+    }
+
+    switch (str[0]) {
+    case 'a': case 'e': case 'i': case 'o': case 'u': case 'y':
+        return "an";
+
+    default:
+        return "a";
+    }
 }

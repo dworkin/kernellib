@@ -97,9 +97,11 @@ int login(string str)
 	    connection(previous_object());
 	    tell_audience(Name + " logs in.\n");
 	    if (str != "admin" && sizeof(query_users() & ({ str })) == 0) {
-                creature = GAME_INITD->make_creature();
-                subscribe_event(creature, "observe");
-                subscribe_event(creature, "error");
+                if (!creature) {
+                    creature = GAME_INITD->make_creature();
+                    subscribe_event(creature, "observe");
+                    subscribe_event(creature, "error");
+                }
 
 		message("> ");
 		state[previous_object()] = STATE_NORMAL;
@@ -133,6 +135,9 @@ void logout(int quit)
 	if (wiztool) {
 	    destruct_object(wiztool);
 	}
+        if (creature) {
+            creature->die();
+        }
 	destruct_object(this_object());
     }
 }

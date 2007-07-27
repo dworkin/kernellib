@@ -1,9 +1,10 @@
 # include <game/thing.h>
 
-inherit LIB_CREATURE;
+inherit LIB_CONTAINER;
 
 static void create()
 {
     ::create();
-    set_race("elf");
+    add_noun("bag");
+    set_look("a bag");
 }

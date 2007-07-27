@@ -4,5 +4,7 @@
 # define GO_ACTION        "/usr/Game/data/action/go"
 # define PICK_UP_ACTION   "/usr/Game/data/action/pick_up"
 # define PUT_DOWN_ACTION  "/usr/Game/data/action/put_down"
+# define PUT_IN_ACTION    "/usr/Game/data/action/put_in"
 # define SAY_ACTION       "/usr/Game/data/action/say"
 # define SAY_TO_ACTION    "/usr/Game/data/action/say_to"
+# define TAKE_OUT_ACTION  "/usr/Game/data/action/take_out"
