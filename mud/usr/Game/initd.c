@@ -1,12 +1,10 @@
+# include <limits.h>
 # include <game/action.h>
 # include <game/command.h>
 # include <game/selector.h>
-# include <game/value.h>
 # include <game/word.h>
 # include <game/thing.h>
 # include <system/assert.h>
-
-inherit UTIL_VALUE;
 
 # define BAG     "/usr/Game/obj/bag"
 # define CRYPT   "/usr/Game/room/crypt"
@@ -61,11 +59,13 @@ static void create()
     compile_object(BAG);
     compile_object(SWORD);
     compile_object(SHIELD);
+    compile_object(COIN);
 
     move_object(clone_object(BAG), temple_);
     move_object(clone_object(ORC), crypt);
     move_object(new_object(SWORD), crypt);
     move_object(new_object(SHIELD), crypt);
+    move_object(new_object(COIN, "silver", 1 + random(13)), crypt);
 }
 
 object LIB_CREATURE make_creature()
@@ -76,9 +76,4 @@ object LIB_CREATURE make_creature()
     
     move_object(creature, temple_);
     return creature;
-}
-
-string dump(mixed val)
-{
-    return dump_value(val);
 }

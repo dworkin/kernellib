@@ -1,9 +1,11 @@
 # include <game/description.h>
+# include <game/language.h>
 # include <game/thing.h>
 # include <system/assert.h>
 
 inherit LIB_ITEM;
 inherit UTIL_DESCRIPTION;
+inherit UTIL_LANGUAGE;
 
 static void create(string race)
 {

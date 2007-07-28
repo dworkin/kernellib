@@ -1,11 +1,13 @@
 # include <game/action.h>
 # include <game/description.h>
+# include <game/language.h>
 # include <game/message.h>
 # include <game/thing.h>
 # include <system/assert.h>
 
 inherit LIB_THING;
 private inherit UTIL_DESCRIPTION;
+private inherit UTIL_LANGUAGE;
 private inherit UTIL_MESSAGE;
 
 string race_;

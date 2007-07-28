@@ -1,27 +1,9 @@
+# include <game/language.h>
 # include <game/string.h>
 # include <game/thing.h>
 
+private inherit UTIL_LANGUAGE;
 private inherit UTIL_STRING;
-
-static string list_strings(string *arr)
-{
-    int size;
-
-    size = sizeof(arr);
-    switch (size) {
-    case 0:
-        return "";
-
-    case 1:
-        return arr[0];
-
-    case 2:
-        return arr[0] + " and " + arr[1];
-
-    default:
-        return implode(arr[.. size - 2], ", ") + ", and " + arr[size - 1];
-    }
-}
 
 static string indefinite_description(object LIB_THING obj,
                                      varargs object LIB_THING observer)
@@ -160,11 +142,11 @@ static string describe_items_in_room(object LIB_ROOM room,
     int size;
 
     size = sizeof(items);
-    return "There " + ((size <= 1) ? "is" : "are") + " "
+    return ((size <= 1) ? "There is " : "There are ")
         + (size ? list_strings(describe_each_thing(items, observer))
-           : "nothing") + " "
+           : "nothing")
         + (observer && (room == (object LIB_ROOM) environment(observer))
-           ? "here" : "there") + ".";
+           ? " here." : " there.");
 }
 
 static string describe_room_inventory(object LIB_ROOM room,
@@ -213,19 +195,4 @@ static string verbose_description(object LIB_THING thing,
         desc += " " + describe_inventory(thing, observer);
     }
     return desc;
-}
-
-static string indefinite_article(string str)
-{
-    if (!strlen(str)) {
-        return "a";
-    }
-
-    switch (str[0]) {
-    case 'a': case 'e': case 'i': case 'o': case 'u': case 'y':
-        return "an";
-
-    default:
-        return "a";
-    }
 }
