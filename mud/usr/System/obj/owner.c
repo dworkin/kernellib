@@ -73,11 +73,14 @@ void compile(mixed obj, string *inherited)
 
     ASSERT_ACCESS(previous_object() == objectd);
     oname = (typeof(obj) == T_STRING) ? obj : object_name(obj);
+
+# if FALSE
     message = "compiled " + oname;
     if (sizeof(inherited) != 0) {
         message += " (inherited " + implode(inherited, ", ") + ")";
     }
     driver->message("OBJECTD: " + message + "\n");
+# endif
 
     oid = objectd->join_oid(uid, status(obj)[O_INDEX]);
     progent = progents[oid] = ({ oname, ([ ]), ([ ]), nil });

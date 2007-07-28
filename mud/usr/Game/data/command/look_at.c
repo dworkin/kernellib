@@ -8,22 +8,21 @@ inherit LIB_COMMAND;
 inherit UTIL_DESCRIPTION;
 inherit UTIL_MESSAGE;
 
-object LIB_SELECTOR obj_;
+object LIB_SELECTOR thing_;
 
-static void create(varargs object LIB_SELECTOR obj)
+static void create(object LIB_SELECTOR thing)
 {
-    obj_ = obj;
+    thing_ = thing;
 }
 
 void perform(object LIB_CREATURE actor)
 {
-    object LIB_THING *objs;
+    object LIB_THING *things;
 
-    objs = obj_->select(inventory(actor) + inventory(environment(actor)));
-    if (!sizeof(objs)) {
+    things = thing_->select(inventory(actor) + inventory(environment(actor)));
+    if (!sizeof(things)) {
         tell_object(actor, "That is not here.");
         return;
     }
-
-    tell_object(actor, verbose_description(objs[0], actor));
+    tell_object(actor, verbose_description(things[0], actor));
 }

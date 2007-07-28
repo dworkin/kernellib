@@ -3,6 +3,7 @@
 mapping adjectives_;
 mapping singular_nouns_;
 mapping plural_nouns_;
+string name_;
 
 static void create()
 {
@@ -37,16 +38,27 @@ static void add_noun(string sing, varargs string plur)
     add_plural_noun(plur ? plur : plural_form(sing));
 }
 
+void set_name(string name)
+{
+    name_ = name;
+}
+
+string query_name()
+{
+    return name_;
+}
+
 int singular_identify(string *words, varargs object LIB_CREATURE actor)
 {
     int size;
 
     size = sizeof(words);
-    if (!size || !singular_nouns_[words[size - 1]]) {
+    if (!size || !singular_nouns_[words[size - 1]] && words[size - 1] != name_)
+    {
         return FALSE;
     }
     return !sizeof(words[.. size - 2] - map_indices(adjectives_)
-                   - map_indices(singular_nouns_));
+                   - map_indices(singular_nouns_) - ({ name_ }));
 }
 
 int plural_identify(string *words, varargs object LIB_CREATURE actor)
@@ -54,11 +66,11 @@ int plural_identify(string *words, varargs object LIB_CREATURE actor)
     int size;
 
     size = sizeof(words);
-    if (!size || !plural_nouns_[words[size - 1]]) {
+    if (!size || !plural_nouns_[words[size - 1]] && words[size - 1] != name_) {
         return FALSE;
     }
     return !sizeof(words[.. size - 2] - map_indices(adjectives_)
-                   - map_indices(singular_nouns_));
+                   - map_indices(singular_nouns_) - ({ name_ }));
 }
 
 int identify(string *words, varargs object LIB_CREATURE actor)
@@ -68,10 +80,10 @@ int identify(string *words, varargs object LIB_CREATURE actor)
     size = sizeof(words);
     if (!size
         || !singular_nouns_[words[size - 1]]
-        && !plural_nouns_[words[size - 1]])
+        && !plural_nouns_[words[size - 1]] && words[size - 1] != name_)
     {
         return FALSE;
     }
     return !sizeof(words[.. size - 2] - map_indices(adjectives_)
-                   - map_indices(singular_nouns_));
+                   - map_indices(singular_nouns_) - ({ name_ }));
 }

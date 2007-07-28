@@ -41,6 +41,7 @@ static void create()
     compile_object(INVENTORY_COMMAND);
     compile_object(LOOK_COMMAND);
     compile_object(LOOK_AT_COMMAND);
+    compile_object(LOOK_TO_COMMAND);
     compile_object(PICK_UP_COMMAND);
     compile_object(PUT_DOWN_COMMAND);
     compile_object(PUT_IN_COMMAND);

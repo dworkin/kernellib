@@ -2,6 +2,7 @@
 # include <game/description.h>
 # include <game/language.h>
 # include <game/message.h>
+# include <game/string.h>
 # include <game/thing.h>
 # include <system/assert.h>
 
@@ -9,6 +10,7 @@ inherit LIB_THING;
 private inherit UTIL_DESCRIPTION;
 private inherit UTIL_LANGUAGE;
 private inherit UTIL_MESSAGE;
+private inherit UTIL_STRING;
 
 string race_;
 
@@ -23,7 +25,19 @@ static void set_race(string race)
 {
     race_ = race;
     add_noun(race);
-    set_look(indefinite_article(race) + " " + race);
+}
+
+string query_race()
+{
+    return race_;
+}
+
+string query_look(varargs object LIB_THING observer)
+{
+    string name;
+    
+    name = query_name();
+    return name ? capitalize(name) : indefinite_article(race_) + " " + race_;
 }
 
 int allow_subscribe(object obj, string name)

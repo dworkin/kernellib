@@ -6,6 +6,7 @@
 # define INVENTORY_COMMAND  "/usr/Game/data/command/inventory"
 # define LOOK_COMMAND       "/usr/Game/data/command/look"
 # define LOOK_AT_COMMAND    "/usr/Game/data/command/look_at"
+# define LOOK_TO_COMMAND    "/usr/Game/data/command/look_to"
 # define PICK_UP_COMMAND    "/usr/Game/data/command/pick_up"
 # define PUT_DOWN_COMMAND   "/usr/Game/data/command/put_down"
 # define PUT_IN_COMMAND     "/usr/Game/data/command/put_in"

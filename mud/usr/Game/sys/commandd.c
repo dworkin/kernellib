@@ -47,6 +47,11 @@ static mixed *parse_look_at_command(mixed *tree)
     return ({ new_object(LOOK_AT_COMMAND, tree[2]) });
 }
 
+static mixed *parse_look_to_command(mixed *tree)
+{
+    return ({ new_object(LOOK_TO_COMMAND, tree[1]) });
+}
+
 static mixed *parse_pick_up_command(mixed *tree)
 {
     tree -= ({ "up" });
