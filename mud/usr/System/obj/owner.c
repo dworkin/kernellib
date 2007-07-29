@@ -74,7 +74,7 @@ void compile(mixed obj, string *inherited)
     ASSERT_ACCESS(previous_object() == objectd);
     oname = (typeof(obj) == T_STRING) ? obj : object_name(obj);
 
-# if FALSE
+# if TRUE
     message = "compiled " + oname;
     if (sizeof(inherited) != 0) {
         message += " (inherited " + implode(inherited, ", ") + ")";
@@ -142,8 +142,11 @@ void remove_program(int index)
     oid = objectd->join_oid(uid, index);
     progent = progents[oid];
     DEBUG_ASSERT(progent != nil);
+
+# if TRUE
     driver->message("OBJECTD: removing program " + progent[PROG_OBJNAME]
                     + "\n");
+# endif
 
     oname = progent[PROG_OBJNAME];
     DEBUG_ASSERT(prognames[oname] != nil);

@@ -1,6 +1,7 @@
 # include <config.h>
 
-# define ASSERT_MESSAGE(expr, mess)  if (!(expr)) error(mess)
+# define ASSERT_MESSAGE(expr, message) \
+    if (!(expr)) error(__FILE__ + ", " + __LINE__ + ": " + message)
 
 # define ASSERT(expr)  ASSERT_MESSAGE(expr, "Assertion failed: " + #expr)
 # define ASSERT_ACCESS(expr)    ASSERT_MESSAGE(expr, "Access denied")

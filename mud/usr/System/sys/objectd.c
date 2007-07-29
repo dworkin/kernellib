@@ -189,6 +189,17 @@ mixed include_file(string compiled, string from, string path)
 }
 
 /*
+ * NAME:        forbid_call()
+ * DESCRIPTION: returns true if a call is forbidden
+ */
+int forbid_call(string path)
+{
+    ASSERT_ACCESS(previous_object() == driver);
+    return sscanf(path, "%*s" + CLONABLE_SUBDIR)
+        || sscanf(path, "%*s" + LIGHTWEIGHT_SUBDIR);
+}
+
+/*
  * NAME:        forbid_inherit()
  * DESCRIPTION: returns true if an inheritance is forbidden
  */
