@@ -8,3 +8,4 @@
 # define SAY_ACTION       "/usr/Game/data/action/say"
 # define SAY_TO_ACTION    "/usr/Game/data/action/say_to"
 # define TAKE_OUT_ACTION  "/usr/Game/data/action/take_out"
+# define WEAR_ACTION      "/usr/Game/data/action/wear"

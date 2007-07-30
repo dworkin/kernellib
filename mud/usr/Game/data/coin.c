@@ -27,6 +27,9 @@ string query_look(varargs object LIB_THING observer)
     int count;
    
     count = query_count();
-    return format_count(count) + " " + material_ + " "
-        + (count == 1 ? "coin" : "coins");
+    if (count == 1) {
+        return indefinite_article(material_) + " " + material_ + " coin";
+    } else {
+        return format_count(count) + " " + material_ + " coins";
+    }
 }

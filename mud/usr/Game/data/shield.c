@@ -1,6 +1,6 @@
 # include <game/armor.h>
 
-inherit LIB_ARMOR;
+inherit LIB_ARMOR_PIECE;
 
 static void create()
 {

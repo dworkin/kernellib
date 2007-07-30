@@ -31,9 +31,11 @@ CMD: 'take' SEL 'from' SEL ? parse_take_out_command
 CMD: 'get' SEL 'out' 'of' SEL ? parse_take_out_command
 CMD: 'get' SEL 'from' SEL ? parse_take_out_command
 
-CMD: 'put' 'on' SEL ? parse_put_on_command
-CMD: 'wear' SEL ? parse_put_on_command
+CMD: 'put' 'on' SEL ? parse_wear_command
+CMD: 'put' SEL 'on' ? parse_wear_command
+CMD: 'wear' SEL ? parse_wear_command
 CMD: 'take' 'off' SEL ? parse_take_off_command
+CMD: 'take' SEL 'off' ? parse_take_off_command
 CMD: 'remove' SEL ? parse_take_off_command
 
 CMD: 'wield' SEL ? parse_wield_command

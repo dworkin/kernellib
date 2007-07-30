@@ -71,6 +71,12 @@ static mixed *parse_put_in_command(mixed *tree)
     return ({ new_object(PUT_IN_COMMAND, tree[1], tree[3]) });
 }
 
+static mixed *parse_wear_command(mixed *tree)
+{
+    tree -= ({ "on" });
+    return ({ new_object(WEAR_COMMAND, tree[1]) });
+}
+
 static mixed *parse_say_command(mixed *tree)
 {
     return ({ new_object(SAY_COMMAND, tree[sizeof(tree) - 1]) });

@@ -13,3 +13,4 @@
 # define SAY_COMMAND        "/usr/Game/data/command/say"
 # define SAY_TO_COMMAND     "/usr/Game/data/command/say_to"
 # define TAKE_OUT_COMMAND   "/usr/Game/data/command/take_out"
+# define WEAR_COMMAND       "/usr/Game/data/command/wear"

@@ -1,4 +1,5 @@
 # include <game/action.h>
+# include <game/armor.h>
 # include <game/description.h>
 # include <game/language.h>
 # include <game/message.h>
@@ -15,6 +16,9 @@ private inherit UTIL_STRING;
 string race_;
 string gender_;
 
+int *weapons_;
+int *armor_pieces_;
+
 static void create()
 {
     ::create();
@@ -22,6 +26,8 @@ static void create()
     add_event("error");
     race_ = "human";
     gender_ = random(2) ? "male" : "female";
+    weapons_ = ({ });
+    armor_pieces_ = ({ });
 }
 
 static void set_race(string race)
@@ -46,6 +52,78 @@ static void set_gender(string gender)
 string query_gender()
 {
     return gender_;
+}
+
+static object *to_objects(int *numbers)
+{
+    int      i, size;
+    object  *objs;
+
+    size = sizeof(numbers);
+    objs = allocate(size);
+    for (i = 0; i < size; ++i) {
+        objs[i] = find_object(numbers[i]);
+    }
+    return objs;
+}
+
+static int *to_numbers(object *objs)
+{
+    int   i, size;
+    int  *numbers;
+
+    size = sizeof(objs);
+    numbers = allocate_int(size);
+    for (i = 0; i < size; ++i) {
+        numbers[i] = object_number(objs[i]);
+    }
+    return numbers;
+}
+
+void add_weapon(object LIB_WEAPON weapon)
+{
+    ASSERT_ARG(weapon);
+    weapons_ |= ({ object_number(weapon) });
+}
+
+void remove_weapon(object LIB_WEAPON weapon)
+{
+    ASSERT_ARG(weapon);
+    weapons_ -= ({ object_number(weapon) });
+}
+
+object LIB_WEAPON *query_weapons()
+{
+    object LIB_WEAPON *weapons;
+
+    weapons = to_objects(weapons_) - ({ nil });
+    if (sizeof(weapons) != sizeof(weapons_)) {
+        weapons_ = to_numbers(weapons);
+    }
+    return weapons;
+}
+
+void add_armor_piece(object LIB_ARMOR_PIECE armor_piece)
+{
+    ASSERT_ARG(armor_piece);
+    armor_pieces_ |= ({ object_number(armor_piece) });
+}
+
+void remove_armor(object LIB_ARMOR_PIECE armor_piece)
+{
+    ASSERT_ARG(armor_piece);
+    armor_pieces_ -= ({ object_number(armor_piece) });
+}
+
+object LIB_ARMOR_PIECE *query_armor_pieces()
+{
+    object LIB_ARMOR_PIECE *armor_pieces;
+
+    armor_pieces = to_objects(armor_pieces_) - ({ nil });
+    if (sizeof(armor_pieces) != sizeof(armor_pieces_)) {
+        armor_pieces_ = to_numbers(armor_pieces);
+    }
+    return armor_pieces;
 }
 
 string query_look(varargs object LIB_THING observer)
