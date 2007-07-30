@@ -1,10 +1,9 @@
-# include <game/thing.h>
+# include <game/armor.h>
 
-inherit LIB_ITEM;
+inherit LIB_ARMOR;
 
 static void create()
 {
     ::create();
-    add_noun("shield");
-    set_look("a shield");
+    set_armor_type("shield");
 }

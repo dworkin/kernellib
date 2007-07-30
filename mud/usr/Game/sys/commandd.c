@@ -1,10 +1,12 @@
 # include <game/command.h>
 # include <game/direction.h>
+# include <game/language.h>
 # include <game/selector.h>
 # include <game/string.h>
 # include <system/system.h>
 
 inherit UTIL_DIRECTION;
+inherit UTIL_LANGUAGE;
 inherit UTIL_STRING;
 
 string grammar_;
@@ -165,57 +167,18 @@ static mixed *parse_except_selector(mixed *tree)
 
 static mixed *parse_count(mixed *tree)
 {
-    int count;
+    mixed count;
 
-    switch (tree[0]) {
-    case "one":    return ({  1 });
-    case "two":    return ({  2 });
-    case "three":  return ({  3 });
-    case "four":   return ({  4 });
-    case "five":   return ({  5 });
-    case "six":    return ({  6 });
-    case "seven":  return ({  7 });
-    case "eight":  return ({  8 });
-    case "nine":   return ({  9 });
-    case "ten":    return ({ 10 });
-    case "eleven": return ({ 11 });
-    case "twelve": return ({ 12 });
-    }
-
-    if (sscanf(tree[0], "%d%*c", count) == 1 && count >= 1) {
-        return ({ count });
-    } else {
-        return nil;
-    }
+    count = ::parse_count(tree[0]);
+    return count == nil ? nil : ({ count });
 }
 
 static mixed *parse_ordinal(mixed *tree)
 {
-    int ord;
-    string suffix;
+    mixed ordinal;
 
-    switch (tree[0]) {
-    case "first":    return ({  1 });
-    case "second":   return ({  2 });
-    case "third":    return ({  3 });
-    case "fourth":   return ({  4 });
-    case "fifth":    return ({  5 });
-    case "sixth":    return ({  6 });
-    case "seventh":  return ({  7 });
-    case "eighth":   return ({  8 });
-    case "ninth":    return ({  9 });
-    case "tenth":    return ({ 10 });
-    case "eleventh": return ({ 11 });
-    case "twelveth": return ({ 12 });
-    }
-
-    if (sscanf(tree[0], "%d%s", ord, suffix) == 2 && ord >= 1
-        && (suffix == "st" || suffix == "nd" || suffix == "rd"))
-    {
-        return ({ ord });
-    } else {
-        return nil;
-    }
+    ordinal = ::parse_ordinal(tree[0]);
+    return ordinal == nil ? nil : ({ ordinal });
 }
 
 static mixed *parse_direction(mixed *tree)

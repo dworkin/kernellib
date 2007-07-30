@@ -1,5 +1,6 @@
-# define OBJECTD   "/usr/System/sys/objectd"  /* object manager */
-# define OWNEROBJ  "/usr/System/obj/owner"    /* per-owner management object */
+# define OBJECTD     "/usr/System/sys/objectd"     /* object manager */
+# define OWNEROBJ    "/usr/System/obj/owner"       /* per-owner management */
+# define API_OBJECT  "/usr/System/lib/api/object"  /* object management API */
 
 # define PROG_OBJNAME     0  /* object name */
 # define PROG_PREVSIB     1  /* ([ int parent: int prevsib ]) */

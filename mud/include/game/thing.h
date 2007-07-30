@@ -4,6 +4,7 @@
 # define LIB_ITEM       "/usr/Game/lib/item"
 # define LIB_CONTAINER  "/usr/Game/lib/container"
 # define LIB_HEAP       "/usr/Game/lib/heap"
+# define LIB_WEAPON     "/usr/Game/lib/weapon"
 
 # define CORPSE         "/usr/Game/data/corpse"
 # define COIN           "/usr/Game/data/coin"

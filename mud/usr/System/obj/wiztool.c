@@ -1,10 +1,12 @@
 # include <type.h>
 # include <kernel/kernel.h>
 # include <kernel/user.h>
+# include <system/object.h>
 
-inherit LIB_WIZTOOL;
+inherit tool  LIB_WIZTOOL;
+inherit obj   API_OBJECT;
 
-private object user;		/* associated user object */
+object user; /* associated user object */
 
 /*
  * NAME:	create()
@@ -13,7 +15,8 @@ private object user;		/* associated user object */
 static void create(int clone)
 {
     if (clone) {
-	::create(200);
+	tool::create(200);
+        obj::create();
 	user = this_user();
     }
 }
@@ -85,6 +88,7 @@ static void process(string str)
     case "mkdir":
     case "rmdir":
     case "ed":
+    case "pls":
 
     case "access":
     case "grant":
@@ -105,6 +109,12 @@ static void process(string str)
 	message("No command: " + str + "\n");
 	break;
     }
+}
+
+static string normalize_path(string path)
+{
+    return find_object(DRIVER)->normalize_path(path, query_directory(),
+                                               query_owner());
 }
 
 static void cmd_find(object user, string cmd, string str)
@@ -136,7 +146,7 @@ static void cmd_find(object user, string cmd, string str)
             return;
         }
     } else {
-        str = DRIVER->normalize_path(str, query_directory(), query_owner());
+        str = normalize_path(str);
         obj = find_object(str);
         if (!obj) {
             message("No such object.\n");
@@ -144,4 +154,61 @@ static void cmd_find(object user, string cmd, string str)
         }
     }
     store(obj);
+}
+
+static string format_oids(int *oids)
+{
+    string  str;
+    int     i, size;
+
+    str = (string) oids[0];
+    size = sizeof(oids);
+    for (i = 1; i < size; ++i) {
+        str += ", " + oids[i];
+    }
+    return str;
+}
+
+static void cmd_pls(object user, string cmd, string str)
+{
+    mapping    dir;
+    string    *names, message;
+    int      **oids, i, size;
+
+    if (!str) {
+        str = ".";
+    }
+    str = normalize_path(str);
+    dir = get_program_dir(str);
+    names = map_indices(dir);
+    oids = map_values(dir);
+
+    size = sizeof(names);
+    if (!size) {
+        message("No programs.\n");
+        return;
+    }
+
+    message = "";
+    for (i = 0; i < size; ++i) {
+        string line;
+
+        if (oids[i][0] == -2) {
+            names[i] += "/";
+            oids[i] = oids[i][1 ..];
+        } else {
+            names[i] += " ";
+        }
+        
+        line = names[i];
+        if (strlen(line) < 18) {
+            line = "                  " + line;
+            line = line[strlen(line) - 18 ..];
+        }
+        if (sizeof(oids[i])) {
+            line += "  " + format_oids(oids[i]);
+        }
+        message += line + "\n";
+    }
+    message(message);
 }

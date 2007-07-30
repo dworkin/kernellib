@@ -13,16 +13,20 @@ private inherit UTIL_MESSAGE;
 private inherit UTIL_STRING;
 
 string race_;
+string gender_;
 
 static void create()
 {
     ::create();
     add_event("observe");
     add_event("error");
+    race_ = "human";
+    gender_ = random(2) ? "male" : "female";
 }
 
 static void set_race(string race)
 {
+    ASSERT_ARG(race);
     race_ = race;
     add_noun(race);
 }
@@ -30,6 +34,18 @@ static void set_race(string race)
 string query_race()
 {
     return race_;
+}
+
+static void set_gender(string gender)
+{
+    ASSERT_ARG(gender == "male" || gender == "female");
+    gender_ = gender;
+    add_noun(gender);
+}
+
+string query_gender()
+{
+    return gender_;
 }
 
 string query_look(varargs object LIB_THING observer)

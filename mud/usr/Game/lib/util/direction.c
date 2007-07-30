@@ -1,5 +1,8 @@
+# include <system/assert.h>
+
 static int is_horizontal_direction(string str)
 {
+    ASSERT_ARG(str);
     switch (str) {
     case "east":
     case "north":
@@ -18,23 +21,19 @@ static int is_horizontal_direction(string str)
 
 static int is_vertical_direction(string str)
 {
-    switch (str) {
-    case "down":
-    case "up":
-        return TRUE;
-
-    default:
-        return FALSE;
-    }
+    ASSERT_ARG(str);
+    return str == "down" || str == "up";
 }
 
 static int is_direction(string str)
 {
+    ASSERT_ARG(str);
     return is_horizontal_direction(str) || is_vertical_direction(str);
 }
 
 static string reverse_direction(string str)
 {
+    ASSERT_ARG(str && is_direction(str));
     switch (str) {
     case "east":      return "west";
     case "north":     return "south";
@@ -47,7 +46,5 @@ static string reverse_direction(string str)
 
     case "down":      return "up";
     case "up":        return "down";
-
-    default:          return nil;
     }
 }

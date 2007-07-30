@@ -98,15 +98,24 @@ int *split_oid(int oid)
  */
 void compile(string owner, object obj, string *source, string inherited...)
 {
-    int uid;
+    int     uid;
+    string  path, message;
 
     ASSERT_ACCESS(previous_object() == driver || previous_object() == initd);
-    if (object_name(obj) != DRIVER && sizeof(inherited) == 0) {
+    path = object_name(obj);
+    if (path != DRIVER && !sizeof(inherited)) {
         inherited = ({ AUTO });
     }
+
+    message = "compiled " + path + "@" + status(path)[O_INDEX];
+    if (sizeof(inherited)) {
+        message += " (inherited " + implode(inherited, ", ") + ")";
+    }
+    driver->message("OBJECTD: " + message + "\n");
+
     uid = add_owner(owner);
     DEBUG_ASSERT(ownerobjs[uid]);
-    ownerobjs[uid]->compile(obj, inherited);
+    ownerobjs[uid]->compile(path, inherited);
 
     oids[status(obj)[O_INDEX]] = obj;
 }
@@ -118,12 +127,20 @@ void compile(string owner, object obj, string *source, string inherited...)
 void compile_lib(string owner, string path, string *source,
                  string inherited...)
 {
-    int uid;
+    int     uid;
+    string  message;
 
     ASSERT_ACCESS(previous_object() == driver || previous_object() == initd);
     if (path != AUTO && sizeof(inherited) == 0) {
         inherited = ({ AUTO });
     }
+
+    message = "compiled " + path + "@" + status(path)[O_INDEX];
+    if (sizeof(inherited) != 0) {
+        message += " (inherited " + implode(inherited, ", ") + ")";
+    }
+    driver->message("OBJECTD: " + message + "\n");
+
     uid = add_owner(owner);
     DEBUG_ASSERT(ownerobjs[uid]);
     ownerobjs[uid]->compile(path, inherited);
@@ -166,6 +183,9 @@ void remove_program(string owner, string path, int timestamp, int index)
     int uid;
 
     ASSERT_ACCESS(previous_object() == driver);
+
+    driver->message("OBJECTD: removing program " + path + "@" + index + "\n");
+
     DEBUG_ASSERT(uids[owner]);
     uid = uids[owner];
     DEBUG_ASSERT(ownerobjs[uid]);
@@ -285,7 +305,7 @@ static mapping program_dir_map(string *dirs)
     map = ([ ]);
     size = sizeof(dirs);
     for (i = 0; i < size; ++i) {
-        map[dirs[i]] = -2;
+        map[dirs[i]] = ({ -2 });
     }
     return map;
 }
@@ -299,7 +319,7 @@ mapping get_program_dir(string path)
     string  creator;
     mixed   uid;
 
-    ASSERT_ACCESS(previous_object() == initd);
+    ASSERT_ACCESS(previous_program() == API_OBJECT);
     DEBUG_ASSERT(path);
     if (path == "/") {
         return program_dir_map(({ "kernel", USR_DIR[1 ..] }));

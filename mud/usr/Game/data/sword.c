@@ -1,6 +1,6 @@
 # include <game/thing.h>
 
-inherit LIB_ITEM;
+inherit LIB_WEAPON;
 
 static void create()
 {

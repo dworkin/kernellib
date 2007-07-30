@@ -98,8 +98,8 @@ static string describe_creature_inventory(object LIB_CREATURE creature,
     desc = sizeof(inv) ? list_strings(describe_each_thing(inv, observer))
         : "nothing";
     return ((creature == observer) ? "You have "
-            : capitalize(definite_description(creature)) + " has ") + desc
-        + ".";
+            : capitalize(nominative_pronoun(creature->query_gender()))
+            + " has ") + desc + ".";
 }
 
 static string describe_container_inventory(object LIB_CONTAINER cont,

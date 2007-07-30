@@ -65,34 +65,24 @@ private void link_child(int childoid, mixed *childent, string parname)
  * NAME:        compile()
  * DESCRIPTION: the given object has just been compiled
  */
-void compile(mixed obj, string *inherited)
+void compile(string path, string *inherited)
 {
-    int      oid, i, size;
-    string   oname, message;
-    mixed   *progent;
+    int     oid, i, size;
+    mixed  *progent;
 
     ASSERT_ACCESS(previous_object() == objectd);
-    oname = (typeof(obj) == T_STRING) ? obj : object_name(obj);
 
-# if TRUE
-    message = "compiled " + oname;
-    if (sizeof(inherited) != 0) {
-        message += " (inherited " + implode(inherited, ", ") + ")";
-    }
-    driver->message("OBJECTD: " + message + "\n");
-# endif
-
-    oid = objectd->join_oid(uid, status(obj)[O_INDEX]);
-    progent = progents[oid] = ({ oname, ([ ]), ([ ]), nil });
+    oid = objectd->join_oid(uid, status(path)[O_INDEX]);
+    progent = progents[oid] = ({ path, ([ ]), ([ ]), nil });
     size = sizeof(inherited);
     for (i = 0; i < size; ++i) {
         link_child(oid, progent, inherited[i]);
     }
 
-    if (prognames[oname]) {
-        prognames[oname] += ({ oid });
+    if (prognames[path]) {
+        prognames[path] += ({ oid });
     } else {
-        prognames[oname] = ({ oid });
+        prognames[path] = ({ oid });
     }
 }
 
@@ -142,11 +132,6 @@ void remove_program(int index)
     oid = objectd->join_oid(uid, index);
     progent = progents[oid];
     DEBUG_ASSERT(progent != nil);
-
-# if TRUE
-    driver->message("OBJECTD: removing program " + progent[PROG_OBJNAME]
-                    + "\n");
-# endif
 
     oname = progent[PROG_OBJNAME];
     DEBUG_ASSERT(prognames[oname] != nil);
