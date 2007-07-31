@@ -16,8 +16,8 @@ private inherit UTIL_STRING;
 string race_;
 string gender_;
 
-int *weapons_;
-int *armor_pieces_;
+int *wielded_;
+int *worn_;
 
 static void create()
 {
@@ -26,8 +26,8 @@ static void create()
     add_event("error");
     race_ = "human";
     gender_ = random(2) ? "male" : "female";
-    weapons_ = ({ });
-    armor_pieces_ = ({ });
+    wielded_ = ({ });
+    worn_ = ({ });
 }
 
 static void set_race(string race)
@@ -80,50 +80,50 @@ static int *to_numbers(object *objs)
     return numbers;
 }
 
-void add_weapon(object LIB_WEAPON weapon)
+void add_wielded(object LIB_WEAPON weapon)
 {
     ASSERT_ARG(weapon);
-    weapons_ |= ({ object_number(weapon) });
+    wielded_ |= ({ object_number(weapon) });
 }
 
-void remove_weapon(object LIB_WEAPON weapon)
+void remove_wielded(object LIB_WEAPON weapon)
 {
     ASSERT_ARG(weapon);
-    weapons_ -= ({ object_number(weapon) });
+    wielded_ -= ({ object_number(weapon) });
 }
 
-object LIB_WEAPON *query_weapons()
+object LIB_WEAPON *query_wielded()
 {
-    object LIB_WEAPON *weapons;
+    object LIB_WEAPON *wielded;
 
-    weapons = to_objects(weapons_) - ({ nil });
-    if (sizeof(weapons) != sizeof(weapons_)) {
-        weapons_ = to_numbers(weapons);
+    wielded = to_objects(wielded_) - ({ nil });
+    if (sizeof(wielded) != sizeof(wielded_)) {
+        wielded_ = to_numbers(wielded);
     }
-    return weapons;
+    return wielded;
 }
 
-void add_armor_piece(object LIB_ARMOR_PIECE armor_piece)
+void add_worn(object LIB_ARMOR_PIECE armor_piece)
 {
     ASSERT_ARG(armor_piece);
-    armor_pieces_ |= ({ object_number(armor_piece) });
+    worn_ |= ({ object_number(armor_piece) });
 }
 
-void remove_armor(object LIB_ARMOR_PIECE armor_piece)
+void remove_worn(object LIB_ARMOR_PIECE armor_piece)
 {
     ASSERT_ARG(armor_piece);
-    armor_pieces_ -= ({ object_number(armor_piece) });
+    worn_ -= ({ object_number(armor_piece) });
 }
 
-object LIB_ARMOR_PIECE *query_armor_pieces()
+object LIB_ARMOR_PIECE *query_worn()
 {
-    object LIB_ARMOR_PIECE *armor_pieces;
+    object LIB_ARMOR_PIECE *worn;
 
-    armor_pieces = to_objects(armor_pieces_) - ({ nil });
-    if (sizeof(armor_pieces) != sizeof(armor_pieces_)) {
-        armor_pieces_ = to_numbers(armor_pieces);
+    worn = to_objects(worn_) - ({ nil });
+    if (sizeof(worn) != sizeof(worn_)) {
+        worn_ = to_numbers(worn);
     }
-    return armor_pieces;
+    return worn;
 }
 
 string query_look(varargs object LIB_THING observer)

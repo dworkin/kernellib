@@ -46,7 +46,7 @@ object LIB_CREATURE query_wearer()
 
     environment = environment(this_object());
     return environment && environment <- LIB_CREATURE
-            && sizeof(environment->query_armor_pieces() & ({ this_object() }))
+            && sizeof(environment->query_worn() & ({ this_object() }))
         ? environment : nil;
 }
 

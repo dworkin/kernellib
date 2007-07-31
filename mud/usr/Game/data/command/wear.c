@@ -38,7 +38,7 @@ void perform(object LIB_CREATURE actor)
         }
     }
 
-    worn = items & actor->query_armor_pieces();
+    worn = items & actor->query_worn();
     if (sizeof(worn)) {
         tell_object(actor, "You are already wearing "
                     + definite_description(worn[0]));
