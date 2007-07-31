@@ -27,3 +27,8 @@ string *query_exits()
 {
     return map_indices(exits_);
 }
+
+int allow_enter(object obj)
+{
+    return obj <- LIB_THING;
+}

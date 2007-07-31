@@ -193,3 +193,13 @@ void die()
                   definite_description(this_object()) + " dies.");
     destruct_object(this_object());
 }
+
+int allow_enter(object obj)
+{
+    return obj <- LIB_ITEM;
+}
+
+int allow_move(object destination)
+{
+    return !destination || destination <- LIB_ROOM;
+}

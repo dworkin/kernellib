@@ -367,13 +367,16 @@ static mixed *status(varargs mixed obj)
  * NAME:        move_object()
  * DESCRIPTION: move an object to another environment
  */
-static int move_object(object obj, object dest)
+static int move_object(object obj, object destination)
 {
-    object env;
-
     ASSERT_ARG_1(obj);
-    ASSERT_ARG_2(!dest || !sscanf(object_name(dest), "%*s#-1"));
-    obj->_F_move(dest);
+    ASSERT_ARG_2(!destination || !sscanf(object_name(destination), "%*s#-1"));
+    if (destination && !destination->allow_enter(obj) || !obj
+        || !obj->allow_move(destination) || !obj)
+    {
+        return FALSE;
+    }
+    obj->_F_move(destination);
     return TRUE;
 }
 

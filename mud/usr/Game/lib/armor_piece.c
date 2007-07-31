@@ -39,3 +39,18 @@ string query_look(varargs object LIB_THING observer)
         return indefinite_article(armor_type_) + " " + armor_type_;
     }
 }
+
+object LIB_CREATURE query_wearer()
+{
+    object LIB_THING environment;
+
+    environment = environment(this_object());
+    return environment && environment <- LIB_CREATURE
+            && sizeof(environment->query_armor_pieces() & ({ this_object() }))
+        ? environment : nil;
+}
+
+int allow_move(object destination)
+{
+    return query_wearer() ? FALSE : ::allow_move(destination);
+}
