@@ -36,13 +36,13 @@ void perform(object LIB_CREATURE actor)
     }
     for (i = 0; i < size; ++i) {
         if (!(objs[i] <- LIB_ITEM)) {
-            tell_object(actor, "You cannot pick up "
+            tell_object(actor, "You cannot take "
                         + definite_description(objs[i]));
             return;
         }
     }
 
     for (i = 0; i < size; ++i) {
-        actor->add_action(new_object(PICK_UP_ACTION, objs[i]));
+        actor->add_action(new_object(TAKE_ACTION, objs[i]));
     }
 }

@@ -19,8 +19,8 @@ static void create(object LIB_ITEM item)
 
 void perform(object LIB_CREATURE actor)
 {
-    object LIB_ROOM  room;
-    object LIB_ITEM  item;
+    object LIB_ROOM room;
+    object LIB_ITEM item;
 
     ASSERT_ARG(actor);
 
@@ -37,12 +37,12 @@ void perform(object LIB_CREATURE actor)
     }
 
     if (move_object(item, room)) {
-        tell_object(actor, "You put down "
+        tell_object(actor, "You drop "
                     + definite_description(item, actor));
-        tell_audience(actor, definite_description(actor) + " puts down "
+        tell_audience(actor, definite_description(actor) + " drops "
                       + indefinite_description(item));
     } else {
-        tell_object(actor, "You cannot put down "
+        tell_object(actor, "You cannot drop "
                     + definite_description(item, actor));
     }
 }

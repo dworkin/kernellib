@@ -42,7 +42,7 @@ void perform(object LIB_CREATURE actor)
     }
     for (i = 0; i < size; ++i) {
         if (!(conts[i] <- LIB_CONTAINER)) {
-            tell_object(actor, "You cannot take anything out of "
+            tell_object(actor, "You cannot take anything from "
                         + definite_description(conts[i]));
             return;
         }
@@ -56,6 +56,6 @@ void perform(object LIB_CREATURE actor)
         return;
     }
     for (i = 0; i < size; ++i) {
-        actor->add_action(new_object(TAKE_OUT_ACTION, items[i], cont));
+        actor->add_action(new_object(TAKE_FROM_ACTION, items[i], cont));
     }
 }

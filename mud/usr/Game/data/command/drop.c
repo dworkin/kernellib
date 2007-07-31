@@ -40,6 +40,6 @@ void perform(object LIB_CREATURE actor)
     }
 
     for (i = 0; i < size; ++i) {
-        actor->add_action(new_object(PUT_DOWN_ACTION, items[i]));
+        actor->add_action(new_object(DROP_ACTION, items[i]));
     }
 }

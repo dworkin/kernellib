@@ -24,6 +24,12 @@ object LIB_COMMAND parse(string command)
     return tree ? tree[0] : nil;
 }
 
+static mixed *parse_drop_command(mixed *tree)
+{
+    tree -= ({ "down" });
+    return ({ new_object(DROP_COMMAND, tree[1]) });
+}
+
 static mixed *parse_give_command(mixed *tree)
 {
     return ({ new_object(GIVE_COMMAND, tree[1], tree[3]) });
@@ -54,27 +60,9 @@ static mixed *parse_look_to_command(mixed *tree)
     return ({ new_object(LOOK_TO_COMMAND, tree[1]) });
 }
 
-static mixed *parse_pick_up_command(mixed *tree)
-{
-    tree -= ({ "up" });
-    return ({ new_object(PICK_UP_COMMAND, tree[1]) });
-}
-
-static mixed *parse_put_down_command(mixed *tree)
-{
-    tree -= ({ "down" });
-    return ({ new_object(PUT_DOWN_COMMAND, tree[1]) });
-}
-
 static mixed *parse_put_in_command(mixed *tree)
 {
     return ({ new_object(PUT_IN_COMMAND, tree[1], tree[3]) });
-}
-
-static mixed *parse_wear_command(mixed *tree)
-{
-    tree -= ({ "on" });
-    return ({ new_object(WEAR_COMMAND, tree[1]) });
 }
 
 static mixed *parse_say_command(mixed *tree)
@@ -88,9 +76,22 @@ static mixed *parse_say_to_command(mixed *tree)
                          tree[sizeof(tree) - 1]) });
 }
 
-static mixed *parse_take_out_command(mixed *tree)
+static mixed *parse_take_command(mixed *tree)
 {
-    return ({ new_object(TAKE_OUT_COMMAND, tree[1], tree[sizeof(tree) - 1]) });
+    tree -= ({ "up" });
+    return ({ new_object(TAKE_COMMAND, tree[1]) });
+}
+
+static mixed *parse_take_from_command(mixed *tree)
+{
+    return ({ new_object(TAKE_FROM_COMMAND, tree[1],
+                         tree[sizeof(tree) - 1]) });
+}
+
+static mixed *parse_wear_command(mixed *tree)
+{
+    tree -= ({ "on" });
+    return ({ new_object(WEAR_COMMAND, tree[1]) });
 }
 
 static mixed *parse_word(mixed *tree)

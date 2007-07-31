@@ -22,11 +22,11 @@ static void create()
 {
     object LIB_ROOM crypt;
 
+    compile_object(DROP_ACTION);
     compile_object(GIVE_ACTION);
-    compile_object(PICK_UP_ACTION);
-    compile_object(PUT_DOWN_ACTION);
     compile_object(PUT_IN_ACTION);
-    compile_object(TAKE_OUT_ACTION);
+    compile_object(TAKE_ACTION);
+    compile_object(TAKE_FROM_ACTION);
     compile_object(WEAR_ACTION);
 
     compile_object(SIMPLE_SELECTOR);
@@ -37,18 +37,18 @@ static void create()
     compile_object(LIST_SELECTOR);
     compile_object(EXCEPT_SELECTOR);
 
+    compile_object(DROP_COMMAND);
     compile_object(GIVE_COMMAND);
     compile_object(GO_COMMAND);
     compile_object(INVENTORY_COMMAND);
     compile_object(LOOK_COMMAND);
     compile_object(LOOK_AT_COMMAND);
     compile_object(LOOK_TO_COMMAND);
-    compile_object(PICK_UP_COMMAND);
-    compile_object(PUT_DOWN_COMMAND);
     compile_object(PUT_IN_COMMAND);
     compile_object(SAY_COMMAND);
     compile_object(SAY_TO_COMMAND);
-    compile_object(TAKE_OUT_COMMAND);
+    compile_object(TAKE_COMMAND);
+    compile_object(TAKE_FROM_COMMAND);
     compile_object(WEAR_COMMAND);
 
     wordd_ = compile_object(WORDD);

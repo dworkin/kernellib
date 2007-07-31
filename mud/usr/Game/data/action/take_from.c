@@ -41,12 +41,12 @@ void perform(object LIB_CREATURE actor)
 
     if (move_object(item, actor)) {
         tell_object(actor, "You take " + definite_description(item)
-                    + " out of " + definite_description(cont));
+                    + " from " + definite_description(cont));
         tell_audience(actor, definite_description(actor)
                       + " takes " + indefinite_description(item)
-                      + " out of " + indefinite_description(cont));
+                      + " from " + indefinite_description(cont));
     } else {
         tell_object(actor, "You cannot take " + definite_description(item)
-                    + " out of " + definite_description(cont));
+                    + " from " + definite_description(cont));
     }
 }

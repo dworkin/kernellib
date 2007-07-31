@@ -35,17 +35,17 @@ void perform(object LIB_CREATURE actor)
     }
 
     if (!(obj <- LIB_ITEM)) {
-        tell_object(actor, "You cannot pick up " + definite_description(obj));
+        tell_object(actor, "You cannot take " + definite_description(obj));
         return;
     }
 
     if (move_object(obj, actor)) {
-        tell_object(actor, "You pick up "
+        tell_object(actor, "You take "
                     + definite_description(obj, actor));
-        tell_audience(actor, definite_description(actor) + " picks up "
+        tell_audience(actor, definite_description(actor) + " takes "
                       + indefinite_description(obj));
     } else {
-        tell_object(actor, "You cannot pick up "
+        tell_object(actor, "You cannot take "
                     + definite_description(obj, actor));
     }
 }
