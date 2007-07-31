@@ -30,13 +30,14 @@ void perform(object LIB_CREATURE actor)
         return;
     }
 
-    if (sizeof(actor->query_worn() & ({ armor_piece }))) {
-        tell_object(actor, "You are already wearing that.");
+    if (!sizeof(actor->query_worn() & ({ armor_piece }))) {
+        tell_object(actor, "You are not wearing that.");
         return;
     }
 
-    actor->add_worn(armor_piece);
-    tell_object(actor, "You wear " + definite_description(armor_piece, actor));
-    tell_audience(actor, definite_description(actor) + " wears "
+    actor->remove_worn(armor_piece);
+    tell_object(actor, "You remove "
+                + definite_description(armor_piece, actor));
+    tell_audience(actor, definite_description(actor) + " removes "
                   + indefinite_description(armor_piece));
 }

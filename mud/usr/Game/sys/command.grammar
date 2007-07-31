@@ -17,29 +17,29 @@ CMD: 'taste' SEL ? parse_taste_command
 CMD: 'go' DIR ? parse_go_command
 CMD: DIR ? parse_go_command
 
-CMD: 'pick' 'up' SEL ? parse_take_command
-CMD: 'pick' SEL 'up' ? parse_take_command
 CMD: 'take' SEL ? parse_take_command
 CMD: 'get' SEL ? parse_take_command
+CMD: 'pick' 'up' SEL ? parse_take_command
+CMD: 'pick' SEL 'up' ? parse_take_command
+CMD: 'drop' SEL ? parse_drop_command
 CMD: 'put' 'down' SEL ? parse_drop_command
 CMD: 'put' SEL 'down' ? parse_drop_command
-CMD: 'drop' SEL ? parse_drop_command
  
 CMD: 'put' SEL 'in' SEL ? parse_put_in_command
-CMD: 'take' SEL 'out' 'of' SEL ? parse_take_from_command
 CMD: 'take' SEL 'from' SEL ? parse_take_from_command
-CMD: 'get' SEL 'out' 'of' SEL ? parse_take_from_command
+CMD: 'take' SEL 'out' 'of' SEL ? parse_take_from_command
 CMD: 'get' SEL 'from' SEL ? parse_take_from_command
+CMD: 'get' SEL 'out' 'of' SEL ? parse_take_from_command
 
+CMD: 'wear' SEL ? parse_wear_command
 CMD: 'put' 'on' SEL ? parse_wear_command
 CMD: 'put' SEL 'on' ? parse_wear_command
-CMD: 'wear' SEL ? parse_wear_command
+CMD: 'remove' SEL ? parse_remove_command
 CMD: 'take' 'off' SEL ? parse_remove_command
 CMD: 'take' SEL 'off' ? parse_remove_command
-CMD: 'remove' SEL ? parse_remove_command
 
 CMD: 'wield' SEL ? parse_wield_command
-CMD: 'release' ? parse_release_command
+CMD: 'release' SEL ? parse_release_command
 
 CMD: 'eat' SEL ? parse_eat_command
 CMD: 'drink' SEL ? parse_drink_command
@@ -86,8 +86,6 @@ WORDS: REC_WORD ? parse_words
 
 OPT_THE:
 OPT_THE: 'the'
-OPT_A:
-OPT_A: 'a'
 
 SEL_1: OPT_THE WORDS ? parse_simple_selector
 SEL_1: OPT_THE ORD WORDS ? parse_ordinal_selector

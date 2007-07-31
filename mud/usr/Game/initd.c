@@ -25,9 +25,12 @@ static void create()
     compile_object(DROP_ACTION);
     compile_object(GIVE_ACTION);
     compile_object(PUT_IN_ACTION);
+    compile_object(RELEASE_ACTION);
+    compile_object(REMOVE_ACTION);
     compile_object(TAKE_ACTION);
     compile_object(TAKE_FROM_ACTION);
     compile_object(WEAR_ACTION);
+    compile_object(WIELD_ACTION);
 
     compile_object(SIMPLE_SELECTOR);
     compile_object(ORDINAL_SELECTOR);
@@ -45,11 +48,14 @@ static void create()
     compile_object(LOOK_AT_COMMAND);
     compile_object(LOOK_TO_COMMAND);
     compile_object(PUT_IN_COMMAND);
+    compile_object(RELEASE_COMMAND);
+    compile_object(REMOVE_COMMAND);
     compile_object(SAY_COMMAND);
     compile_object(SAY_TO_COMMAND);
     compile_object(TAKE_COMMAND);
     compile_object(TAKE_FROM_COMMAND);
     compile_object(WEAR_COMMAND);
+    compile_object(WIELD_COMMAND);
 
     wordd_ = compile_object(WORDD);
     commandd_ = compile_object(COMMANDD);
