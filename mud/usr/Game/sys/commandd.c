@@ -1,3 +1,4 @@
+# include <game/action.h>
 # include <game/command.h>
 # include <game/direction.h>
 # include <game/language.h>
@@ -16,7 +17,7 @@ static void create()
     grammar_ = read_file("command.grammar");
 }
 
-object LIB_COMMAND parse(string command)
+object LIB_ACTION parse(string command)
 {
     mixed *tree;
 
@@ -78,7 +79,7 @@ static mixed *parse_remove_command(mixed *tree)
 
 static mixed *parse_say_command(mixed *tree)
 {
-    return ({ new_object(SAY_COMMAND, tree[sizeof(tree) - 1]) });
+    return ({ new_object(SAY_ACTION, tree[sizeof(tree) - 1]) });
 }
 
 static mixed *parse_say_to_command(mixed *tree)
@@ -122,39 +123,23 @@ static mixed *parse_words(mixed *tree)
 
 static mixed *parse_simple_selector(mixed *tree)
 {
-    string *words;
-
-    words = tree[sizeof(tree) - 1];
-    return ({ new_object(SIMPLE_SELECTOR, words) });
+    return ({ new_object(SIMPLE_SELECTOR, tree[sizeof(tree) - 1]) });
 }
 
 static mixed *parse_ordinal_selector(mixed *tree)
 {
-    int      ord;
-    string  *words;
-
     tree -= ({ "of", "the" });
-    ord = tree[0];
-    words = tree[1];
-    return ({ new_object(ORDINAL_SELECTOR, ord, words) });
+    return ({ new_object(ORDINAL_SELECTOR, tree[0], tree[1]) });
 }
 
 static mixed *parse_a_selector(mixed *tree)
 {
-    string *words;
-
-    words = tree[1];
-    return ({ new_object(COUNT_SELECTOR, 1, words) });
+    return ({ new_object(COUNT_SELECTOR, 1, tree[1]) });
 }
 
 static mixed *parse_count_selector(mixed *tree)
 {
-    int      count;
-    string  *words;
-
-    count = tree[0];
-    words = tree[sizeof(tree) - 1];
-    return ({ new_object(COUNT_SELECTOR, count, words) });
+    return ({ new_object(COUNT_SELECTOR, tree[0], tree[sizeof(tree) - 1]) });
 }
 
 static mixed *parse_all_selector(mixed *tree)
@@ -164,28 +149,18 @@ static mixed *parse_all_selector(mixed *tree)
 
 static mixed *parse_all_of_selector(mixed *tree)
 {
-    string *words;
-
     tree -= ({ "of", "the" });
-    words = tree[1];
-    return ({ new_object(ALL_OF_SELECTOR, words) });
+    return ({ new_object(ALL_OF_SELECTOR, tree[1]) });
 }
 
 static mixed *parse_list_selector(mixed *tree)
 {
-    object LIB_SELECTOR *sels;
-
-    sels = tree - ({ ",", "and", "or" });
-    return ({ new_object(LIST_SELECTOR, sels) });
+    return ({ new_object(LIST_SELECTOR, tree - ({ ",", "and", "or" })) });
 }
 
 static mixed *parse_except_selector(mixed *tree)
 {
-    object LIB_SELECTOR incl, excl;
-
-    incl = tree[0];
-    excl = tree[sizeof(tree) - 1];
-    return ({ new_object(EXCEPT_SELECTOR, incl, excl) });
+    return ({ new_object(EXCEPT_SELECTOR, tree[0], tree[sizeof(tree) - 1]) });
 }
 
 static mixed *parse_count(mixed *tree)

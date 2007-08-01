@@ -72,9 +72,9 @@ CMD: 'whisper' QUOTE ? parse_whisper_command
 CMD: 'whisper' QUOTE 'to' SEL ? parse_whisper_command
 
 CMD: 'say' QUOTE ? parse_say_command
-CMD: 'say' QUOTE 'to' SEL ? parse_say_command
 CMD: QUOTE ? parse_say_command
-CMD: QUOTE 'to' SEL ? parse_say_command
+CMD: 'say' QUOTE 'to' SEL ? parse_say_to_command
+CMD: QUOTE 'to' SEL ? parse_say_to_command
 
 CMD: 'shout' QUOTE ? parse_shout_command
 CMD: 'shout' QUOTE 'to' SEL ? parse_shout_command

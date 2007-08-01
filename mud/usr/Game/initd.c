@@ -27,6 +27,7 @@ static void create()
     compile_object(PUT_IN_ACTION);
     compile_object(RELEASE_ACTION);
     compile_object(REMOVE_ACTION);
+    compile_object(SAY_ACTION);
     compile_object(TAKE_ACTION);
     compile_object(TAKE_FROM_ACTION);
     compile_object(WEAR_ACTION);
