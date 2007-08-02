@@ -10,7 +10,9 @@ int      uid;        /* user ID of owner */
 mapping  progents;   /* ([ int oid: mixed *progent ]) */
 mapping  prognames;  /* ([ string progname: ({ int oid, ... }) ]) */
 int      nextindex;  /* index for the next managed LWO */
-mapping  envs;       /* ([ int oid: object env ]) */
+
+mapping persistent_;   /* ([ int oid: object obj ]) */
+mapping lightweight_;  /* ([ int oid: object environment ]) */
 
 /*
  * NAME:        create()
@@ -24,40 +26,44 @@ static void create(int clone)
         uid = objectd->query_uid(query_owner());
         progents = ([ ]);
         prognames = ([ ]);
-	nextindex = -2;
-	envs = ([ ]);
+	nextindex = 1;
+
+        persistent_ = ([ ]);
+        lightweight_ = ([ ]);
     }
 }
 
-private void link_child(int childoid, mixed *childent, string parname)
+private void link_child(int child_oid, mixed *child_entry, string parent_name)
 {
-    int      paruid, index, paroid;
+    int      parent_uid, index, parent_oid;
     string   creator;
-    mixed   *parent;
+    mixed   *parent_entry;
 
     /* get program entry for parent */
-    creator = driver->creator(parname);
-    paruid = objectd->query_uid(creator);
-    DEBUG_ASSERT(paruid >= 1);
-    index = status(parname)[O_INDEX];
-    paroid = objectd->join_oid(paruid, index);
-    parent = objectd->find_program(paroid);
-    DEBUG_ASSERT(parent != nil);
+    creator = driver->creator(parent_name);
+    parent_uid = objectd->query_uid(creator);
+    DEBUG_ASSERT(parent_uid >= 1);
+    index = status(parent_name)[O_INDEX] + 1;
+    parent_oid = OID_MASTER | (parent_uid << OID_OWNER_OFFSET)
+        | (index << OID_INDEX_OFFSET);
+    parent_entry = objectd->find_program(parent_oid);
+    DEBUG_ASSERT(parent_entry);
 
     /* link child */
-    if (parent[PROG_FIRSTCHILD] == nil) {
+    if (!parent_entry[PROG_FIRSTCHILD]) {
         /* first child: create chain */
-        parent[PROG_FIRSTCHILD] = childoid;
-        childent[PROG_PREVSIB][paroid] = childoid;
-        childent[PROG_NEXTSIB][paroid] = childoid;
+        parent_entry[PROG_FIRSTCHILD] = child_oid;
+        child_entry[PROG_PREVSIB][parent_oid] = child_oid;
+        child_entry[PROG_NEXTSIB][parent_oid] = child_oid;
     } else {
-        mixed *firstent, *prevent;
+        mixed *first_entry, *previous_entry;
         
         /* add to chain */
-        firstent = objectd->find_program(parent[PROG_FIRSTCHILD]);
-        prevent = objectd->find_program(firstent[PROG_PREVSIB][paroid]);
-        firstent[PROG_PREVSIB][paroid] = childoid;
-        prevent[PROG_NEXTSIB][paroid] = childoid;
+        first_entry = objectd->find_program(parent_entry[PROG_FIRSTCHILD]);
+        previous_entry
+            = objectd->find_program(first_entry[PROG_PREVSIB][parent_oid]);
+        first_entry[PROG_PREVSIB][parent_oid] = child_oid;
+        previous_entry[PROG_NEXTSIB][parent_oid] = child_oid;
     }
 }
 
@@ -65,18 +71,24 @@ private void link_child(int childoid, mixed *childent, string parname)
  * NAME:        compile()
  * DESCRIPTION: the given object has just been compiled
  */
-void compile(string path, string *inherited)
+void compile(mixed obj, string *source, string *inherited)
 {
-    int     oid, i, size;
-    mixed  *progent;
+    string   path;
+    int      oid, i, size;
+    mixed   *entry;
 
     ASSERT_ACCESS(previous_object() == objectd);
+    path = (typeof(obj) == T_STRING) ? obj : object_name(obj);
+    if (path != DRIVER && path != AUTO && !sizeof(inherited)) {
+        inherited = ({ AUTO });
+    }
 
-    oid = objectd->join_oid(uid, status(path)[O_INDEX]);
-    progent = progents[oid] = ({ path, ([ ]), ([ ]), nil });
+    oid = OID_MASTER | (uid << OID_OWNER_OFFSET)
+        | ((status(path)[O_INDEX] + 1) << OID_INDEX_OFFSET);
+    entry = progents[oid] = ({ path, ([ ]), ([ ]), nil });
     size = sizeof(inherited);
     for (i = 0; i < size; ++i) {
-        link_child(oid, progent, inherited[i]);
+        link_child(oid, entry, inherited[i]);
     }
 
     if (prognames[path]) {
@@ -86,34 +98,82 @@ void compile(string path, string *inherited)
     }
 }
 
-private void unlink_child(int childoid, mixed *childent, int paroid)
+void clone(object obj)
 {
-    int     prevoid;
-    mixed  *parent;
+    int oid, index;
 
-    parent = objectd->find_program(paroid);
-    DEBUG_ASSERT(parent != nil);
-    prevoid = childent[PROG_PREVSIB][paroid];
-    if (childoid == prevoid) {
-        /* only link: remove chain */
-        DEBUG_ASSERT(childoid == parent[PROG_FIRSTCHILD]);
-        parent[PROG_FIRSTCHILD] = nil;
+    ASSERT_ACCESS(previous_object() == objectd);
+    DEBUG_ASSERT(obj);
+    sscanf(object_name(obj), "%*s#%d", index);
+    DEBUG_ASSERT(index >= 1);
+    oid = OID_CLONE | (uid << OID_OWNER_OFFSET) | (index << OID_INDEX_OFFSET);
+    DEBUG_ASSERT(!persistent_[oid]);
+    persistent_[oid] = obj;
+}
+
+void destruct(object obj)
+{
+    int category, index, oid;
+
+    ASSERT_ACCESS(previous_object() == objectd);
+    DEBUG_ASSERT(obj);
+    if (sscanf(object_name(obj), "%*s#%d", index)) {
+        category = OID_CLONE;
     } else {
-        int     nextoid;
-        mixed  *prevent, *nextent;
+        category = OID_MASTER;
+        index = status(obj)[O_INDEX] + 1;
+    }
+    DEBUG_ASSERT(index >= 1);
+    oid = category | (uid << OID_OWNER_OFFSET) | (index << OID_INDEX_OFFSET);
+    DEBUG_ASSERT(persistent_[oid]);
+    persistent_[oid] = nil;
+}
+
+/*
+ * NAME:        find()
+ * DESCRIPTION: find a persistent object or managed LWO by number
+ */
+object find(int oid)
+{
+    ASSERT_ACCESS(previous_object() == objectd);
+    if ((oid & OID_CATEGORY_MASK) == OID_LIGHTWEIGHT) {
+        object environment;
+
+        environment = lightweight_[oid];
+        return environment ? environment->_F_find(oid) : nil;
+    } else {
+        return persistent_[oid];
+    }
+}
+
+private void unlink_child(int child_oid, mixed *child_entry, int parent_oid)
+{
+    int     previous_oid;
+    mixed  *parent_entry;
+
+    parent_entry = objectd->find_program(parent_oid);
+    DEBUG_ASSERT(parent_entry);
+    previous_oid = child_entry[PROG_PREVSIB][parent_oid];
+    if (child_oid == previous_oid) {
+        /* only link: remove chain */
+        DEBUG_ASSERT(child_oid == parent_entry[PROG_FIRSTCHILD]);
+        parent_entry[PROG_FIRSTCHILD] = nil;
+    } else {
+        int     next_oid;
+        mixed  *previous_entry, *next_entry;
 
         /* unlink child */
-        nextoid = childent[PROG_NEXTSIB][paroid];
-        prevent = objectd->find_program(prevoid);
-        DEBUG_ASSERT(prevent != nil);
-        nextent = objectd->find_program(nextoid);
-        DEBUG_ASSERT(nextent != nil);
-        prevent[PROG_NEXTSIB][paroid] = nextoid;
-        nextent[PROG_PREVSIB][paroid] = prevoid;
+        next_oid = child_entry[PROG_NEXTSIB][parent_oid];
+        previous_entry = objectd->find_program(previous_oid);
+        DEBUG_ASSERT(previous_entry);
+        next_entry = objectd->find_program(next_oid);
+        DEBUG_ASSERT(next_entry);
+        previous_entry[PROG_NEXTSIB][parent_oid] = next_oid;
+        next_entry[PROG_PREVSIB][parent_oid] = previous_oid;
 
-        if (parent[PROG_FIRSTCHILD] == childoid) {
+        if (parent_entry[PROG_FIRSTCHILD] == child_oid) {
             /* child was first in chain: appoint next child instead */
-            parent[PROG_FIRSTCHILD] = nextoid;
+            parent_entry[PROG_FIRSTCHILD] = next_oid;
         }
     }
 }
@@ -124,26 +184,27 @@ private void unlink_child(int childoid, mixed *childent, int paroid)
  */
 void remove_program(int index)
 {
-    int      oid, i, size, *paroids;
-    string   oname;
-    mixed   *progent;
+    int      oid, i, size, *parent_oids;
+    string   name;
+    mixed   *entry;
 
     ASSERT_ACCESS(previous_object() == objectd);
-    oid = objectd->join_oid(uid, index);
-    progent = progents[oid];
-    DEBUG_ASSERT(progent != nil);
+    oid = OID_MASTER | (uid << OID_OWNER_OFFSET)
+        | (index << OID_INDEX_OFFSET);
+    entry = progents[oid];
+    DEBUG_ASSERT(entry);
 
-    oname = progent[PROG_OBJNAME];
-    DEBUG_ASSERT(prognames[oname] != nil);
-    prognames[oname] -= ({ oid });
-    if (sizeof(prognames[oname]) == 0) {
-        prognames[oname] = nil;
+    name = entry[PROG_OBJNAME];
+    DEBUG_ASSERT(prognames[name]);
+    prognames[name] -= ({ oid });
+    if (!sizeof(prognames[name])) {
+        prognames[name] = nil;
     }
 
-    paroids = map_indices(progent[PROG_PREVSIB]);
-    size = sizeof(paroids);
+    parent_oids = map_indices(entry[PROG_PREVSIB]);
+    size = sizeof(parent_oids);
     for (i = 0; i < size; ++i) {
-        unlink_child(oid, progent, paroids[i]);
+        unlink_child(oid, entry, parent_oids[i]);
     }
     progents[oid] = nil;
 }
@@ -155,8 +216,8 @@ void remove_program(int index)
 mixed *find_program(int oid)
 {
     ASSERT_ACCESS(previous_object() == objectd);
-    DEBUG_ASSERT(oid >= 0);
-    DEBUG_ASSERT(progents[oid] != nil);
+    DEBUG_ASSERT((oid & OID_CATEGORY_MASK) == OID_MASTER);
+    DEBUG_ASSERT(progents[oid]);
     return progents[oid];
 }
 
@@ -212,47 +273,36 @@ int add_data(object env)
     ASSERT_ACCESS(previous_object() == objectd);
     DEBUG_ASSERT(uid);
     DEBUG_ASSERT(env);
-    oid = objectd->join_oid(uid, nextindex--);
-    envs[oid] = env;
+    oid = OID_LIGHTWEIGHT | (uid << OID_OWNER_OFFSET)
+        | (nextindex++ << OID_INDEX_OFFSET);
+    lightweight_[oid] = env;
     return oid;
-}
-
-/*
- * NAME:        find_data()
- * DESCRIPTION: find a managed LWO by number
- */
-object find_data(int oid)
-{
-    object env;
-
-    ASSERT_ACCESS(previous_object() == objectd);
-    DEBUG_ASSERT(oid <= -2);
-    env = envs[oid];
-    return env ? env->_F_find(oid) : nil;
 }
 
 /*
  * NAME:        move_data()
  * DESCRIPTION: move a managed LWO to another environment
  */
-void move_data(int oid, object env)
+void move_data(int oid, object environment)
 {
     ASSERT_ACCESS(previous_object() == objectd);
-    DEBUG_ASSERT(oid <= -2 && envs[oid]);
-    envs[oid] = env;
+    DEBUG_ASSERT((oid & OID_CATEGORY_MASK) == OID_LIGHTWEIGHT);
+    DEBUG_ASSERT(lightweight_[oid]);
+    lightweight_[oid] = environment;
 }
 
 /*
  * NAME:        data_callout()
  * DESCRIPTION: schedule a call-out for a managed LWO
  */
-int data_callout(int oid, string func, mixed delay, mixed *args)
+int data_callout(int oid, string function, mixed delay, mixed *arguments)
 {
     ASSERT_ACCESS(previous_object() == objectd);
     DEBUG_ASSERT(oid);
-    DEBUG_ASSERT(func);
-    DEBUG_ASSERT(args);
-    return call_out("call_data", delay, oid, func, args);
+    DEBUG_ASSERT(function);
+    DEBUG_ASSERT(typeof(delay) == T_INT || typeof(delay) == T_FLOAT);
+    DEBUG_ASSERT(arguments);
+    return call_out("call_data", delay, oid, function, arguments);
 }
 
 /*
@@ -318,17 +368,17 @@ mixed *query_data_callouts(string owner, int oid)
  * NAME:        call_data()
  * DESCRIPTION: dispatch a call-out to a managed LWO
  */
-static void call_data(int oid, string func, mixed *args)
+static void call_data(int oid, string function, mixed *arguments)
 {
-    object env;
+    object environment;
 
-    env = envs[oid];
-    if (env) {
+    environment = lightweight_[oid];
+    if (environment) {
         object obj;
 
-        obj = env->_F_find(oid);
+        obj = environment->_F_find(oid);
         if (obj) {
-            obj->_F_call_data(func, args);
+            obj->_F_call_data(function, arguments);
         }
     }
 }

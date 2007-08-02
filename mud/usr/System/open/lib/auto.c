@@ -238,35 +238,45 @@ nomask object _Q_environment()
  */
 int object_number(object obj)
 {
-    ASSERT_ARG(obj && obj <- SYSTEM_AUTO);
-    return obj->_Q_oid();
+    string  path, owner;
+    int     category, uid, index, oid;
+
+    ASSERT_ARG(obj);
+    path = object_name(obj);
+    if (sscanf(path, "%*s#%d", index)) {
+        if (index == -1) {
+            return obj <- SYSTEM_AUTO ? obj->_Q_oid() : -1;
+        }
+        category = OID_CLONE;
+        owner = obj->query_owner();
+    } else {
+        category = OID_MASTER;
+        owner = creator(path);
+        index = ::status(obj)[O_INDEX] + 1;
+    }
+    uid = ::find_object(OBJECTD)->query_uid(owner);
+    DEBUG_ASSERT(uid >= 1);
+    DEBUG_ASSERT(index >= 1);
+    return category | (uid << OID_OWNER_OFFSET) | (index << OID_INDEX_OFFSET);
 }
 
 /*
  * NAME:        find_object()
  * DESCRIPTION: find an object by name or number
  */
-static object find_object(mixed oname)
+static object find_object(mixed name)
 {
-    int     ptype, onumber;
-    string  master;
     object  obj;
 
-    switch (typeof(oname)) {
+    switch (typeof(name)) {
     case T_INT:
         /* find object by number */
-        if (oname < 0) {
-            /* distinct LWO */
-            return ::find_object(OBJECTD)->find_data(oname);
-        } else {
-            /* persistent object */
-            obj = ::find_object(OBJECTD)->find_obj(oname);
-        }
+        obj = ::find_object(OBJECTD)->find(name);
         break;
 
     case T_STRING:
         /* find object by name */
-        obj = ::find_object(oname);
+        obj = ::find_object(name);
         break;
 
     default:
@@ -277,9 +287,9 @@ static object find_object(mixed oname)
     }
 
     /* cannot find clonable or light-weight master objects */
-    oname = object_name(obj);
-    return sscanf(oname, "%*s#") || !sscanf(oname, "%*s" + CLONABLE_SUBDIR)
-        && !sscanf(oname, "%*s" + LIGHTWEIGHT_SUBDIR) ? obj : nil;
+    name = object_name(obj);
+    return sscanf(name, "%*s#") || !sscanf(name, "%*s" + CLONABLE_SUBDIR)
+        && !sscanf(name, "%*s" + LIGHTWEIGHT_SUBDIR) ? obj : nil;
 }
 
 /*
