@@ -13,7 +13,7 @@
 private inherit rsrc  API_RSRC;
 private inherit tls   API_TLS;
 
-object driver;
+object driver_;
 
 /*
  * NAME:        load()
@@ -39,14 +39,14 @@ private object load(string path)
  */
 private void init_object_manager()
 {
-    object objectd, ownerobj;
+    object objectd, owner_node;
 
     /* load object manager */
     objectd = load(OBJECTD);
-    ownerobj = load(OWNEROBJ);
+    owner_node = load(OWNER_NODE);
 
     /* register kernel objects */
-    objectd->compile("System", driver, nil);
+    objectd->compile("System", driver_, nil);
     objectd->compile_lib("System", AUTO, nil);
     objectd->compile("System", find_object(OBJREGD), nil);
     objectd->compile("System", find_object(RSRCD), nil);
@@ -76,10 +76,10 @@ private void init_object_manager()
     /* register system objects */
     objectd->compile("System", this_object(), nil, API_RSRC, API_TLS);
     objectd->compile("System", objectd, nil, API_RSRC, API_TLS);
-    objectd->compile("System", ownerobj, nil);
+    objectd->compile("System", owner_node, nil);
 
     /* install object manager */
-    driver->set_object_manager(objectd);
+    driver_->set_object_manager(objectd);
 }
 
 /*
@@ -97,17 +97,6 @@ private void init_telnet_manager()
     USERD->set_telnet_manager(0, telnetd);
 }
 
-private void test_program_dir(string path)
-{
-    string   *paths;
-    mapping   progs;
-
-    progs = OBJECTD->get_program_dir(path);
-    paths = map_indices(progs);
-    driver->message("INITD: listing " + path + ": " + implode(paths, ", ")
-                    + "\n");
-}
-
 /*
  * NAME:        create()
  * DESCRIPTION: initialize system
@@ -119,10 +108,10 @@ static void create()
 
     rsrc::create();
     tls::create();
-    driver = find_object(DRIVER);
+    driver_ = find_object(DRIVER);
 
     /* initialize system */
-    driver->message("Initializing system.\n");
+    driver_->message("Initializing system.\n");
     init_object_manager();
     init_telnet_manager();
     load(SYSTEM_AUTO);
@@ -135,7 +124,7 @@ static void create()
     size = sizeof(owners);
     for (i = 0; i < size; ++i) {
         path = USR_DIR + "/" + owners[i] + "/initd";
-        if (driver->file_size(path + ".c")) {
+        if (driver_->file_size(path + ".c")) {
 	    /*
 	     * the increased TLS size does not affect the current execution
 	     * round, so initialize user code in call-outs
@@ -151,6 +140,6 @@ static void create()
  */
 static void init(string path)
 {
-    driver->message("Initializing " + path + ".\n");
+    driver_->message("Initializing " + path + ".\n");
     load(path);
 }

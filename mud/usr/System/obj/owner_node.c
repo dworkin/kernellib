@@ -47,7 +47,7 @@ private void link_child(int child_oid, mixed *child_entry, string parent_name)
     index = status(parent_name)[O_INDEX] + 1;
     parent_oid = OID_MASTER | (parent_uid << OID_OWNER_OFFSET)
         | (index << OID_INDEX_OFFSET);
-    parent_entry = objectd_->find_program(parent_oid);
+    parent_entry = objectd_->query_program(parent_oid);
 
     /* link child */
     if (!parent_entry[PDB_FIRST_CHILD]) {
@@ -60,9 +60,9 @@ private void link_child(int child_oid, mixed *child_entry, string parent_name)
         mixed  *first_entry, *previous_entry;
         
         /* add to chain */
-        first_entry = objectd_->find_program(parent_entry[PDB_FIRST_CHILD]);
+        first_entry = objectd_->query_program(parent_entry[PDB_FIRST_CHILD]);
         previous_oid = first_entry[PDB_PREVIOUS_SIBLING][parent_oid];
-        previous_entry = objectd_->find_program(previous_oid);
+        previous_entry = objectd_->query_program(previous_oid);
         first_entry[PDB_PREVIOUS_SIBLING][parent_oid] = child_oid;
         previous_entry[PDB_NEXT_SIBLING][parent_oid] = child_oid;
     }
@@ -153,7 +153,7 @@ private void unlink_child(int child_oid, mixed *child_entry, int parent_oid)
     int     previous_oid;
     mixed  *parent_entry;
 
-    parent_entry = objectd_->find_program(parent_oid);
+    parent_entry = objectd_->query_program(parent_oid);
     previous_oid = child_entry[PDB_PREVIOUS_SIBLING][parent_oid];
     if (child_oid == previous_oid) {
         /* only link: remove chain */
@@ -164,8 +164,8 @@ private void unlink_child(int child_oid, mixed *child_entry, int parent_oid)
 
         /* unlink child */
         next_oid = child_entry[PDB_NEXT_SIBLING][parent_oid];
-        previous_entry = objectd_->find_program(previous_oid);
-        next_entry = objectd_->find_program(next_oid);
+        previous_entry = objectd_->query_program(previous_oid);
+        next_entry = objectd_->query_program(next_oid);
         previous_entry[PDB_NEXT_SIBLING][parent_oid] = next_oid;
         next_entry[PDB_PREVIOUS_SIBLING][parent_oid] = previous_oid;
 
@@ -206,13 +206,19 @@ void remove_program(int index)
 }
 
 /*
- * NAME:        find_program()
- * DESCRIPTION: find a program by object ID
+ * NAME:        query_program()
+ * DESCRIPTION: return the program with the specified OID
  */
-mixed *find_program(int oid)
+mixed *query_program(int oid)
 {
+    mixed *entry;
+
     ASSERT_ACCESS(previous_object() == objectd_);
-    return pdb_entries_[oid];
+    entry = pdb_entries_[oid];
+    if (!entry) {
+        error("No such program");
+    }
+    return entry;
 }
 
 /*
@@ -311,7 +317,6 @@ mixed remove_data_callout(int oid, int handle)
     mixed  **callouts;
 
     ASSERT_ACCESS(previous_object() == objectd_);
-
     callouts = status(this_object())[O_CALLOUTS];
     for (i = sizeof(callouts) - 1; i >= 0; --i) {
         if (callouts[i][CO_HANDLE] == handle) {
@@ -323,7 +328,6 @@ mixed remove_data_callout(int oid, int handle)
                 ? remove_call_out(handle) : -1;
         }
     }
-
     return -1;
 }
 

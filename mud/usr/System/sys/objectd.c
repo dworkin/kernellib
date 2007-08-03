@@ -9,11 +9,11 @@
 private inherit rsrc  API_RSRC;
 private inherit tls   API_TLS;
 
-object   driver_;      /* driver object */
-object   initd_;       /* system initialization manager */
-int      next_uid_;    /* next UID */
-mapping  uids_;        /* ([ string owner: int uid ]) */
-mapping  owner_objs_;  /* ([ int uid: object owner_obj ]) */
+object   driver_;    /* driver object */
+object   initd_;     /* system initialization manager */
+int      next_uid_;  /* next UID */
+mapping  uids_;      /* ([ string owner: int uid ]) */
+mapping  nodes_;     /* ([ int uid: object node ]) */
 
 /*
  * NAME:        create()
@@ -27,7 +27,7 @@ static void create()
     initd_ = find_object(INITD);
     next_uid_ = 1;
     uids_ = ([ ]);
-    owner_objs_ = ([ ]);
+    nodes_ = ([ ]);
 }
 
 /*
@@ -41,7 +41,7 @@ private int add_owner(string owner)
 
 	/* new owner: register and create owner object */
 	uid = uids_[owner] = next_uid_++;
-        owner_objs_[uid] = clone_object(OWNEROBJ, owner);
+        nodes_[uid] = clone_object(OWNER_NODE, owner);
         driver_->message("OBJECTD: added owner " + owner + " with UID " + uid
                          + "\n");
     }
@@ -67,7 +67,7 @@ void compile(string owner, object obj, string *source, string inherited...)
 
     ASSERT_ACCESS(previous_object() == driver_ || previous_object() == initd_);
     uid = add_owner(owner);
-    owner_objs_[uid]->compile(obj, source, inherited);
+    nodes_[uid]->compile(obj, source, inherited);
 }
 
 /*
@@ -81,7 +81,7 @@ void compile_lib(string owner, string path, string *source,
 
     ASSERT_ACCESS(previous_object() == driver_ || previous_object() == initd_);
     uid = add_owner(owner);
-    owner_objs_[uid]->compile(path, source, inherited);
+    nodes_[uid]->compile(path, source, inherited);
 }
 
 /*
@@ -93,11 +93,11 @@ void clone(string owner, object obj)
     int uid;
 
     ASSERT_ACCESS(previous_object() == driver_);
-    if (sscanf(object_name(obj), OWNEROBJ + "#%*s")) {
+    if (sscanf(object_name(obj), OWNER_NODE + "#%*s")) {
         return;
     }
     uid = add_owner(owner);
-    owner_objs_[uid]->clone(obj);
+    nodes_[uid]->clone(obj);
 }
 
 /*
@@ -110,7 +110,7 @@ void destruct(string owner, object obj)
 
     ASSERT_ACCESS(previous_object() == driver_);
     uid = query_uid(owner);
-    owner_objs_[uid]->destruct(obj);
+    nodes_[uid]->destruct(obj);
 }
 
 /*
@@ -123,7 +123,7 @@ void remove_program(string owner, string path, int timestamp, int index)
 
     ASSERT_ACCESS(previous_object() == driver_);
     uid = uids_[owner];
-    owner_objs_[uid]->remove_program(index);
+    nodes_[uid]->remove_program(index);
 }
 
 /*
@@ -217,16 +217,16 @@ void set_tlvar(int index, mixed value)
 }
 
 /*
- * NAME:        find_program()
- * DESCRIPTION: find a program by object ID
+ * NAME:        query_program()
+ * DESCRIPTION: return the program with the specified OID
  */
-mixed *find_program(int oid)
+mixed *query_program(int oid)
 {
     int uid;
 
-    ASSERT_ACCESS(previous_program() == OWNEROBJ);
+    ASSERT_ACCESS(previous_program() == OWNER_NODE);
     uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
-    return owner_objs_[uid]->find_program(oid);
+    return nodes_[uid]->query_program(oid);
 }
 
 static mapping program_dir_map(string *directories)
@@ -263,20 +263,20 @@ mapping get_program_dir(string path)
     if (uid == nil) {
         return ([ ]);
     }
-    return owner_objs_[uid]->get_program_dir(path);
+    return nodes_[uid]->get_program_dir(path);
 }
 
 /*
  * NAME:        add_data()
  * DESCRIPTION: add a managed LWO
  */
-int add_data(string owner, object env)
+int add_data(string owner, object environment)
 {
     int uid;
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     uid = add_owner(owner);
-    return owner_objs_[uid]->add_data(env);
+    return nodes_[uid]->add_data(environment);
 }
 
 /*
@@ -286,10 +286,12 @@ int add_data(string owner, object env)
 object find(int oid)
 {
     int     uid;
+    object  node;
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
-    return owner_objs_[uid] ? owner_objs_[uid]->find(oid) : nil;
+    node = nodes_[uid];
+    return node ? node->find(oid) : nil;
 }
 
 /*
@@ -302,7 +304,7 @@ void move_data(int oid, object environment)
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
-    owner_objs_[uid]->move_data(oid, environment);
+    nodes_[uid]->move_data(oid, environment);
 }
 
 /*
@@ -315,7 +317,7 @@ int data_callout(int oid, string function, mixed delay, mixed *arguments)
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
-    return owner_objs_[uid]->data_callout(oid, function, delay, arguments);
+    return nodes_[uid]->data_callout(oid, function, delay, arguments);
 }
 
 /*
@@ -328,7 +330,7 @@ mixed remove_data_callout(int oid, int handle)
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
-    return owner_objs_[uid]->remove_data_callout(oid, handle);
+    return nodes_[uid]->remove_data_callout(oid, handle);
 }
 
 /*
@@ -341,5 +343,5 @@ mixed *query_data_callouts(string owner, int oid)
 
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
-    return owner_objs_[uid]->query_data_callouts(owner, oid);
+    return nodes_[uid]->query_data_callouts(owner, oid);
 }

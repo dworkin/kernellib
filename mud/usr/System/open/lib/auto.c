@@ -16,7 +16,6 @@ private mapping  inventory_;    /* ([ int oid: object obj ]) */
  */
 private string creator(string path)
 {
-    DEBUG_ASSERT(path);
     return ::find_object(DRIVER)->creator(path);
 }
 
@@ -29,7 +28,6 @@ private string normalize_path(string path)
     string  name;
     object  driver;
 
-    DEBUG_ASSERT(path);
     driver = ::find_object(DRIVER);
     name = object_name(this_object());
     return driver->normalize_path(path, name + "/..", driver->creator(name));
@@ -40,8 +38,6 @@ private void undefined_error(string name, mapping undefined)
     string  *programs, **functions;
     int      i, size;
 
-    DEBUG_ASSERT(name);
-    DEBUG_ASSERT(undefined);
     programs = map_indices(undefined);
     functions = map_values(undefined);
     size = sizeof(programs);
@@ -88,7 +84,6 @@ nomask int _F_system_create(varargs int clone)
 	args = objectd->get_tlvar(SYSTEM_TLS_CREATE_ARGS);
 	if (args) {
             /* pass arguments to create() */
-	    DEBUG_ASSERT(typeof(args) == T_ARRAY);
 	    objectd->set_tlvar(SYSTEM_TLS_CREATE_ARGS, nil);
 	    call_limited("create", args...);
 	} else {
@@ -152,8 +147,7 @@ nomask void _F_move(object dest)
         }
     }
 
-    if (environment_ != nil) {
-        DEBUG_ASSERT(oid_ != -1);
+    if (environment_) {
         environment_->_F_leave(oid_);
     }
 
@@ -178,12 +172,9 @@ nomask void _F_move(object dest)
 nomask void _F_enter(int oid, object obj)
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    DEBUG_ASSERT(oid);
-    DEBUG_ASSERT(obj);
-    if (inventory_ == nil) {
+    if (!inventory_) {
         inventory_ = ([ ]);
     }
-    DEBUG_ASSERT(!inventory_[oid]);
     inventory_[oid] = obj;
 }
 
@@ -194,8 +185,6 @@ nomask void _F_enter(int oid, object obj)
 nomask void _F_leave(int oid)
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    DEBUG_ASSERT(oid);
-    DEBUG_ASSERT(inventory_ && inventory_[oid]);
     inventory_[oid] = nil;
 }
 
@@ -206,8 +195,7 @@ nomask void _F_leave(int oid)
 nomask object _F_find(int oid)
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO
-                  || previous_program() == OWNEROBJ);
-    DEBUG_ASSERT(oid < -1);
+                  || previous_program() == OWNER_NODE);
     return inventory_ ? inventory_[oid] : nil;
 }
 
@@ -255,8 +243,6 @@ int object_number(object obj)
         index = ::status(obj)[O_INDEX] + 1;
     }
     uid = ::find_object(OBJECTD)->query_uid(owner);
-    DEBUG_ASSERT(uid >= 1);
-    DEBUG_ASSERT(index >= 1);
     return category | (uid << OID_OWNER_OFFSET) | (index << OID_INDEX_OFFSET);
 }
 
@@ -522,19 +508,20 @@ static mixed remove_call_out(int handle)
  * NAME:        _F_call_data()
  * DESCRIPTION: dispatch a scheduled function call
  */
-nomask void _F_call_data(string func, mixed *args)
+nomask void _F_call_data(string function, mixed *arguments)
 {
-    string prog;
+    object  this;
+    string  program;
 
-    ASSERT_ACCESS(previous_program() == OWNEROBJ);
-    DEBUG_ASSERT(oid_ < -1);
-    prog = ::function_object(func, this_object());
+    ASSERT_ACCESS(previous_program() == OWNER_NODE);
+    this = this_object();
+    program = ::function_object(function, this);
 
     /*
      * Make sure that it is still safe to call the function. This object may
      * have been recompiled after the call was scheduled.
      */
-    if (prog && (creator(prog) != "System" || func == "create")) {
-        call_other(this_object(), func, args...);
+    if (program && (creator(program) != "System" || function == "create")) {
+        call_other(this, function, arguments...);
     }
 }

@@ -1,5 +1,5 @@
 # define OBJECTD     "/usr/System/sys/objectd"             /* object manager */
-# define OWNEROBJ    "/usr/System/obj/owner"  /* per-owner management object */
+# define OWNER_NODE  "/usr/System/obj/owner_node"     /* per-owner mgmt node */
 # define API_OBJECT  "/usr/System/lib/api/object"   /* object management API */
 
 # define OID_CATEGORY_MASK  0xc0000000
