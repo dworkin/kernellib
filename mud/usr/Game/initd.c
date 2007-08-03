@@ -24,6 +24,10 @@ static void create()
 
     compile_object(DROP_ACTION);
     compile_object(GIVE_ACTION);
+    compile_object(GO_ACTION);
+    compile_object(INVENTORY_ACTION);
+    compile_object(LOOK_ACTION);
+    compile_object(LOOK_TO_ACTION);
     compile_object(PUT_IN_ACTION);
     compile_object(RELEASE_ACTION);
     compile_object(REMOVE_ACTION);
@@ -43,15 +47,10 @@ static void create()
 
     compile_object(DROP_COMMAND);
     compile_object(GIVE_COMMAND);
-    compile_object(GO_COMMAND);
-    compile_object(INVENTORY_COMMAND);
-    compile_object(LOOK_COMMAND);
     compile_object(LOOK_AT_COMMAND);
-    compile_object(LOOK_TO_COMMAND);
     compile_object(PUT_IN_COMMAND);
     compile_object(RELEASE_COMMAND);
     compile_object(REMOVE_COMMAND);
-    compile_object(SAY_COMMAND);
     compile_object(SAY_TO_COMMAND);
     compile_object(TAKE_COMMAND);
     compile_object(TAKE_FROM_COMMAND);

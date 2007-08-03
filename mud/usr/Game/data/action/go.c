@@ -1,10 +1,10 @@
-# include <game/command.h>
+# include <game/action.h>
 # include <game/description.h>
 # include <game/direction.h>
 # include <game/message.h>
 # include <game/thing.h>
 
-inherit LIB_COMMAND;
+inherit LIB_ACTION;
 inherit UTIL_DESCRIPTION;
 inherit UTIL_DIRECTION;
 inherit UTIL_MESSAGE;

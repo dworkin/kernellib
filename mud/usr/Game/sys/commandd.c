@@ -38,17 +38,17 @@ static mixed *parse_give_command(mixed *tree)
 
 static mixed *parse_go_command(mixed *tree)
 {
-    return ({ new_object(GO_COMMAND, tree[sizeof(tree) - 1]) });
+    return ({ new_object(GO_ACTION, tree[sizeof(tree) - 1]) });
 }
 
 static mixed *parse_inventory_command(mixed *tree)
 {
-    return ({ new_object(INVENTORY_COMMAND) });
+    return ({ new_object(INVENTORY_ACTION) });
 }
 
 static mixed *parse_look_command(mixed *tree)
 {
-    return ({ new_object(LOOK_COMMAND) });
+    return ({ new_object(LOOK_ACTION) });
 }
 
 static mixed *parse_look_at_command(mixed *tree)
@@ -58,7 +58,7 @@ static mixed *parse_look_at_command(mixed *tree)
 
 static mixed *parse_look_to_command(mixed *tree)
 {
-    return ({ new_object(LOOK_TO_COMMAND, tree[1]) });
+    return ({ new_object(LOOK_TO_ACTION, tree[1]) });
 }
 
 static mixed *parse_put_in_command(mixed *tree)
