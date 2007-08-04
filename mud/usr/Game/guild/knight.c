@@ -5,6 +5,6 @@ inherit LIB_GUILD;
 static void create()
 {
     ::create();
-    set_name("Warrior");
-    add_noun("warrior");
+    set_name("Knight");
+    add_noun("knight");
 }

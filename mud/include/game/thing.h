@@ -7,4 +7,5 @@
 # define LIB_WEAPON     "/usr/Game/lib/weapon"
 
 # define CORPSE         "/usr/Game/data/corpse"
+# define CREATURE       "/usr/Game/obj/creature"
 # define COIN           "/usr/Game/data/coin"

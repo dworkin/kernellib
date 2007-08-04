@@ -1,4 +1,5 @@
 # define LIB_GUILD      "/usr/Game/lib/guild"
+# define GUILD_DIR      "/usr/Game/guild"
 
 # define BARD_GUILD     "/usr/Game/guild/bard"
 # define KNIGHT_GUILD   "/usr/Game/guild/knight"

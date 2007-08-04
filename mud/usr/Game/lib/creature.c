@@ -30,6 +30,7 @@ static void create()
     ::create();
     add_event("observe");
     add_event("error");
+
     gender_ = random(2) ? "male" : "female";
     race_ = find_object(HUMAN_RACE);
     guild_ = find_object(WARRIOR_GUILD);
@@ -54,7 +55,7 @@ int has_plural_noun(string str)
         || ::has_plural_noun(str);
 }
 
-static void set_gender(string gender)
+void set_gender(string gender)
 {
     ASSERT_ARG(gender == "male" || gender == "female");
     gender_ = gender;
@@ -65,7 +66,7 @@ string query_gender()
     return gender_;
 }
 
-static void set_race(object LIB_RACE race)
+void set_race(object LIB_RACE race)
 {
     ASSERT_ARG(race);
     race_ = race;
@@ -76,7 +77,7 @@ object LIB_RACE query_race()
     return race_;
 }
 
-static void set_guild(object LIB_GUILD guild)
+void set_guild(object LIB_GUILD guild)
 {
     ASSERT_ARG(guild);
     guild_ = guild;

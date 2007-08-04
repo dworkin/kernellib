@@ -67,12 +67,14 @@ private void tell_audience(string str)
 int login(string str)
 {
     if (previous_program() == LIB_CONN) {
+        string tail;
+
+        sscanf(str, "%s the %s", str, tail);
 	if (nconn == 0) {
 	    ::login(str);
 	}
 	nconn++;
-	if (strlen(str) == 0 || sscanf(str, "%*s ") != 0 ||
-	    sscanf(str, "%*s/") != 0) {
+	if (!strlen(str) || sscanf(str, "%*s ") || sscanf(str, "%*s/")) {
 	    return MODE_DISCONNECT;
 	}
 	Name = name = str;
@@ -96,9 +98,9 @@ int login(string str)
 	    /* no password; login immediately */
 	    connection(previous_object());
 	    tell_audience(Name + " logs in.\n");
-	    if (str != "admin" && sizeof(query_users() & ({ str })) == 0) {
+	    if (str != "admin" && !sizeof(query_users() & ({ str }))) {
                 if (!creature) {
-                    creature = GAME_INITD->make_creature();
+                    creature = find_object(GAME_INITD)->make_creature(tail);
                     creature->set_name(Name);
                     subscribe_event(creature, "observe");
                     subscribe_event(creature, "error");

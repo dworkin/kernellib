@@ -66,8 +66,18 @@ static void create()
     compile_object(ELF_RACE);
     compile_object(DWARF_RACE);
     compile_object(HUMAN_RACE);
+    compile_object(LEPRECHAUN_RACE);
 
+    compile_object(BARD_GUILD);
+    compile_object(KNIGHT_GUILD);
+    compile_object(MONK_GUILD);
+    compile_object(PRIEST_GUILD);
+    compile_object(RANGER_GUILD);
+    compile_object(THIEF_GUILD);
     compile_object(WARRIOR_GUILD);
+    compile_object(WIZARD_GUILD);
+
+    compile_object(CREATURE);
 
     temple_ = compile_object(TEMPLE);
     crypt = compile_object(CRYPT); 
@@ -86,11 +96,55 @@ static void create()
     move_object(new_object(COIN, "silver", 1 + random(13)), crypt);
 }
 
-object LIB_CREATURE make_creature()
+static string select_element(string *array)
 {
-    object creature;
+    return array[random(sizeof(array))];
+}
 
-    creature = clone_object(ELF);
+static string select_gender(string *options)
+{
+    string *genders;
+
+    genders = ({ "female", "male" });
+    options &= genders;
+    return select_element(sizeof(options) ? options : genders);
+}
+
+static object LIB_RACE select_race(string *options)
+{
+    string *races, race;
+
+    races = ({ "dwarf", "elf", "human", "leprechaun" });
+    options &= races;
+    race = select_element(sizeof(options) ? options : races);
+    return find_object(RACE_DIR + "/" + race);
+}
+
+static object LIB_GUILD select_guild(string *options)
+{
+    string *guilds, guild;
+
+    guilds = ({ "bard", "knight", "monk", "priest", "ranger", "thief",
+                "warrior", "wizard" });
+    options &= guilds;
+    guild = select_element(sizeof(options) ? options : guilds);
+    return find_object(GUILD_DIR + "/" + guild);
+}
+
+object LIB_CREATURE make_creature(varargs string str)
+{
+    string  *options, gender;
+
+    object LIB_RACE      race;
+    object LIB_GUILD     guild;
+    object LIB_CREATURE  creature;
+
+    options = str ? explode(str, " ") - ({ "" }) : ({ });
+
+    creature = clone_object(CREATURE);
+    creature->set_gender(select_gender(options));
+    creature->set_race(select_race(options));
+    creature->set_guild(select_guild(options));
     
     move_object(creature, temple_);
     return creature;
