@@ -2,9 +2,9 @@
 # include <game/identity.h>
 # include <game/message.h>
 
-inherit desc LIB_DESCRIBABLE;
-inherit id LIB_IDENTIFIABLE;
-inherit LIB_OBSERVER;
+inherit desc  LIB_DESCRIBABLE;
+inherit id    LIB_IDENTIFIABLE;
+inherit       LIB_OBSERVER;
 
 static void create()
 {

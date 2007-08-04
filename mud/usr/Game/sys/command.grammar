@@ -3,6 +3,7 @@ quote = /'[^']+'?|"[^"]+"?/
 whitespace = / +/
 
 CMD: 'inventory' ? parse_inventory_command
+CMD: 'score' ? parse_score_command
 
 CMD: 'look' ? parse_look_command
 CMD: 'look' 'at' SEL ? parse_look_at_command

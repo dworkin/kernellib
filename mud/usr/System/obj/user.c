@@ -99,7 +99,7 @@ int login(string str)
 	    if (str != "admin" && sizeof(query_users() & ({ str })) == 0) {
                 if (!creature) {
                     creature = GAME_INITD->make_creature();
-                    creature->set_name(name);
+                    creature->set_name(Name);
                     subscribe_event(creature, "observe");
                     subscribe_event(creature, "error");
                 }

@@ -1,8 +1,10 @@
 # include <game/action.h>
 # include <game/armor.h>
 # include <game/description.h>
+# include <game/guild.h>
 # include <game/language.h>
 # include <game/message.h>
+# include <game/race.h>
 # include <game/string.h>
 # include <game/thing.h>
 # include <system/assert.h>
@@ -13,45 +15,76 @@ private inherit UTIL_LANGUAGE;
 private inherit UTIL_MESSAGE;
 private inherit UTIL_STRING;
 
-string race_;
 string gender_;
+
+object LIB_RACE   race_;
+object LIB_GUILD  guild_;
 
 int *wielded_;
 int *worn_;
+
+mapping traits_;
 
 static void create()
 {
     ::create();
     add_event("observe");
     add_event("error");
-    race_ = "human";
     gender_ = random(2) ? "male" : "female";
+    race_ = find_object(HUMAN_RACE);
+    guild_ = find_object(WARRIOR_GUILD);
+
     wielded_ = ({ });
     worn_ = ({ });
+
+    traits_ = ([ ]);
 }
 
-static void set_race(string race)
+int has_singular_noun(string str)
 {
-    ASSERT_ARG(race);
-    race_ = race;
-    add_noun(race);
+    return race_ && race_->has_singular_noun(str)
+        || guild_ && guild_->has_singular_noun(str)
+        || ::has_singular_noun(str);
 }
 
-string query_race()
+int has_plural_noun(string str)
 {
-    return race_;
+    return race_ && race_->has_plural_noun(str)
+        || guild_ && guild_->has_plural_noun(str)
+        || ::has_plural_noun(str);
 }
 
 static void set_gender(string gender)
 {
     ASSERT_ARG(gender == "male" || gender == "female");
     gender_ = gender;
-    add_noun(gender);
 }
 
 string query_gender()
 {
     return gender_;
+}
+
+static void set_race(object LIB_RACE race)
+{
+    ASSERT_ARG(race);
+    race_ = race;
+}
+
+object LIB_RACE query_race()
+{
+    return race_;
+}
+
+static void set_guild(object LIB_GUILD guild)
+{
+    ASSERT_ARG(guild);
+    guild_ = guild;
+}
+
+object LIB_GUILD query_guild()
+{
+    return guild_;
 }
 
 static object *to_objects(int *numbers)
@@ -131,7 +164,21 @@ string query_look(varargs object LIB_THING observer)
     string name;
     
     name = query_name();
-    return name ? capitalize(name) : indefinite_article(race_) + " " + race_;
+    if (name) {
+        return capitalize(name);
+    }
+
+    if (race_ && guild_) {
+        name = race_->query_name() + " " + guild_->query_name();
+    } else if (race_) {
+        name = race_->query_name();
+    } else if (guild_) {
+        name = guild_->query_name();
+    } else {
+        name = "creature";
+    }
+    name = lower_case(name);
+    return indefinite_article(name) + " " + name;
 }
 
 int allow_subscribe(object obj, string name)
@@ -202,4 +249,18 @@ int allow_enter(object obj)
 int allow_move(object destination)
 {
     return !destination || destination <- LIB_ROOM;
+}
+
+float query_trait(string name)
+{
+    float value;
+
+    value = traits_[name] ? traits_[name] : 0.0;
+    if (race_) {
+        value += race_->query_trait_bonus(name);
+    }
+    if (guild_) {
+        value += guild_->query_trait_bonus(name);
+    }
+    return value;
 }

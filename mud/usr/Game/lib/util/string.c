@@ -70,3 +70,29 @@ static string capitalize(string str)
     }
     return str;
 }
+
+static string lower_case(string str)
+{
+    int i, len;
+
+    len = strlen(str);
+    for (i = 0; i < len; ++i) {
+        if (str[i] >= 'A' && str[i] <= 'Z') {
+            str[i] += 'a' - 'A';
+        }
+    }
+    return str;
+}
+
+static string upper_case(string str)
+{
+    int i, len;
+
+    len = strlen(str);
+    for (i = 0; i < len; ++i) {
+        if (str[i] >= 'a' && str[i] <= 'z') {
+            str[i] += 'A' - 'a';
+        }
+    }
+    return str;
+}

@@ -1,6 +1,8 @@
 # include <limits.h>
 # include <game/action.h>
 # include <game/command.h>
+# include <game/guild.h>
+# include <game/race.h>
 # include <game/selector.h>
 # include <game/word.h>
 # include <game/thing.h>
@@ -8,8 +10,8 @@
 
 # define BAG     "/usr/Game/obj/bag"
 # define CRYPT   "/usr/Game/room/crypt"
+# define DWARF   "/usr/Game/obj/dwarf"
 # define ELF     "/usr/Game/obj/elf"
-# define ORC     "/usr/Game/obj/orc"
 # define SHIELD  "/usr/Game/data/shield"
 # define SWORD   "/usr/Game/data/sword"
 # define TEMPLE  "/usr/Game/room/temple"
@@ -32,6 +34,7 @@ static void create()
     compile_object(RELEASE_ACTION);
     compile_object(REMOVE_ACTION);
     compile_object(SAY_ACTION);
+    compile_object(SCORE_ACTION);
     compile_object(TAKE_ACTION);
     compile_object(TAKE_FROM_ACTION);
     compile_object(WEAR_ACTION);
@@ -60,10 +63,16 @@ static void create()
     wordd_ = compile_object(WORDD);
     commandd_ = compile_object(COMMANDD);
 
+    compile_object(ELF_RACE);
+    compile_object(DWARF_RACE);
+    compile_object(HUMAN_RACE);
+
+    compile_object(WARRIOR_GUILD);
+
     temple_ = compile_object(TEMPLE);
-    crypt = compile_object(CRYPT);
+    crypt = compile_object(CRYPT); 
+    compile_object(DWARF);
     compile_object(ELF);
-    compile_object(ORC);
     compile_object(CORPSE);
     compile_object(BAG);
     compile_object(SWORD);
@@ -71,7 +80,7 @@ static void create()
     compile_object(COIN);
 
     move_object(clone_object(BAG), temple_);
-    move_object(clone_object(ORC), crypt);
+    move_object(clone_object(DWARF), crypt);
     move_object(new_object(SWORD), crypt);
     move_object(new_object(SHIELD), crypt);
     move_object(new_object(COIN, "silver", 1 + random(13)), crypt);

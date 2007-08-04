@@ -88,6 +88,11 @@ static mixed *parse_say_to_command(mixed *tree)
                          tree[sizeof(tree) - 1]) });
 }
 
+static mixed *parse_score_command(mixed *tree)
+{
+    return ({ new_object(SCORE_ACTION) });
+}
+
 static mixed *parse_take_command(mixed *tree)
 {
     tree -= ({ "up" });

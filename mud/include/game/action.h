@@ -11,6 +11,7 @@
 # define REMOVE_ACTION     "/usr/Game/data/action/remove"
 # define SAY_ACTION        "/usr/Game/data/action/say"
 # define SAY_TO_ACTION     "/usr/Game/data/action/say_to"
+# define SCORE_ACTION      "/usr/Game/data/action/score"
 # define TAKE_ACTION       "/usr/Game/data/action/take"
 # define TAKE_FROM_ACTION  "/usr/Game/data/action/take_from"
 # define WEAR_ACTION       "/usr/Game/data/action/wear"

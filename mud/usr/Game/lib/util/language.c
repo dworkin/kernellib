@@ -221,3 +221,8 @@ static string possessive_pronoun(string gender)
     case NEUTER_GENDER:  return "its";
     }
 }
+
+static string plural_form(string str)
+{
+    return str + "s";
+}
