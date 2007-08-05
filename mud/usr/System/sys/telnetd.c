@@ -25,5 +25,14 @@ int query_timeout(object connection)
 string query_banner(object connection)
 {
     ASSERT_ACCESS(previous_object() == userd);
-    return "\nWelcome to Leprechaun.\n\nlogin: ";
+    return "\nWelcome to Leprechaun.\n\n"
+        + "Log in with one of:\n\n"
+        + "  <name>\n"
+        + "  <name> the [<gender>] [<race>] [<guild>]\n\n"
+        + "Gender:  Female or male.\n"
+        + "Race:    Dwarf, elf, goblin, human, leprechaun, or troll.\n"
+        + "Guild:   Bard, knight, monk, priest, ranger, thief, warrior, "
+        + "or wizard.\n\n"
+        + "Unspecified options will be randomly selected.\n\n"
+        + "login: ";
 }

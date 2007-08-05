@@ -6,7 +6,7 @@ static void create()
 {
     ::create();
     set_name("Leprechaun");
-    add_noun("leprechaun", "leprechaun");
+    add_noun("leprechaun");
 
     set_trait_bonus("strength",      -2.0);
     set_trait_bonus("constitution",  -2.0);

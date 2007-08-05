@@ -3,5 +3,7 @@
 
 # define DWARF_RACE       "/usr/Game/race/dwarf"
 # define ELF_RACE         "/usr/Game/race/elf"
+# define GOBLIN_RACE      "/usr/Game/race/goblin"
 # define HUMAN_RACE       "/usr/Game/race/human"
 # define LEPRECHAUN_RACE  "/usr/Game/race/leprechaun"
+# define TROLL_RACE       "/usr/Game/race/troll"

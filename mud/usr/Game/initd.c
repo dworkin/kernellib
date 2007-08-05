@@ -65,8 +65,10 @@ static void create()
 
     compile_object(ELF_RACE);
     compile_object(DWARF_RACE);
+    compile_object(GOBLIN_RACE);
     compile_object(HUMAN_RACE);
     compile_object(LEPRECHAUN_RACE);
+    compile_object(TROLL_RACE);
 
     compile_object(BARD_GUILD);
     compile_object(KNIGHT_GUILD);
@@ -114,7 +116,7 @@ static object LIB_RACE select_race(string *options)
 {
     string *races, race;
 
-    races = ({ "dwarf", "elf", "human", "leprechaun" });
+    races = ({ "dwarf", "elf", "goblin", "human", "leprechaun", "troll" });
     options &= races;
     race = select_element(sizeof(options) ? options : races);
     return find_object(RACE_DIR + "/" + race);
