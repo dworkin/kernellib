@@ -1,5 +1,6 @@
 # include <game/action.h>
 # include <game/armor.h>
+# include <game/attribute.h>
 # include <game/description.h>
 # include <game/guild.h>
 # include <game/language.h>
@@ -7,7 +8,6 @@
 # include <game/race.h>
 # include <game/string.h>
 # include <game/thing.h>
-# include <game/trait.h>
 # include <system/assert.h>
 
 inherit LIB_THING;
@@ -24,7 +24,7 @@ object LIB_GUILD  guild_;
 int *wielded_;
 int *worn_;
 
-mapping traits_;
+mapping attributes_;
 float health_;
 float power_;
 
@@ -41,7 +41,7 @@ static void create()
     wielded_ = ({ });
     worn_ = ({ });
 
-    traits_ = ([ ]);
+    attributes_ = ([ ]);
     health_ = 1.0;
     power_ = 0.63;
 }
@@ -257,24 +257,24 @@ int allow_move(object destination)
     return !destination || destination <- LIB_ROOM;
 }
 
-static object LIB_TRAIT_AFFECTOR *query_trait_affectors(string name)
+static object LIB_ATTRIBUTE_AFFECTOR *query_attribute_affectors(string name)
 {
     return ({ race_, guild_ }) - ({ nil }) + query_wielded() + query_worn();
 }
 
-float query_trait(string name)
+float query_attribute(string name)
 {
     float  value;
     int    i, size;
 
-    object LIB_TRAIT_AFFECTOR *affectors;
+    object LIB_ATTRIBUTE_AFFECTOR *affectors;
 
-    value = traits_[name] ? traits_[name] : 0.0;
+    value = attributes_[name] ? attributes_[name] : 0.0;
 
-    affectors = query_trait_affectors(name);
+    affectors = query_attribute_affectors(name);
     size = sizeof(affectors);
     for (i = 0; i < size; ++i) {
-        value += affectors[i]->affect_trait(this_object(), name);
+        value += affectors[i]->affect_attribute(this_object(), name);
     }
     return value;
 }

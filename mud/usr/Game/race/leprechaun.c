@@ -1,3 +1,4 @@
+# include <game/attribute.h>
 # include <game/race.h>
 
 inherit LIB_RACE;
@@ -8,10 +9,8 @@ static void create()
     set_name("Leprechaun");
     add_noun("leprechaun");
 
-    set_trait_bonus("strength",      -2.0);
-    set_trait_bonus("constitution",  -2.0);
-    set_trait_bonus("dexterity",      1.0);
-    set_trait_bonus("charisma",       1.0);
-    set_trait_bonus("intelligence",   1.0);
-    set_trait_bonus("wisdom",         1.0);
+    set_attribute_distribution(([ STRENGTH_ATTRIBUTE:   0.6,
+                                  DEXTERITY_ATTRIBUTE:  1.3,
+                                  CHARISMA_ATTRIBUTE:   1.0,
+                                  WISDOM_ATTRIBUTE:     1.1 ]));
 }

@@ -6,6 +6,7 @@
  * - is a skilled rider.
  */
 
+# include <game/attribute.h>
 # include <game/guild.h>
 
 inherit LIB_GUILD;
@@ -16,10 +17,8 @@ static void create()
     set_name("Knight");
     add_noun("knight");
 
-    set_trait_bonus("strength",       1.0);
-    set_trait_bonus("constitution",   1.0);
-    set_trait_bonus("dexterity",     -2.0);
-    set_trait_bonus("charisma",       1.0);
-    set_trait_bonus("intelligence",  -1.0);
-    set_trait_bonus("wisdom",         0.0);
+    set_attribute_distribution(([ STRENGTH_ATTRIBUTE:   1.2,
+                                  DEXTERITY_ATTRIBUTE:  0.8,
+                                  CHARISMA_ATTRIBUTE:   1.1,
+                                  WISDOM_ATTRIBUTE:     0.9 ]));
 }

@@ -1,8 +1,8 @@
+# include <game/attribute.h>
 # include <game/thing.h>
-# include <game/trait.h>
 
+inherit aff   LIB_ATTRIBUTE_AFFECTOR;
 inherit item  LIB_ITEM;
-inherit aff   LIB_TRAIT_AFFECTOR;
 
 static void create()
 {

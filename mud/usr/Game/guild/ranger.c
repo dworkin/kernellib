@@ -1,3 +1,13 @@
+/*
+ * Rangers
+ * - are stealthy
+ * - are skilled at setting and disarming traps
+ * - are skilled trackers
+ * - prefer hunting weapons such as spears, knives, and bows
+ * - prefer light armor.
+ */
+
+# include <game/attribute.h>
 # include <game/guild.h>
 
 inherit LIB_GUILD;
@@ -8,10 +18,8 @@ static void create()
     set_name("Ranger");
     add_noun("ranger");
 
-    set_trait_bonus("strength",       0.0);
-    set_trait_bonus("constitution",   1.0);
-    set_trait_bonus("dexterity",      1.0);
-    set_trait_bonus("charisma",      -1.0);
-    set_trait_bonus("intelligence",   0.0);
-    set_trait_bonus("wisdom",        -1.0);
+    set_attribute_distribution(([ STRENGTH_ATTRIBUTE:   0.9,
+                                  DEXTERITY_ATTRIBUTE:  1.2,
+                                  CHARISMA_ATTRIBUTE:   0.8,
+                                  WISDOM_ATTRIBUTE:     1.1 ]));
 }

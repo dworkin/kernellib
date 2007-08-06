@@ -30,7 +30,7 @@ string query_banner(object connection)
         + "  <name>\n"
         + "  <name> the [<gender>] [<race>] [<guild>]\n\n"
         + "Gender:  Female or male.\n"
-        + "Race:    Dwarf, elf, goblin, human, leprechaun, or troll.\n"
+        + "Race:    Dwarf, elf, goblin, human, or leprechaun.\n"
         + "Guild:   Bard, knight, monk, priest, ranger, thief, warrior, "
         + "or wizard.\n\n"
         + "Unspecified options will be randomly selected.\n\n"

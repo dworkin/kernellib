@@ -1,4 +1,5 @@
 # include <game/action.h>
+# include <game/attribute.h>
 # include <game/description.h>
 # include <game/message.h>
 # include <game/string.h>
@@ -9,10 +10,10 @@ inherit UTIL_DESCRIPTION;
 inherit UTIL_MESSAGE;
 inherit UTIL_STRING;
 
-private string format_trait(object LIB_CREATURE actor, string name)
+private string format_attribute(object LIB_CREATURE actor, string name)
 {
     return align_left(capitalize(name) + ":", 13) + "  "
-        + align_right((string) (int) actor->query_trait(name), 2);
+        + align_right((string) (int) actor->query_attribute(name), 2);
 }
 
 private string format_bar(object LIB_CREATURE actor, string name,
@@ -42,19 +43,18 @@ void perform(object LIB_CREATURE actor)
         + lower_case(actor->query_race()->query_name() + " "
                      + actor->query_guild()->query_name()) + ".\n\n"
 
-        + format_trait(actor, "strength") + " | "
-        + format_trait(actor, "charisma") + " | "
-        + format_trait(actor, "attack") + " | "
-        + format_trait(actor, "defense") + "\n"
+        + format_attribute(actor, STRENGTH_ATTRIBUTE) + " | "
+        + format_attribute(actor, "attack") + " | "
+        + format_attribute(actor, "speed") + "\n"
 
-        + format_trait(actor, "constitution") + " | "
-        + format_trait(actor, "intelligence") + " | "
-        + format_trait(actor, "damage") + " | "
-        + format_trait(actor, "protection") + "\n"
+        + format_attribute(actor, DEXTERITY_ATTRIBUTE) + " | "
+        + format_attribute(actor, "damage") + " |\n"
 
-        + format_trait(actor, "dexterity") + " | "
-        + format_trait(actor, "wisdom") + " | "
-        + format_trait(actor, "speed") + " |\n\n"
+        + format_attribute(actor, CHARISMA_ATTRIBUTE) + " | "
+        + format_attribute(actor, "defense") + " |\n"
+
+        + format_attribute(actor, WISDOM_ATTRIBUTE) + " | "
+        + format_attribute(actor, "protection") + " |\n\n"
 
         + format_bar(actor, "health", actor->query_health()) + "\n"
         + format_bar(actor, "power", actor->query_power()) + "\n";

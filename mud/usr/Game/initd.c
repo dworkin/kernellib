@@ -68,7 +68,6 @@ static void create()
     compile_object(GOBLIN_RACE);
     compile_object(HUMAN_RACE);
     compile_object(LEPRECHAUN_RACE);
-    compile_object(TROLL_RACE);
 
     compile_object(BARD_GUILD);
     compile_object(KNIGHT_GUILD);
@@ -95,7 +94,7 @@ static void create()
     move_object(clone_object(DWARF), crypt);
     move_object(new_object(SWORD), crypt);
     move_object(new_object(SHIELD), crypt);
-    move_object(new_object(COIN, "silver", 1 + random(13)), crypt);
+    move_object(new_object(COIN, "silver", 1 + random(20)), crypt);
 }
 
 static string select_element(string *array)
@@ -116,7 +115,7 @@ static object LIB_RACE select_race(string *options)
 {
     string *races, race;
 
-    races = ({ "dwarf", "elf", "goblin", "human", "leprechaun", "troll" });
+    races = ({ "dwarf", "elf", "goblin", "human", "leprechaun" });
     options &= races;
     race = select_element(sizeof(options) ? options : races);
     return find_object(RACE_DIR + "/" + race);

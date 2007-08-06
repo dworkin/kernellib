@@ -1,3 +1,4 @@
+# include <game/attribute.h>
 # include <game/guild.h>
 
 inherit LIB_GUILD;
@@ -8,10 +9,8 @@ static void create()
     set_name("Monk");
     add_noun("monk");
 
-    set_trait_bonus("strength",      -1.0);
-    set_trait_bonus("constitution",   0.0);
-    set_trait_bonus("dexterity",      0.0);
-    set_trait_bonus("charisma",       0.0);
-    set_trait_bonus("intelligence",   0.0);
-    set_trait_bonus("wisdom",         1.0);
+    set_attribute_distribution(([ STRENGTH_ATTRIBUTE:   1.0,
+                                  DEXTERITY_ATTRIBUTE:  1.0,
+                                  CHARISMA_ATTRIBUTE:   1.0,
+                                  WISDOM_ATTRIBUTE:     1.0 ]));
 }

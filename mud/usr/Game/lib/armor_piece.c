@@ -1,11 +1,11 @@
 # include <game/armor.h>
+# include <game/attribute.h>
 # include <game/language.h>
 # include <game/thing.h>
-# include <game/trait.h>
 # include <system/assert.h>
 
+inherit aff   LIB_ATTRIBUTE_AFFECTOR;
 inherit item  LIB_ITEM;
-inherit aff   LIB_TRAIT_AFFECTOR;
 
 private inherit UTIL_ARMOR;
 private inherit UTIL_LANGUAGE;
