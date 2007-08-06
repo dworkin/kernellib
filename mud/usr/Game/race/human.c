@@ -1,3 +1,7 @@
+/*
+ * prefers horses as mounts
+ */
+
 # include <game/race.h>
 
 inherit LIB_RACE;

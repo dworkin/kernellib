@@ -7,6 +7,7 @@
 # include <game/race.h>
 # include <game/string.h>
 # include <game/thing.h>
+# include <game/trait.h>
 # include <system/assert.h>
 
 inherit LIB_THING;
@@ -24,6 +25,8 @@ int *wielded_;
 int *worn_;
 
 mapping traits_;
+float health_;
+float power_;
 
 static void create()
 {
@@ -31,7 +34,7 @@ static void create()
     add_event("observe");
     add_event("error");
 
-    gender_ = random(2) ? "male" : "female";
+    gender_ = random(2) ? "female" : "male";
     race_ = find_object(HUMAN_RACE);
     guild_ = find_object(WARRIOR_GUILD);
 
@@ -39,6 +42,8 @@ static void create()
     worn_ = ({ });
 
     traits_ = ([ ]);
+    health_ = 1.0;
+    power_ = 0.63;
 }
 
 int has_singular_noun(string str)
@@ -210,26 +215,26 @@ static void act(object LIB_ACTION action)
 
 static void drop_all()
 {
-    object LIB_ITEM  *inv;
-    object LIB_ROOM   env;
+    object LIB_ITEM  *items;
+    object LIB_ROOM   room;
 
     int i, size;
 
-    env = environment(this_object());
-    inv = inventory(this_object());
-    size = sizeof(inv);
+    room = environment(this_object());
+    items = inventory(this_object());
+    size = sizeof(items);
     for (i = 0; i < size; ++i) {
-        move_object(inv[i], env);
+        move_object(items[i], room);
     }
 }
 
 static void make_corpse()
 {
-    object LIB_ROOM env;
+    object LIB_ROOM room;
 
-    env = environment(this_object());
-    if (race_ && env) {
-        move_object(new_object(CORPSE, race_), env);
+    room = environment(this_object());
+    if (race_ && room) {
+        move_object(new_object(CORPSE, race_), room);
     }
 }
 
@@ -252,16 +257,48 @@ int allow_move(object destination)
     return !destination || destination <- LIB_ROOM;
 }
 
+static object LIB_TRAIT_AFFECTOR *query_trait_affectors(string name)
+{
+    return ({ race_, guild_ }) - ({ nil }) + query_wielded() + query_worn();
+}
+
 float query_trait(string name)
 {
-    float value;
+    float  value;
+    int    i, size;
+
+    object LIB_TRAIT_AFFECTOR *affectors;
 
     value = traits_[name] ? traits_[name] : 0.0;
-    if (race_) {
-        value += race_->query_trait_bonus(name);
-    }
-    if (guild_) {
-        value += guild_->query_trait_bonus(name);
+
+    affectors = query_trait_affectors(name);
+    size = sizeof(affectors);
+    for (i = 0; i < size; ++i) {
+        value += affectors[i]->affect_trait(this_object(), name);
     }
     return value;
+}
+
+void set_health(float health)
+{
+    health_ = health;
+    if (health_ <= 0.0) {
+        health_ = 0.0;
+        call_out("die", 0);
+    }
+}
+
+float query_health()
+{
+    return health_;
+}
+
+void set_power(float power)
+{
+    power_ = power;
+}
+
+float query_power()
+{
+    return power_;
 }

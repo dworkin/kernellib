@@ -1,9 +1,12 @@
 # include <game/armor.h>
 # include <game/language.h>
 # include <game/thing.h>
+# include <game/trait.h>
 # include <system/assert.h>
 
-inherit LIB_ITEM;
+inherit item  LIB_ITEM;
+inherit aff   LIB_TRAIT_AFFECTOR;
+
 private inherit UTIL_ARMOR;
 private inherit UTIL_LANGUAGE;
 
@@ -18,7 +21,8 @@ static void set_armor_type(string armor_type)
 
 static void create()
 {
-    ::create();
+    item::create();
+    aff::create();
     set_armor_type("armor");
 }
 
@@ -30,6 +34,13 @@ string query_armor_type()
 
 string query_look(varargs object LIB_THING observer)
 {
+    string look;
+
+    look = ::query_look(observer);
+    if (look) {
+        return look;
+    }
+
     switch (armor_type_) {
     case "boot":
     case "glove":

@@ -1,3 +1,9 @@
+/*
+ * - prefers light armor
+ * - strong against dwarves
+ * - prefers wolves as mounts
+ */
+
 # include <game/race.h>
 
 inherit LIB_RACE;

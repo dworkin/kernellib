@@ -1,3 +1,10 @@
+/*
+ * - prefers heavy armor
+ * - prefers cave boars and mountain goats as mounts
+ * - prefers tool weapons such as axes, hammers, and mattocks
+ * - strong against trolls
+ */
+
 # include <game/race.h>
 
 inherit LIB_RACE;

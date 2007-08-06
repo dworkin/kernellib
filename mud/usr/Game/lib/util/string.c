@@ -96,3 +96,30 @@ static string upper_case(string str)
     }
     return str;
 }
+
+static string align_left(string str, int width) {
+    while (strlen(str) < width) {
+        str += "                                                             ";
+    }
+    return str[.. width - 1];
+}
+
+static string align_right(string str, int width) {
+    while (strlen(str) < width) {
+        str = "                                                        " + str;
+    }
+    return str[strlen(str) - width ..];
+}
+
+static string repeat_string(string str, int count) {
+    int len;
+
+    len = strlen(str) * count;
+    if (len <= 0) {
+        return "";
+    }
+    while (strlen(str) < len) {
+        str += str;
+    }
+    return str[.. len];
+}

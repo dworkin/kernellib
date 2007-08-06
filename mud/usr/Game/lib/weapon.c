@@ -1,6 +1,14 @@
 # include <game/thing.h>
+# include <game/trait.h>
 
-inherit LIB_ITEM;
+inherit item  LIB_ITEM;
+inherit aff   LIB_TRAIT_AFFECTOR;
+
+static void create()
+{
+    item::create();
+    aff::create();
+}
 
 object LIB_CREATURE query_wielder()
 {

@@ -1,3 +1,10 @@
+/*
+ * - prefers light armor
+ * - prefers wild animals as mounts, like elks and deers
+ * - prefers hunting weapons such as bows, spears, and knives
+ * - strong against goblins
+ */
+
 # include <game/race.h>
 
 inherit LIB_RACE;

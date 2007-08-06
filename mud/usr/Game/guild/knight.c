@@ -1,3 +1,11 @@
+/*
+ * A knight
+ * - prefers shields and heavy armor
+ * - prefers swords
+ * - is strong against giants and monsters such as dragons
+ * - is a skilled rider.
+ */
+
 # include <game/guild.h>
 
 inherit LIB_GUILD;
