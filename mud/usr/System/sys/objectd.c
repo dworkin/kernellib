@@ -1,4 +1,5 @@
 # include <status.h>
+# include <type.h>
 # include <kernel/kernel.h>
 # include <kernel/rsrc.h>
 # include <kernel/tls.h>
@@ -42,8 +43,6 @@ private int add_owner(string owner)
 	/* new owner: register and create owner object */
 	uid = uids_[owner] = next_uid_++;
         nodes_[uid] = clone_object(OWNER_NODE, owner);
-        driver_->message("OBJECTD: added owner " + owner + " with UID " + uid
-                         + "\n");
     }
     return uids_[owner];
 }
@@ -123,7 +122,7 @@ void remove_program(string owner, string path, int timestamp, int index)
 
     ASSERT_ACCESS(previous_object() == driver_);
     uid = uids_[owner];
-    nodes_[uid]->remove_program(index);
+    nodes_[uid]->remove_program(path, index);
 }
 
 /*

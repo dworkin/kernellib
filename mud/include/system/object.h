@@ -11,9 +11,9 @@
 # define OID_INDEX_MASK     0x000fffff
 # define OID_INDEX_OFFSET   0
 
-# define PDB_PATH              0  /* program name */
-# define PDB_PREVIOUS_SIBLING  1  /* ([ int parent: int previous ]) */
-# define PDB_NEXT_SIBLING      2  /* ([ int parent: int next ]) */
-# define PDB_FIRST_CHILD       3  /* OID of first child or clone */
+# define PDB_PATH      0  /* program name */
+# define PDB_PREVIOUS  1  /* ([ int parent_oid: int previous_oid ]) */
+# define PDB_NEXT      2  /* ([ int parent_oid: int next_oid ]) */
+# define PDB_CHILDREN  3  /* clone count or OID of first child */
 
 # define DATA_BUCKET_SIZE  1024

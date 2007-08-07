@@ -8,8 +8,8 @@ object   driver_;            /* driver object */
 object   objectd_;           /* object manager */
 int      uid_;               /* UID of owner */
 
-mapping  pdb_entries_;       /* ([ int oid: mixed *progent ]) */
-mapping  pdb_paths_;         /* ([ string progname: ({ int oid, ... }) ]) */
+mapping  pdb_entries_;       /* ([ int oid: mixed *entry ]) */
+mapping  pdb_paths_;         /* ([ string path: ({ int oid, ... }) ]) */
 
 int      next_index_;        /* index for the next managed LWO */
 mapping  persistent_oids_;   /* ([ int oid: object obj ]) */
@@ -17,7 +17,7 @@ mapping  lightweight_oids_;  /* ([ bucket_index: ([ oid: environment ]) ]) */
 
 /*
  * NAME:        create()
- * DESCRIPTION: initialize owner object
+ * DESCRIPTION: initialize owner node
  */
 static void create(int clone)
 {
@@ -50,21 +50,59 @@ private void link_child(int child_oid, mixed *child_entry, string parent_name)
     parent_entry = objectd_->query_program(parent_oid);
 
     /* link child */
-    if (!parent_entry[PDB_FIRST_CHILD]) {
+    if (!parent_entry[PDB_CHILDREN]) {
         /* first child: create chain */
-        parent_entry[PDB_FIRST_CHILD] = child_oid;
-        child_entry[PDB_PREVIOUS_SIBLING][parent_oid] = child_oid;
-        child_entry[PDB_NEXT_SIBLING][parent_oid] = child_oid;
+        parent_entry[PDB_CHILDREN] = child_oid;
+        child_entry[PDB_PREVIOUS][parent_oid] = child_oid;
+        child_entry[PDB_NEXT][parent_oid] = child_oid;
     } else {
-        int     previous_oid;
+        int     first_oid, previous_oid;
         mixed  *first_entry, *previous_entry;
         
-        /* add to chain */
-        first_entry = objectd_->query_program(parent_entry[PDB_FIRST_CHILD]);
-        previous_oid = first_entry[PDB_PREVIOUS_SIBLING][parent_oid];
+        /* find links */
+        first_oid = parent_entry[PDB_CHILDREN];
+        first_entry = objectd_->query_program(first_oid);
+        previous_oid = first_entry[PDB_PREVIOUS][parent_oid];
         previous_entry = objectd_->query_program(previous_oid);
-        first_entry[PDB_PREVIOUS_SIBLING][parent_oid] = child_oid;
-        previous_entry[PDB_NEXT_SIBLING][parent_oid] = child_oid;
+
+        /* add new child to chain */
+        previous_entry[PDB_NEXT][parent_oid] = child_oid;
+        child_entry[PDB_PREVIOUS][parent_oid] = previous_oid;
+        first_entry[PDB_PREVIOUS][parent_oid] = child_oid;
+        child_entry[PDB_NEXT][parent_oid] = first_oid;
+    }
+}
+
+private void unlink_child(int child_oid, mixed *child_entry, int parent_oid)
+{
+    int     previous_oid;
+    mixed  *parent_entry;
+
+    parent_entry = objectd_->query_program(parent_oid);
+    previous_oid = child_entry[PDB_PREVIOUS][parent_oid];
+    if (child_oid == previous_oid) {
+        /* only link: remove chain */
+        parent_entry[PDB_CHILDREN] = 0;
+        child_entry[PDB_PREVIOUS][parent_oid] = nil;
+        child_entry[PDB_NEXT][parent_oid] = nil;
+    } else {
+        int     next_oid;
+        mixed  *previous_entry, *next_entry;
+
+        /* unlink child */
+        next_oid = child_entry[PDB_NEXT][parent_oid];
+        previous_entry = objectd_->query_program(previous_oid);
+        next_entry = objectd_->query_program(next_oid);
+
+        previous_entry[PDB_NEXT][parent_oid] = next_oid;
+        child_entry[PDB_PREVIOUS][parent_oid] = nil;
+        next_entry[PDB_PREVIOUS][parent_oid] = previous_oid;
+        child_entry[PDB_NEXT][parent_oid] = nil;
+
+        if (parent_entry[PDB_CHILDREN] == child_oid) {
+            /* child was first in chain: appoint next child instead */
+            parent_entry[PDB_CHILDREN] = next_oid;
+        }
     }
 }
 
@@ -75,18 +113,31 @@ private void link_child(int child_oid, mixed *child_entry, string parent_name)
 void compile(mixed obj, string *source, string *inherited)
 {
     string   path;
-    int      oid, i, size;
+    int      index, oid, i, size;
     mixed   *entry;
 
     ASSERT_ACCESS(previous_object() == objectd_);
     path = (typeof(obj) == T_STRING) ? obj : object_name(obj);
+
     if (path != DRIVER && path != AUTO && !sizeof(inherited)) {
         inherited = ({ AUTO });
     }
 
+    index = status(path)[O_INDEX] + 1;
     oid = OID_MASTER | (uid_ << OID_OWNER_OFFSET)
-        | ((status(path)[O_INDEX] + 1) << OID_INDEX_OFFSET);
-    entry = pdb_entries_[oid] = ({ path, ([ ]), ([ ]), nil });
+        | (index << OID_INDEX_OFFSET);
+    entry = pdb_entries_[oid];
+    if (entry) {
+        int *parent_oids;
+
+        parent_oids = map_indices(entry[PDB_PREVIOUS]);
+        size = sizeof(parent_oids);
+        for (i = 0; i < size; ++i) {
+            unlink_child(oid, entry, parent_oids[i]);
+        }
+    } else {
+        entry = pdb_entries_[oid] = ({ path, ([ ]), ([ ]), 0 });
+    }
     size = sizeof(inherited);
     for (i = 0; i < size; ++i) {
         link_child(oid, entry, inherited[i]);
@@ -101,7 +152,7 @@ void compile(mixed obj, string *source, string *inherited)
 
 void clone(object obj)
 {
-    int oid, index;
+    int index, oid;
 
     ASSERT_ACCESS(previous_object() == objectd_);
     sscanf(object_name(obj), "%*s#%d", index);
@@ -148,56 +199,27 @@ object find(int oid)
     }
 }
 
-private void unlink_child(int child_oid, mixed *child_entry, int parent_oid)
-{
-    int     previous_oid;
-    mixed  *parent_entry;
-
-    parent_entry = objectd_->query_program(parent_oid);
-    previous_oid = child_entry[PDB_PREVIOUS_SIBLING][parent_oid];
-    if (child_oid == previous_oid) {
-        /* only link: remove chain */
-        parent_entry[PDB_FIRST_CHILD] = nil;
-    } else {
-        int     next_oid;
-        mixed  *previous_entry, *next_entry;
-
-        /* unlink child */
-        next_oid = child_entry[PDB_NEXT_SIBLING][parent_oid];
-        previous_entry = objectd_->query_program(previous_oid);
-        next_entry = objectd_->query_program(next_oid);
-        previous_entry[PDB_NEXT_SIBLING][parent_oid] = next_oid;
-        next_entry[PDB_PREVIOUS_SIBLING][parent_oid] = previous_oid;
-
-        if (parent_entry[PDB_FIRST_CHILD] == child_oid) {
-            /* child was first in chain: appoint next child instead */
-            parent_entry[PDB_FIRST_CHILD] = next_oid;
-        }
-    }
-}
-
 /*
  * NAME:        remove_program()
  * DESCRIPTION: the last reference to the given program has been removed
  */
-void remove_program(int index)
+void remove_program(string path, int index)
 {
     int      oid, i, size, *parent_oids;
-    string   path;
     mixed   *entry;
 
     ASSERT_ACCESS(previous_object() == objectd_);
+    ++index; /* use 1-based indices, not 0-based as supplied by DGD */
     oid = OID_MASTER | (uid_ << OID_OWNER_OFFSET)
         | (index << OID_INDEX_OFFSET);
     entry = pdb_entries_[oid];
 
-    path = entry[PDB_PATH];
     pdb_paths_[path] -= ({ oid });
     if (!sizeof(pdb_paths_[path])) {
         pdb_paths_[path] = nil;
     }
 
-    parent_oids = map_indices(entry[PDB_PREVIOUS_SIBLING]);
+    parent_oids = map_indices(entry[PDB_PREVIOUS]);
     size = sizeof(parent_oids);
     for (i = 0; i < size; ++i) {
         unlink_child(oid, entry, parent_oids[i]);
