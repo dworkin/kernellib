@@ -6,3 +6,10 @@
 # define DEXTERITY_ATTRIBUTE        "dexterity"
 # define CHARISMA_ATTRIBUTE         "charisma"
 # define WISDOM_ATTRIBUTE           "wisdom"
+
+# define DAMAGE_ATTRIBUTE           "damage"
+# define PROTECTION_ATTRIBUTE       "protection"
+
+# define ATTACK_ATTRIBUTE           "attack"
+# define DEFENSE_ATTRIBUTE          "defense"
+# define SPEED_ATTRIBUTE            "speed"

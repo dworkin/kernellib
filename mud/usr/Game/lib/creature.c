@@ -10,7 +10,9 @@
 # include <game/thing.h>
 # include <system/assert.h>
 
-inherit LIB_THING;
+inherit aff    LIB_ATTRIBUTE_AFFECTOR;
+inherit thing  LIB_THING;
+
 private inherit UTIL_DESCRIPTION;
 private inherit UTIL_LANGUAGE;
 private inherit UTIL_MESSAGE;
@@ -30,7 +32,8 @@ float power_;
 
 static void create()
 {
-    ::create();
+    aff::create();
+    thing::create();
     add_event("observe");
     add_event("error");
 
@@ -259,7 +262,8 @@ int allow_move(object destination)
 
 static object LIB_ATTRIBUTE_AFFECTOR *query_attribute_affectors(string name)
 {
-    return ({ race_, guild_ }) - ({ nil }) + query_wielded() + query_worn();
+    return ({ this_object(), race_, guild_ }) - ({ nil })
+        + query_wielded() + query_worn();
 }
 
 float query_attribute(string name)
@@ -277,6 +281,23 @@ float query_attribute(string name)
         value += affectors[i]->affect_attribute(this_object(), name);
     }
     return value;
+}
+
+float affect_attribute(object LIB_CREATURE creature, string name)
+{
+    switch (name) {
+    case DAMAGE_ATTRIBUTE:
+    case PROTECTION_ATTRIBUTE:
+        return query_attribute(STRENGTH_ATTRIBUTE);
+
+    case ATTACK_ATTRIBUTE:
+    case DEFENSE_ATTRIBUTE: 
+    case SPEED_ATTRIBUTE:
+       return query_attribute(DEXTERITY_ATTRIBUTE);
+
+    default:
+        return 0.0;
+    }
 }
 
 void set_health(float health)
