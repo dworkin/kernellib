@@ -7,9 +7,15 @@
 # define CHARISMA_ATTRIBUTE         "charisma"
 # define WISDOM_ATTRIBUTE           "wisdom"
 
+# define ATTACK_ATTRIBUTE           "attack"
+# define DEFENSE_ATTRIBUTE          "defense"
 # define DAMAGE_ATTRIBUTE           "damage"
 # define PROTECTION_ATTRIBUTE       "protection"
 
-# define ATTACK_ATTRIBUTE           "attack"
-# define DEFENSE_ATTRIBUTE          "defense"
 # define SPEED_ATTRIBUTE            "speed"
+# define PERCEPTION_ATTRIBUTE       "perception"
+# define MAGIC_ATTRIBUTE            "magic"
+
+# define STEALTH_ATTRIBUTE          "stealth"
+# define BARGAIN_ATTRIBUTE          "bargain"
+# define LEADERSHIP_ATTRIBUTE       "leadership"

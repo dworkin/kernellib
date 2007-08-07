@@ -91,10 +91,10 @@ static void create()
 
     attributes_ = ([ ]);
     health_ = 1.0;
-    power_ = 0.63;
+    power_ = 1.0;
 
     base_attributes_ = make_base_attributes();
-    set_level(10.0);
+    set_level(5.0 + rnd() * 10.0);
 }
 
 int has_singular_noun(string str)
@@ -343,6 +343,21 @@ float affect_attribute(object LIB_CREATURE creature, string name)
     case DEFENSE_ATTRIBUTE: 
     case SPEED_ATTRIBUTE:
        return query_attribute(DEXTERITY_ATTRIBUTE);
+
+    case BARGAIN_ATTRIBUTE:
+       return query_attribute(CHARISMA_ATTRIBUTE);
+
+    case PERCEPTION_ATTRIBUTE:
+    case MAGIC_ATTRIBUTE:
+       return query_attribute(WISDOM_ATTRIBUTE);
+
+    case LEADERSHIP_ATTRIBUTE:
+       return (query_attribute(CHARISMA_ATTRIBUTE)
+               + query_attribute(WISDOM_ATTRIBUTE)) / 2.0;
+
+    case STEALTH_ATTRIBUTE:
+       return (query_attribute(DEXTERITY_ATTRIBUTE)
+               + query_attribute(WISDOM_ATTRIBUTE)) / 2.0;
 
     default:
         return 0.0;
