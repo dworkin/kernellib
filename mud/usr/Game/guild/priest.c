@@ -9,8 +9,8 @@ static void create()
     set_name("Priest");
     add_noun("priest");
 
-    set_attribute_distribution(([ STRENGTH_ATTRIBUTE:   0.9,
-                                  DEXTERITY_ATTRIBUTE:  0.8,
-                                  CHARISMA_ATTRIBUTE:   1.2,
-                                  WISDOM_ATTRIBUTE:     1.1 ]));
+    set_attribute_shares(([ STRENGTH_ATTRIBUTE:   0.9,
+                            DEXTERITY_ATTRIBUTE:  0.8,
+                            CHARISMA_ATTRIBUTE:   1.2,
+                            WISDOM_ATTRIBUTE:     1.1 ]));
 }

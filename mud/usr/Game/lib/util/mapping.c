@@ -2,21 +2,21 @@
 
 private inherit UTIL_VALUE;
 
-static mapping make_mapping(mixed *inds, varargs mixed *vals)
+static mapping make_mapping(mixed *indices, varargs mixed *values)
 {
-    int i, size;
-    mapping map;
+    int      i, size;
+    mapping  map;
 
     map = ([ ]);
-    if (vals) {
-        size = min_value(sizeof(inds), sizeof(vals));
+    if (values) {
+        size = min_value(sizeof(indices), sizeof(values));
         for (i = 0; i < size; ++i) {
-            map[inds[i]] = vals[i];
+            map[indices[i]] = values[i];
         }
     } else {
-        size = sizeof(inds);
+        size = sizeof(indices);
         for (i = 0; i < size; ++i) {
-            map[inds[i]] = TRUE;
+            map[indices[i]] = TRUE;
         }
     }
     return map;

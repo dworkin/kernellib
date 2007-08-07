@@ -1,21 +1,21 @@
 # include <game/attribute.h>
 
-mapping attribute_distribution_;
+mapping attribute_shares_;
 
 static void create()
 {
-    attribute_distribution_ = ([ STRENGTH_ATTRIBUTE:   1.0,
-                                 DEXTERITY_ATTRIBUTE:  1.0,
-                                 CHARISMA_ATTRIBUTE:   1.0,
-                                 WISDOM_ATTRIBUTE:     1.0 ]);
+    attribute_shares_ = ([ STRENGTH_ATTRIBUTE:   1.0,
+                           DEXTERITY_ATTRIBUTE:  1.0,
+                           CHARISMA_ATTRIBUTE:   1.0,
+                           WISDOM_ATTRIBUTE:     1.0 ]);
 }
 
-static void set_attribute_distribution(mapping attribute_distribution)
+static void set_attribute_shares(mapping shares)
 {
-    attribute_distribution_ = attribute_distribution;
+    attribute_shares_ = shares;
 }
 
-mapping query_attribute_distribution()
+mapping query_attribute_shares()
 {
-    return attribute_distribution_[..];
+    return attribute_shares_[..];
 }

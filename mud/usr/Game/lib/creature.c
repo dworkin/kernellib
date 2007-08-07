@@ -1,3 +1,4 @@
+# include <limits.h>
 # include <game/action.h>
 # include <game/armor.h>
 # include <game/attribute.h>
@@ -13,6 +14,7 @@
 inherit aff    LIB_ATTRIBUTE_AFFECTOR;
 inherit thing  LIB_THING;
 
+private inherit UTIL_ATTRIBUTE;
 private inherit UTIL_DESCRIPTION;
 private inherit UTIL_LANGUAGE;
 private inherit UTIL_MESSAGE;
@@ -26,9 +28,52 @@ object LIB_GUILD  guild_;
 int *wielded_;
 int *worn_;
 
-mapping attributes_;
-float health_;
-float power_;
+float    level_;
+mapping  base_attributes_, attributes_;
+float    health_;
+float    power_;
+
+static float rnd()
+{
+    return (float) random(INT_MAX) / (float) INT_MAX;
+}
+
+static mapping make_base_attributes()
+{
+    mapping attributes;
+
+    return normalize_attributes(([ STRENGTH_ATTRIBUTE:   1.0 + rnd(),
+                                   DEXTERITY_ATTRIBUTE:  1.0 + rnd(),
+                                   CHARISMA_ATTRIBUTE:   1.0 + rnd(),
+                                   WISDOM_ATTRIBUTE:     1.0 + rnd() ]));
+}
+
+static void update_attributes()
+{
+    mapping attributes;
+
+    attributes = base_attributes_;
+    if (race_) {
+        attributes = add_attributes(attributes,
+                                    race_->query_attribute_shares());
+    }
+    if (guild_) {
+        attributes = add_attributes(attributes,
+                                    guild_->query_attribute_shares());
+    }
+    attributes_ = scale_attributes(normalize_attributes(attributes), level_);
+}
+
+void set_level(float level)
+{
+    level_ = level;
+    update_attributes();
+}
+
+float query_level()
+{
+    return level_;
+}
 
 static void create()
 {
@@ -47,6 +92,9 @@ static void create()
     attributes_ = ([ ]);
     health_ = 1.0;
     power_ = 0.63;
+
+    base_attributes_ = make_base_attributes();
+    set_level(10.0);
 }
 
 int has_singular_noun(string str)
@@ -78,6 +126,7 @@ void set_race(object LIB_RACE race)
 {
     ASSERT_ARG(race);
     race_ = race;
+    update_attributes();
 }
 
 object LIB_RACE query_race()
@@ -87,8 +136,8 @@ object LIB_RACE query_race()
 
 void set_guild(object LIB_GUILD guild)
 {
-    ASSERT_ARG(guild);
     guild_ = guild;
+    update_attributes();
 }
 
 object LIB_GUILD query_guild()

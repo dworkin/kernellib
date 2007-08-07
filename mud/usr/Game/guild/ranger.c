@@ -18,8 +18,8 @@ static void create()
     set_name("Ranger");
     add_noun("ranger");
 
-    set_attribute_distribution(([ STRENGTH_ATTRIBUTE:   0.9,
-                                  DEXTERITY_ATTRIBUTE:  1.2,
-                                  CHARISMA_ATTRIBUTE:   0.8,
-                                  WISDOM_ATTRIBUTE:     1.1 ]));
+    set_attribute_shares(([ STRENGTH_ATTRIBUTE:   0.9,
+                            DEXTERITY_ATTRIBUTE:  1.2,
+                            CHARISMA_ATTRIBUTE:   0.8,
+                            WISDOM_ATTRIBUTE:     1.1 ]));
 }
