@@ -9,8 +9,8 @@ static void create()
     set_name("Thief");
     add_noun("thief", "thieves");
 
-    set_attribute_shares(([ STRENGTH_ATTRIBUTE:   0.8,
-                            DEXTERITY_ATTRIBUTE:  1.3,
-                            CHARISMA_ATTRIBUTE:   0.9,
-                            WISDOM_ATTRIBUTE:     1.0 ]));
+    set_attribute_shares(([ STRENGTH_ATTRIBUTE:    0.6,
+                            SPEED_ATTRIBUTE:       1.5,
+                            PERCEPTION_ATTRIBUTE:  1.2,
+                            CHARISMA_ATTRIBUTE:    0.7 ]));
 }

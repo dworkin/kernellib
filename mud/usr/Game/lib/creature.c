@@ -42,10 +42,10 @@ static mapping make_base_attributes()
 {
     mapping attributes;
 
-    return normalize_attributes(([ STRENGTH_ATTRIBUTE:   1.0 + rnd(),
-                                   DEXTERITY_ATTRIBUTE:  1.0 + rnd(),
-                                   CHARISMA_ATTRIBUTE:   1.0 + rnd(),
-                                   WISDOM_ATTRIBUTE:     1.0 + rnd() ]));
+    return normalize_attributes(([ STRENGTH_ATTRIBUTE:    1.0 + rnd(),
+                                   SPEED_ATTRIBUTE:       1.0 + rnd(),
+                                   PERCEPTION_ATTRIBUTE:  1.0 + rnd(),
+                                   CHARISMA_ATTRIBUTE:    1.0 + rnd() ]));
 }
 
 static void update_attributes()
@@ -90,11 +90,11 @@ static void create()
     worn_ = ({ });
 
     attributes_ = ([ ]);
-    health_ = 1.0;
-    power_ = 1.0;
+    health_ = 0.5 + 0.5 * rnd();
+    power_ = 0.5 + 0.5 * rnd();
 
     base_attributes_ = make_base_attributes();
-    set_level(5.0 + rnd() * 10.0);
+    set_level(50.0);
 }
 
 int has_singular_noun(string str)
@@ -335,29 +335,47 @@ float query_attribute(string name)
 float affect_attribute(object LIB_CREATURE creature, string name)
 {
     switch (name) {
+    case AGILITY_ATTRIBUTE:
+        return (query_attribute(STRENGTH_ATTRIBUTE)
+                + query_attribute(SPEED_ATTRIBUTE)) / 2.0;
+
+    case ATTACK_ATTRIBUTE:
+        return (query_attribute(STRENGTH_ATTRIBUTE)
+                + query_attribute(SPEED_ATTRIBUTE)) / 2.0;
+
+    case BARGAIN_ATTRIBUTE:
+        return query_attribute(CHARISMA_ATTRIBUTE);
+
     case DAMAGE_ATTRIBUTE:
+        return query_attribute(STRENGTH_ATTRIBUTE);
+
+    case DEFENSE_ATTRIBUTE: 
+        return query_attribute(SPEED_ATTRIBUTE);
+
+    case DEXTERITY_ATTRIBUTE:
+        return (query_attribute(SPEED_ATTRIBUTE)
+                + query_attribute(PERCEPTION_ATTRIBUTE)) / 2.0;
+
+    case LEADERSHIP_ATTRIBUTE:
+        return (query_attribute(CHARISMA_ATTRIBUTE)
+                + query_attribute(PERCEPTION_ATTRIBUTE)) / 2.0;
+
+    case MAGIC_ATTRIBUTE:
+        return query_attribute(PERCEPTION_ATTRIBUTE);
+
+    case MUSIC_ATTRIBUTE:
+        return query_attribute(CHARISMA_ATTRIBUTE);
+
+    case PRAYER_ATTRIBUTE:
+        return (query_attribute(CHARISMA_ATTRIBUTE)
+                + query_attribute(PERCEPTION_ATTRIBUTE)) / 2.0;
+
     case PROTECTION_ATTRIBUTE:
         return query_attribute(STRENGTH_ATTRIBUTE);
 
-    case ATTACK_ATTRIBUTE:
-    case DEFENSE_ATTRIBUTE: 
-    case SPEED_ATTRIBUTE:
-       return query_attribute(DEXTERITY_ATTRIBUTE);
-
-    case BARGAIN_ATTRIBUTE:
-       return query_attribute(CHARISMA_ATTRIBUTE);
-
-    case PERCEPTION_ATTRIBUTE:
-    case MAGIC_ATTRIBUTE:
-       return query_attribute(WISDOM_ATTRIBUTE);
-
-    case LEADERSHIP_ATTRIBUTE:
-       return (query_attribute(CHARISMA_ATTRIBUTE)
-               + query_attribute(WISDOM_ATTRIBUTE)) / 2.0;
-
     case STEALTH_ATTRIBUTE:
-       return (query_attribute(DEXTERITY_ATTRIBUTE)
-               + query_attribute(WISDOM_ATTRIBUTE)) / 2.0;
+        return (query_attribute(SPEED_ATTRIBUTE)
+                + query_attribute(PERCEPTION_ATTRIBUTE)) / 2.0;
 
     default:
         return 0.0;

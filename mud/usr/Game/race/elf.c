@@ -16,8 +16,8 @@ static void create()
     set_name("Elf");
     add_noun("elf", "elves");
 
-    set_attribute_shares(([ STRENGTH_ATTRIBUTE:   0.7,
-                            DEXTERITY_ATTRIBUTE:  1.2,
-                            CHARISMA_ATTRIBUTE:   1.1,
-                            WISDOM_ATTRIBUTE:     1.0 ]));
+    set_attribute_shares(([ STRENGTH_ATTRIBUTE:    0.6,
+                            SPEED_ATTRIBUTE:       1.2,
+                            PERCEPTION_ATTRIBUTE:  1.1,
+                            CHARISMA_ATTRIBUTE:    1.1 ]));
 }

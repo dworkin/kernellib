@@ -17,8 +17,8 @@ static void create()
     set_name("Knight");
     add_noun("knight");
 
-    set_attribute_shares(([ STRENGTH_ATTRIBUTE:   1.2,
-                            DEXTERITY_ATTRIBUTE:  0.8,
-                            CHARISMA_ATTRIBUTE:   1.1,
-                            WISDOM_ATTRIBUTE:     0.9 ]));
+    set_attribute_shares(([ STRENGTH_ATTRIBUTE:    1.4,
+                            SPEED_ATTRIBUTE:       0.8,
+                            PERCEPTION_ATTRIBUTE:  0.7,
+                            CHARISMA_ATTRIBUTE:    1.1 ]));
 }

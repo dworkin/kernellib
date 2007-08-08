@@ -12,7 +12,7 @@ inherit UTIL_STRING;
 
 private string format_attribute(object LIB_CREATURE actor, string name)
 {
-    return align_left(capitalize(name) + ":", 11) + "  "
+    return align_left(capitalize(name), 10) + "  "
         + align_right((string) (int) actor->query_attribute(name), 2);
 }
 
@@ -29,8 +29,9 @@ private string format_bar(object LIB_CREATURE actor, string name,
         percentage = 100;
     }
 
-    bar = "[" + align_left(repeat_string("#", percentage / 2), 50) + "]";
-    return align_left(capitalize(name) + ":", 7) + "  " + bar + "  "
+    bar = repeat_string("#", percentage / 2)
+        + repeat_string("-", 50 - percentage / 2);
+    return align_left(capitalize(name), 6) + "  " + bar + "  "
         + align_right(percentage + "%", 4);
 }
 
@@ -38,28 +39,31 @@ void perform(object LIB_CREATURE actor)
 {
     string message;
 
-    message = "You are " + actor->query_name() + " the level "
+    message = "You are " + actor->query_name() + ", a level "
         + (int) actor->query_level() + " " + actor->query_gender() + " "
         + lower_case(actor->query_race()->query_name() + " "
                      + actor->query_guild()->query_name()) + ".\n\n"
 
         + format_attribute(actor, STRENGTH_ATTRIBUTE) + " | "
-        + format_attribute(actor, ATTACK_ATTRIBUTE) + " | "
         + format_attribute(actor, SPEED_ATTRIBUTE) + " | "
-        + format_attribute(actor, STEALTH_ATTRIBUTE) + "\n"
-
-        + format_attribute(actor, DEXTERITY_ATTRIBUTE) + " | "
-        + format_attribute(actor, DEFENSE_ATTRIBUTE) + " | "
         + format_attribute(actor, PERCEPTION_ATTRIBUTE) + " | "
-        + format_attribute(actor, BARGAIN_ATTRIBUTE) + "\n"
+        + format_attribute(actor, CHARISMA_ATTRIBUTE) + "\n"
+        + "---------------+----------------+----------------+---------------\n"
 
-        + format_attribute(actor, CHARISMA_ATTRIBUTE) + " | "
-        + format_attribute(actor, DAMAGE_ATTRIBUTE) + " | "
+        + format_attribute(actor, ATTACK_ATTRIBUTE) + " | "
+        + format_attribute(actor, DEFENSE_ATTRIBUTE) + " | "
         + format_attribute(actor, MAGIC_ATTRIBUTE) + " | "
+        + format_attribute(actor, MUSIC_ATTRIBUTE) + "\n"
+
+        + format_attribute(actor, DAMAGE_ATTRIBUTE) + " | "
+        + format_attribute(actor, AGILITY_ATTRIBUTE) + " | "
+        + format_attribute(actor, PRAYER_ATTRIBUTE) + " | "
         + format_attribute(actor, LEADERSHIP_ATTRIBUTE) + "\n"
 
-        + format_attribute(actor, WISDOM_ATTRIBUTE) + " | "
-        + format_attribute(actor, PROTECTION_ATTRIBUTE) + " |\n\n"
+        + format_attribute(actor, PROTECTION_ATTRIBUTE) + " | "
+        + format_attribute(actor, DEXTERITY_ATTRIBUTE) + " | "
+        + format_attribute(actor, STEALTH_ATTRIBUTE) + " | "
+        + format_attribute(actor, BARGAIN_ATTRIBUTE) + "\n\n"
 
         + format_bar(actor, "health", actor->query_health()) + "\n"
         + format_bar(actor, "power", actor->query_power()) + "\n";

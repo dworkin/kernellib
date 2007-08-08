@@ -9,8 +9,8 @@ static void create()
     set_name("Wizard");
     add_noun("wizard");
 
-    set_attribute_shares(([ STRENGTH_ATTRIBUTE:   0.7,
-                            DEXTERITY_ATTRIBUTE:  0.9,
-                            CHARISMA_ATTRIBUTE:   1.0,
-                            WISDOM_ATTRIBUTE:     1.3 ]));
+    set_attribute_shares(([ STRENGTH_ATTRIBUTE:    0.6,
+                            SPEED_ATTRIBUTE:       0.8,
+                            PERCEPTION_ATTRIBUTE:  1.5,
+                            CHARISMA_ATTRIBUTE:    1.1 ]));
 }

@@ -16,8 +16,8 @@ static void create()
     set_name("Dwarf");
     add_noun("dwarf", "dwarves");
 
-    set_attribute_shares(([ STRENGTH_ATTRIBUTE:   1.3,
-                            DEXTERITY_ATTRIBUTE:  0.8,
-                            CHARISMA_ATTRIBUTE:   0.9,
-                            WISDOM_ATTRIBUTE:     1.0 ]));
+    set_attribute_shares(([ STRENGTH_ATTRIBUTE:    1.5,
+                            SPEED_ATTRIBUTE:       0.8,
+                            PERCEPTION_ATTRIBUTE:  0.9,
+                            CHARISMA_ATTRIBUTE:    0.8 ]));
 }

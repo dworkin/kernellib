@@ -121,5 +121,5 @@ static string repeat_string(string str, int count) {
     while (strlen(str) < len) {
         str += str;
     }
-    return str[.. len];
+    return str[.. len - 1];
 }

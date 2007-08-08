@@ -4,10 +4,10 @@ mapping attribute_shares_;
 
 static void create()
 {
-    attribute_shares_ = ([ STRENGTH_ATTRIBUTE:   1.0,
-                           DEXTERITY_ATTRIBUTE:  1.0,
-                           CHARISMA_ATTRIBUTE:   1.0,
-                           WISDOM_ATTRIBUTE:     1.0 ]);
+    attribute_shares_ = ([ STRENGTH_ATTRIBUTE:    1.0,
+                           SPEED_ATTRIBUTE:       1.0,
+                           PERCEPTION_ATTRIBUTE:  1.0,
+                           CHARISMA_ATTRIBUTE:    1.0 ]);
 }
 
 static void set_attribute_shares(mapping shares)
