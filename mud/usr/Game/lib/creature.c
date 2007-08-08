@@ -42,10 +42,10 @@ static mapping make_base_attributes()
 {
     mapping attributes;
 
-    return normalize_attributes(([ STRENGTH_ATTRIBUTE:    1.0 + rnd(),
-                                   SPEED_ATTRIBUTE:       1.0 + rnd(),
-                                   PERCEPTION_ATTRIBUTE:  1.0 + rnd(),
-                                   CHARISMA_ATTRIBUTE:    1.0 + rnd() ]));
+    return normalize_attributes(([ STRENGTH_ATTRIBUTE:    rnd(),
+                                   SPEED_ATTRIBUTE:       rnd(),
+                                   PERCEPTION_ATTRIBUTE:  rnd(),
+                                   CHARISMA_ATTRIBUTE:    rnd() ]));
 }
 
 static void update_attributes()
@@ -94,7 +94,7 @@ static void create()
     power_ = 0.5 + 0.5 * rnd();
 
     base_attributes_ = make_base_attributes();
-    set_level(50.0);
+    set_level(10.0 + 10.0 * rnd());
 }
 
 int has_singular_noun(string str)

@@ -29,10 +29,15 @@ private string format_bar(object LIB_CREATURE actor, string name,
         percentage = 100;
     }
 
-    bar = repeat_string("#", percentage / 2)
+    bar = repeat_string("o", percentage / 2)
         + repeat_string("-", 50 - percentage / 2);
-    return align_left(capitalize(name), 6) + "  " + bar + "  "
+    return align_left(capitalize(name), 10) + "  " + bar + "  "
         + align_right(percentage + "%", 4);
+}
+
+private float experience_progress(object LIB_CREATURE actor)
+{
+    return modf(actor->query_level())[0];
 }
 
 void perform(object LIB_CREATURE actor)
@@ -66,7 +71,8 @@ void perform(object LIB_CREATURE actor)
         + format_attribute(actor, BARGAIN_ATTRIBUTE) + "\n\n"
 
         + format_bar(actor, "health", actor->query_health()) + "\n"
-        + format_bar(actor, "power", actor->query_power()) + "\n";
+        + format_bar(actor, "power", actor->query_power()) + "\n"
+        + format_bar(actor, "experience", experience_progress(actor)) + "\n";
 
     tell_object(actor, message);
 }
