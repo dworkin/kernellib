@@ -6,6 +6,7 @@
 # include <system/assert.h>
 # include <system/object.h>
 # include <system/system.h>
+# include <system/tls.h>
 
 private inherit rsrc  API_RSRC;
 private inherit tls   API_TLS;
@@ -196,23 +197,29 @@ int forbid_inherit(string from, string path, int priv)
 }
 
 /*
- * NAME:        get_tlvar()
- * DESCRIPTION: proxies TLS reads for the system auto object
+ * NAME:        store_create_arguments()
+ * DESCRIPTION: TLS write proxy for the system auto object
  */
-mixed get_tlvar(int index)
+void store_create_arguments(mixed *arguments)
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    return tls::get_tlvar(index);
+    set_tlvar(TLS_CREATE_ARGUMENTS, arguments);
 }
 
 /*
- * NAME:        set_tlvar()
- * DESCRIPTION: proxies TLS writes for the system auto object
+ * NAME:        fetch_create_arguments()
+ * DESCRIPTION: TLS read proxy for the system auto object
  */
-void set_tlvar(int index, mixed value)
+mixed fetch_create_arguments()
 {
+    mixed *arguments;
+
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    tls::set_tlvar(index, value);
+    arguments = get_tlvar(TLS_CREATE_ARGUMENTS);
+    if (arguments) {
+        set_tlvar(TLS_CREATE_ARGUMENTS, nil);
+    }
+    return arguments;
 }
 
 /*

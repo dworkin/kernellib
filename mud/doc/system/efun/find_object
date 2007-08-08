@@ -1,0 +1,17 @@
+NAME
+        find_object - find an object
+
+SYNOPSIS
+        object find_object(mixed obj)
+
+DESCRIPTION
+        Find an object by name or number. If the argument is a string, it will
+        first be normalized as a path relative to this object. Either the
+        object, if found, or nil is returned.
+
+	Master objects with an ancestor directory named "data", "lib", or "obj"
+        cannot be found with this function. Managed light-weight objects can
+        only be found by number.
+
+SEE ALSO
+        kfun/object_name, efun/move_object, efun/object_number

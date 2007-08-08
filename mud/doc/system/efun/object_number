@@ -1,0 +1,13 @@
+NAME
+        object_number - return the number of an object
+
+SYNOPSIS
+        int object_number(object obj)
+
+DESCRIPTION
+	Return the number of the object argument. Persistent objects have
+        positive numbers. Managed light-weight object have negative numbers.
+        Zero is returned for other light-weight objects.
+
+SEE ALSO
+        efun/find_object, efun/move_object

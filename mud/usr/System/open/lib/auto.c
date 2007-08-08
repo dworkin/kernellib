@@ -4,7 +4,6 @@
 # include <system/assert.h>
 # include <system/object.h>
 # include <system/system.h>
-# include <system/tls.h>
 
 private int      oid_;          /* object number */
 private object   environment_;  /* environment */
@@ -58,6 +57,42 @@ private void undefined_error(string name, mapping undefined)
     error("Non-inheritable object cannot have undefined functions");
 }
 
+private int _object_number(object obj)
+{
+    string  path, owner;
+    int     category, uid, index, oid;
+
+    path = object_name(obj);
+    if (sscanf(path, "%*s#%d", index)) {
+        if (index == -1) {
+            return 0;
+        }
+
+        category = OID_CLONE;
+        owner = obj->query_owner();
+    } else {
+        category = OID_MASTER;
+        owner = creator(path);
+        index = ::status(obj)[O_INDEX] + 1;
+    }
+    uid = ::find_object(OBJECTD)->query_uid(owner);
+    return category | (uid << OID_OWNER_OFFSET) | (index << OID_INDEX_OFFSET);
+}
+
+/*
+ * NAME:        normalize_data()
+ * DESCRIPTION: normalize managed light-weight object
+ */
+private void normalize_data()
+{
+    if (oid_ < 0
+        && (!environment_ || environment_->_F_find(oid_) != this_object()))
+    {
+        oid_ = 0;
+        environment_ = nil;
+    }
+}
+
 /*
  * NAME:        create()
  * DESCRIPTION: dummy initialization function
@@ -71,38 +106,39 @@ static void create(mixed args...)
  */
 nomask int _F_system_create(varargs int clone)
 {
-    string name;
-
     ASSERT_ACCESS(previous_program() == AUTO);
-    name = object_name(this_object());
-    if (clone) {
-        object   objectd;
-	mixed   *args;
 
-        sscanf(name, "%*s#%d", oid_);
-        objectd = ::find_object(OBJECTD);
-	args = objectd->get_tlvar(SYSTEM_TLS_CREATE_ARGS);
-	if (args) {
+    /* forbid non-inheritable objects with undefined functions */
+    if (!clone) {
+        mapping undefined;
+
+        undefined = status(this_object())[O_UNDEFINED];
+        if (undefined) {
+            undefined_error(object_name(this_object()), undefined);
+        }
+    }
+
+    oid_ = _object_number(this_object());
+
+    if (clone) {
+	mixed *arguments;
+
+	arguments = ::find_object(OBJECTD)->fetch_create_arguments();
+	if (arguments) {
             /* pass arguments to create() */
-	    objectd->set_tlvar(SYSTEM_TLS_CREATE_ARGS, nil);
-	    call_limited("create", args...);
+	    call_limited("create", arguments...);
 	} else {
             /* no arguments */
 	    call_limited("create");
 	}
     } else {
-        mapping undefined;
-
-        undefined = status(this_object())[O_UNDEFINED];
-        if (undefined) {
-            undefined_error(name, undefined);
-        }
+        string path;
 
         /* do not call create() for clonable or light-weight master objects */
-        if (!sscanf(name, "%*s" + CLONABLE_SUBDIR)
-            && !sscanf(name, "%*s" + LIGHTWEIGHT_SUBDIR))
+        path = object_name(this_object());
+        if (!sscanf(path, "%*s" + CLONABLE_SUBDIR)
+            && !sscanf(path, "%*s" + LIGHTWEIGHT_SUBDIR))
         {
-            oid_ = ::status(this_object())[O_INDEX];
             call_limited("create"); 
         }
     }
@@ -118,12 +154,7 @@ nomask int _F_system_create(varargs int clone)
 nomask int _Q_oid()
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    if (oid_ < -1
-        && (!environment_ || environment_->_F_find(oid_) != this_object()))
-    {
-        oid_ = -1;
-        environment_ = nil;
-    }
+    normalize_data();
     return oid_;
 }
 
@@ -131,16 +162,16 @@ nomask int _Q_oid()
  * NAME:        _F_move()
  * DESCRIPTION: move this object to another environment
  */
-nomask void _F_move(object dest)
+nomask void _F_move(object destination)
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    _Q_oid();  /* update environment */
+    normalize_data();
 
-    if (oid_ >= 0) {
+    if (oid_ > 0) {
         object this, obj;
 
         this = this_object();
-        for (obj = dest; obj; obj = obj->_Q_env()) {
+        for (obj = destination; obj; obj = obj->_Q_environment()) {
             if (obj == this) {
                 error("Cannot move object into itself");
             }
@@ -150,18 +181,14 @@ nomask void _F_move(object dest)
     if (environment_) {
         environment_->_F_leave(oid_);
     }
-
-    environment_ = dest;
-    if (environment_ != nil) {
-        if (oid_ == -1) {
-            oid_ = ::find_object(OBJECTD)->add_data(query_owner(),
-                                                    environment_);
-        } else if (oid_ < -1) {
-            ::find_object(OBJECTD)->move_data(oid_, environment_);
-        }
+    environment_ = destination;
+    if (oid_ < 0) {
+        ::find_object(OBJECTD)->move_data(oid_, environment_);
+    } else if (!oid_ && environment_) {
+        oid_ = ::find_object(OBJECTD)->add_data(query_owner(), environment_);
+    }
+    if (environment_) {
         environment_->_F_enter(oid_, this_object());
-    } else if (oid_ < -1) {
-        ::find_object(OBJECTD)->move_data(oid_, nil);
     }
 }
 
@@ -190,7 +217,7 @@ nomask void _F_leave(int oid)
 
 /*
  * NAME:        _F_find()
- * DESCRIPTION: find a distinct LWO by number in this object
+ * DESCRIPTION: find an object by number in this environment
  */
 nomask object _F_find(int oid)
 {
@@ -216,7 +243,7 @@ nomask object *_Q_inventory()
 nomask object _Q_environment()
 {
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    _Q_oid(); /* update environment */
+    normalize_data();
     return environment_;
 }
 
@@ -224,26 +251,10 @@ nomask object _Q_environment()
  * NAME:        object_number()
  * DESCRIPTION: return the object number of an object
  */
-int object_number(object obj)
+static int object_number(object obj)
 {
-    string  path, owner;
-    int     category, uid, index, oid;
-
     ASSERT_ARG(obj);
-    path = object_name(obj);
-    if (sscanf(path, "%*s#%d", index)) {
-        if (index == -1) {
-            return obj <- SYSTEM_AUTO ? obj->_Q_oid() : -1;
-        }
-        category = OID_CLONE;
-        owner = obj->query_owner();
-    } else {
-        category = OID_MASTER;
-        owner = creator(path);
-        index = ::status(obj)[O_INDEX] + 1;
-    }
-    uid = ::find_object(OBJECTD)->query_uid(owner);
-    return category | (uid << OID_OWNER_OFFSET) | (index << OID_INDEX_OFFSET);
+    return obj <- SYSTEM_AUTO ? obj->_Q_oid() : _object_number(obj);
 }
 
 /*
@@ -292,13 +303,13 @@ static void message(string message)
  * NAME:        clone_object()
  * DESCRIPTION: create a new persistent clone
  */
-static atomic object clone_object(string master, mixed args...)
+static atomic object clone_object(string master, mixed arguments...)
 {
     ASSERT_ARG_1(master);
 
     /* pass arguments to create() via TLS */
-    if (sizeof(args)) {
-	::find_object(OBJECTD)->set_tlvar(SYSTEM_TLS_CREATE_ARGS, args);
+    if (sizeof(arguments)) {
+	::find_object(OBJECTD)->store_create_arguments(arguments);
     }
 
     return ::clone_object(master);
@@ -308,19 +319,19 @@ static atomic object clone_object(string master, mixed args...)
  * NAME:        new_object()
  * DESCRIPTION: create or copy a light-weight object
  */
-static atomic object new_object(mixed master, mixed args...)
+static atomic object new_object(mixed master, mixed arguments...)
 {
     if (typeof(master) == T_STRING) {  /* create new LWO */
         /* pass arguments to create() via TLS */
-	if (sizeof(args)) {
-            ::find_object(OBJECTD)->set_tlvar(SYSTEM_TLS_CREATE_ARGS, args);
+	if (sizeof(arguments)) {
+            ::find_object(OBJECTD)->store_create_arguments(arguments);
 	}
     } else {  /* copy existant LWO */
         ASSERT_ARG_1(typeof(master) == T_OBJECT
                      && sscanf(object_name(master), "%*s#-1") == 1);
 
         /* cannot pass arguments when copying LWO */
-        ASSERT_MESSAGE(sizeof(args) == 0, "Cannot pass arguments");
+        ASSERT_MESSAGE(!sizeof(arguments), "Cannot pass arguments");
     }
     return ::new_object(master);
 }
@@ -346,7 +357,7 @@ static mixed *status(varargs mixed obj)
             int oid;
             
             oid = obj->_Q_oid();
-            if (oid < -1) {
+            if (oid < 0) {
                 obj = ::find_object(OBJECTD);
                 status[O_CALLOUTS] = obj->query_data_callouts(query_owner(),
                                                               oid);
@@ -476,19 +487,22 @@ static mixed *file_info(string path)
  * NAME:        call_out()
  * DESCRIPTION: schedule a function call
  */
-static int call_out(string func, mixed delay, mixed args...)
+static int call_out(string function, mixed delay, mixed arguments...)
 {
-    string prog;
+    string program;
 
-    ASSERT_ARG_1(func);
-    prog = ::function_object(func, this_object());
-    ASSERT_ARG_1(prog && creator(prog) != "System");
+    ASSERT_ARG_1(function);
+    program = ::function_object(function, this_object());
+    ASSERT_ARG_1(program
+                 && (creator(program) != "System" || function == "create"));
     ASSERT_ARG_2(typeof(delay) == T_INT || typeof(delay) == T_FLOAT);
-    _Q_oid(); /* update environment */
-    if (oid_ < -1) {
-        return ::find_object(OBJECTD)->data_callout(oid_, func, delay, args);
+    normalize_data();
+    if (oid_ < 0) {
+        return ::find_object(OBJECTD)->data_callout(oid_, function, delay,
+                                                    arguments);
+    } else {
+        return ::call_out(function, delay, arguments...);
     }
-    return ::call_out(func, delay, args...);
 }
 
 /*
@@ -497,11 +511,12 @@ static int call_out(string func, mixed delay, mixed args...)
  */
 static mixed remove_call_out(int handle)
 {
-    _Q_oid(); /* update environment */
-    if (oid_ < -1) {
+    normalize_data();
+    if (oid_ < 0) {
         return ::find_object(OBJECTD)->remove_data_callout(oid_, handle);
+    } else {
+        return ::remove_call_out(handle);
     }
-    return ::remove_call_out(handle);
 }
 
 /*
