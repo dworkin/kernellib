@@ -228,7 +228,8 @@ static string verbose_description(object LIB_THING thing,
         desc += " " + describe_exits(thing);
     }
     if (thing <- LIB_ROOM) {
-        desc += "\n  " + describe_inventory(thing, observer) + "\n";
+        desc = break_string(desc)
+            + indent_string(describe_inventory(thing, observer));
     } else if (thing <- LIB_CREATURE || thing <- LIB_CONTAINER) {
         desc += " " + describe_inventory(thing, observer);
     }

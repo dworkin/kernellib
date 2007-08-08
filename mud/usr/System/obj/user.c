@@ -183,7 +183,7 @@ int receive_message(string str)
                 cmd = alias_expand(cmd);
                 action = COMMANDD->parse(cmd);
                 if (!action) {
-                    message("Bad command: " + cmd + "\n");
+                    message("  Bad command: " + cmd + "\n");
                 } else {
                     creature->add_action(action);
                 }
@@ -342,5 +342,5 @@ static void evt_observe(object sender, string mess)
 
 static void evt_error(object sender, string mess)
 {
-    message("Error: " + mess + ".\n");
+    message("  Error: " + mess + ".\n");
 }

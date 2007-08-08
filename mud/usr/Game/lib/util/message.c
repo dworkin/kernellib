@@ -3,69 +3,73 @@
 
 private inherit UTIL_STRING;
 
-static string normalize_message(string mess)
+static string normalize_message(string message)
 {
-    if (has_suffix(mess, "\n")) {
+    if (has_suffix(message, "\n")) {
         /* preformatted message: prepend blank line */
-        return "\n" + mess;
+        return "\n" + message;
     }
 
-    if (!has_suffix(mess, ".") && !has_suffix(mess, "!")
-        && !has_suffix(mess, "?"))
+    message = normalize_whitespace(message);
+    if (!has_suffix(message, ".") && !has_suffix(message, "!")
+        && !has_suffix(message, "?"))
     {
-        mess += ".";
+        message += ".";
     }
-    return "  " + capitalize(mess) + "\n";
+    return indent_string(message);
 }
 
-static void tell_object(object LIB_THING obs, string mess)
+static void tell_object(object LIB_THING observer, string message)
 {
-    obs->observe(normalize_message(mess));
+    observer->observe(normalize_message(message));
 }
 
-static void tell_inventory(object LIB_ROOM env, string mess)
+static void tell_inventory(object LIB_ROOM room, string message)
 {
-    object LIB_THING  *inv;
-    int                i, size;
+    object LIB_THING *things;
 
-    inv = inventory(env);
-    size = sizeof(inv);
+    int i, size;
+
+    things = inventory(room);
+    size = sizeof(things);
     for (i = 0; i < size; ++i) {
-        tell_object(inv[i], mess);
+        tell_object(things[i], message);
     }
 }
 
-static void tell_audience(object LIB_CREATURE actor, string mess)
+static void tell_audience(object LIB_CREATURE actor, string message)
 {
-    object LIB_ROOM    env;
-    object LIB_THING  *inv;
-    int                i, size;
+    object LIB_ROOM    room;
+    object LIB_THING  *things;
 
-    env = environment(actor);
-    if (!env) {
+    int i, size;
+
+    room = environment(actor);
+    if (!room) {
         return;
     }
-    inv = inventory(env) - ({ actor });
-    size = sizeof(inv);
+    things = inventory(room) - ({ actor });
+    size = sizeof(things);
     for (i = 0; i < size; ++i) {
-        tell_object(inv[i], mess);
+        tell_object(things[i], message);
     }
 }
 
 static void tell_audience_except(object LIB_CREATURE actor,
-                                 object LIB_THING *excl, string mess)
+                                 object LIB_THING *excluded, string message)
 {
-    object LIB_ROOM    env;
-    object LIB_THING  *inv;
-    int                i, size;
+    object LIB_ROOM    room;
+    object LIB_THING  *things;
 
-    env = environment(actor);
-    if (!env) {
+    int i, size;
+
+    room = environment(actor);
+    if (!room) {
         return;
     }
-    inv = inventory(env) - ({ actor }) - excl;
-    size = sizeof(inv);
+    things = inventory(room) - ({ actor }) - excluded;
+    size = sizeof(things);
     for (i = 0; i < size; ++i) {
-        tell_object(inv[i], mess);
+        tell_object(things[i], message);
     }
 }

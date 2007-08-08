@@ -1,15 +1,20 @@
 static string normalize_whitespace(string str)
 {
+    int len;
+
     if (sscanf(str, "%*s\n")) {
-        str = implode(explode(str, "\n"), "");
+        str = implode(explode(str, "\n"), " ");
     }
     if (sscanf(str, "%*s\r")) {
-        str = implode(explode(str, "\r"), "");
+        str = implode(explode(str, "\r"), " ");
     }
     if (sscanf(str, "%*s\t")) {
-        str = implode(explode(str, "\t"), "");
+        str = implode(explode(str, "\t"), " ");
     }
-    if (sscanf(str, "%*s ")) {
+
+    len = strlen(str);
+    if (len && (str[0] == ' ' || sscanf(str, "%*s  ") || str[len - 1] == ' '))
+    {
         str = implode(explode(str, " ") - ({ "" }), " ");
     }
     return str;
@@ -122,4 +127,52 @@ static string repeat_string(string str, int count) {
         str += str;
     }
     return str[.. len - 1];
+}
+
+static string break_string(string str, varargs int width)
+{
+    int i, len, last, best;
+
+    len = strlen(str);
+    if (!len || str[len - 1] == '\n') {
+        return str;
+    }
+    if (!width) {
+        width = 69;
+    }
+    if (len <= width) {
+        return str + "\n";
+    }
+    last = best = -1;
+    for (i = 0; i < len; ++i) {
+        if (str[i] == ' ') {
+            if (i - last - 1 <= width) {
+                best = i;
+            } else {
+                if (best == -1) {
+                    str[i] = '\n';
+                    last = i;
+                } else {
+                    str[best] = '\n';
+                    last = best;
+                    best = i;
+                }
+            }
+        }
+    }
+    if (len - last - 1 > width && best != -1) {
+        str[best] = '\n';
+    }
+    return str + "\n";
+}
+
+static string indent_string(string str, varargs int width)
+{
+    int len;
+
+    len = strlen(str);
+    if (!len || str[len - 1] == '\n') {
+        return str;
+    }
+    return "  " + break_string("__" + str, width)[2 ..];
 }
