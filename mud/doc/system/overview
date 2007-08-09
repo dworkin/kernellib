@@ -1,0 +1,58 @@
+                 An overview of the system library in Leprechaun
+
+
+1. Object numbers
+
+The object_number() function returns a unique, non-zero number for the object
+argument. Zero is returned for light-weight objects. Non-zero object numbers
+can be passed to the find_object() function to find the object again.
+
+
+2. Inventory system
+
+The system library provides an object inventory system similar to that of
+LPmud. Object movement can be vetoed by both the environment being moved into
+and the object being moved.
+
+
+3. Middle-weight objects
+
+Middle-weight objects are specially managed light-weight objects. A
+light-weight object can be promoted to a middle-weight object by moving it into
+an environment using the move_object() function. Light-weight and middle-weight
+objects cannot serve as environments themselves.
+
+Each middle-weight object is assigned a unique object number that can be
+retrieved with the object_number() function. The object number can be used as a
+work-around for the automatic duplication of middle-weight objects. The object
+retains its object name on the form "master#-1".
+
+Middle-weight objects can have call-outs.
+
+
+3. Further restrictions on use of objects
+
+In addition to the inheritable objects already hidden by the kernel library,
+the system library hides clonable and light-weight master objects. User code
+cannot find the master objects or call functions in them.
+
+
+4. Restrictions on undefined functions
+
+Non-inheritable objects cannot have undefined functions. Undefined functions
+cannot be privately inherited.
+
+
+5. Atomic object creation
+
+The compile_object(), clone_object(), and new_object() functions are atomic.
+This means that any error raised during object compilation or initialization
+causes the creation to be undone, including errors raised by the create()
+function.
+
+
+6. Creator function arguments
+
+The clone_object() and new_object() functions accept any number of extra
+arguments. The extra arguments are passed along to the create() function of the
+newly created clone or light-weight object.

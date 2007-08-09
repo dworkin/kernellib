@@ -118,7 +118,7 @@ nomask int _F_system_create(varargs int clone)
 {
     ASSERT_ACCESS(previous_program() == AUTO);
 
-    /* forbid non-inheritable objects with undefined functions */
+    /* forbid undefined functions for non-inheritable objects */
     if (!clone) {
         mapping undefined;
 
@@ -435,6 +435,7 @@ static atomic object compile_object(string path, string source...)
         return nil;
     }
 
+    /* forbid undefined functions for non-inheritable objects */
     path = object_name(obj);
     undefined = status(obj)[O_UNDEFINED];
     if (undefined) {
