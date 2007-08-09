@@ -34,10 +34,10 @@ private object load(string path)
 }
 
 /*
- * NAME:        init_object_manager()
+ * NAME:        install_object_manager()
  * DESCRIPTION: initialize and install object manager
  */
-private void init_object_manager()
+private void install_object_manager()
 {
     object objectd, owner_node;
 
@@ -83,14 +83,13 @@ private void init_object_manager()
 }
 
 /*
- * NAME:        init_telnet_manager()
+ * NAME:        install_telnet_manager()
  * DESCRIPTION: initialize and install telnet manager
  */
-private void init_telnet_manager()
+private void install_telnet_manager()
 {
     object telnetd;
 
-    /* install telnet manager */
     telnetd = load(SYSTEM_TELNETD);
     load(SYSTEM_USER);
     load(SYSTEM_WIZTOOL);
@@ -103,43 +102,42 @@ private void init_telnet_manager()
  */
 static void create()
 {
-    int      i, size;
-    string  *owners, path;
-
     rsrc::create();
     tls::create();
     driver_ = find_object(DRIVER);
 
     /* initialize system */
     driver_->message("Initializing system.\n");
-    init_object_manager();
-    init_telnet_manager();
+    install_object_manager();
+    install_telnet_manager();
     load(SYSTEM_AUTO);
 
     /* reserve a TLS slot for create() arguments */
     tls::set_tls_size(1);
 
-    /* initialize user code */
-    owners = rsrc::query_owners() - ({ nil, "System" });
-    size = sizeof(owners);
-    for (i = 0; i < size; ++i) {
-        path = USR_DIR + "/" + owners[i] + "/initd";
-        if (driver_->file_size(path + ".c")) {
-	    /*
-	     * the increased TLS size does not affect the current execution
-	     * round, so initialize user code in call-outs
-	     */
-	    call_out("init", 0, path);
-        }
-    }
+    /*
+     * the increased TLS size does not affect the current execution round, so
+     * initialize user code in call-outs
+     */
+    call_out("initialize_owner", 0, query_owners() - ({ nil, "System" }), 0);
 }
 
 /*
- * NAME:        init
- * DESCRIPTION: create user initd after call-out
+ * NAME:        initialize_owner
+ * DESCRIPTION: create user initialization manager after call-out
  */
-static void init(string path)
+static void initialize_owner(string *owners, int i)
 {
-    driver_->message("Initializing " + path + ".\n");
-    load(path);
+    string path;
+
+    /* queue next owner */
+    if (i + 1 < sizeof(owners)) {
+        call_out("initialize_owner", 0, owners, i + 1);
+    }
+
+    path = USR_DIR + "/" + owners[i] + "/initd";
+    if (driver_->file_size(path + ".c")) {
+        driver_->message("Initializing " + path + ".\n");
+        load(path);
+    }
 }

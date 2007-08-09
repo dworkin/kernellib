@@ -9,6 +9,33 @@ inherit obj   API_OBJECT;
 object user; /* associated user object */
 
 /*
+ * NAME:	normalize_path()
+ * DESCRIPTION:	normalize a path relative to the current directory and owner
+ */
+private string normalize_path(string path)
+{
+    return find_object(DRIVER)->normalize_path(path, query_directory(),
+                                               query_owner());
+}
+
+/*
+ * NAME:        format_oids()
+ * DESCRIPTION: return a comma-separated list of object numbers
+ */
+private string format_oids(int *oids)
+{
+    string  str;
+    int     i, size;
+
+    str = (string) oids[0];
+    size = sizeof(oids);
+    for (i = 1; i < size; ++i) {
+        str += ", " + oids[i];
+    }
+    return str;
+}
+
+/*
  * NAME:	create()
  * DESCRIPTION:	initialize object
  */
@@ -69,7 +96,6 @@ static void process(string str)
     if (arg == "") {
 	arg = nil;
     }
-
     switch (str) {
     case "code":
     case "history":
@@ -111,16 +137,14 @@ static void process(string str)
     }
 }
 
-static string normalize_path(string path)
-{
-    return find_object(DRIVER)->normalize_path(path, query_directory(),
-                                               query_owner());
-}
-
+/*
+ * NAME:	cmd_find()
+ * DESCRIPTION:	find an object by name or $ident
+ */
 static void cmd_find(object user, string cmd, string str)
 {
-    int i;
-    mixed obj;
+    int    i;
+    mixed  obj;
 
     i = -1;
     if (!str || (sscanf(str, "$%d%s", i, str) != 0 && (i < 0 || str != "")))
@@ -156,19 +180,10 @@ static void cmd_find(object user, string cmd, string str)
     store(obj);
 }
 
-static string format_oids(int *oids)
-{
-    string  str;
-    int     i, size;
-
-    str = (string) oids[0];
-    size = sizeof(oids);
-    for (i = 1; i < size; ++i) {
-        str += ", " + oids[i];
-    }
-    return str;
-}
-
+/*
+ * NAME:	cmd_pls()
+ * DESCRIPTION:	list programs
+ */
 static void cmd_pls(object user, string cmd, string str)
 {
     mapping    dir;
@@ -202,8 +217,7 @@ static void cmd_pls(object user, string cmd, string str)
         
         line = names[i];
         if (strlen(line) < 18) {
-            line = "                  " + line;
-            line = line[strlen(line) - 18 ..];
+            line = "                  "[.. 18 - strlen(line) - 1] + line;
         }
         if (sizeof(oids[i])) {
             line += "  " + format_oids(oids[i]);

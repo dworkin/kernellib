@@ -16,25 +16,9 @@ mapping  persistent_oids_;   /* ([ int oid: object obj ]) */
 mapping  lightweight_oids_;  /* ([ bucket_index: ([ oid: environment ]) ]) */
 
 /*
- * NAME:        create()
- * DESCRIPTION: initialize owner node
+ * NAME:        link_child()
+ * DESCRIPTION: add entry to linked list of children
  */
-static void create(int clone)
-{
-    if (clone) {
-        driver_ = find_object(DRIVER);
-        objectd_ = find_object(OBJECTD);
-        uid_ = objectd_->query_uid(query_owner());
-
-        pdb_entries_ = ([ ]);
-        pdb_paths_ = ([ ]);
-
-	next_index_ = 1;
-        persistent_oids_ = ([ ]);
-        lightweight_oids_ = ([ ]);
-    }
-}
-
 private void link_child(int child_oid, mixed *child_entry, string parent_name)
 {
     int      parent_uid, index, parent_oid;
@@ -73,6 +57,10 @@ private void link_child(int child_oid, mixed *child_entry, string parent_name)
     }
 }
 
+/*
+ * NAME:        unlink_child()
+ * DESCRIPTION: remove entry from linked list of children
+ */
 private void unlink_child(int child_oid, mixed *child_entry, int parent_oid)
 {
     int     previous_oid;
@@ -89,11 +77,12 @@ private void unlink_child(int child_oid, mixed *child_entry, int parent_oid)
         int     next_oid;
         mixed  *previous_entry, *next_entry;
 
-        /* unlink child */
+        /* find entries */
         next_oid = child_entry[PDB_NEXT][parent_oid];
         previous_entry = objectd_->query_program(previous_oid);
         next_entry = objectd_->query_program(next_oid);
 
+        /* unlink child */
         previous_entry[PDB_NEXT][parent_oid] = next_oid;
         child_entry[PDB_PREVIOUS][parent_oid] = nil;
         next_entry[PDB_PREVIOUS][parent_oid] = previous_oid;
@@ -103,6 +92,26 @@ private void unlink_child(int child_oid, mixed *child_entry, int parent_oid)
             /* child was first in chain: appoint next child instead */
             parent_entry[PDB_CHILDREN] = next_oid;
         }
+    }
+}
+
+/*
+ * NAME:        create()
+ * DESCRIPTION: initialize owner node
+ */
+static void create(int clone)
+{
+    if (clone) {
+        driver_ = find_object(DRIVER);
+        objectd_ = find_object(OBJECTD);
+        uid_ = objectd_->query_uid(query_owner());
+
+        pdb_entries_ = ([ ]);
+        pdb_paths_ = ([ ]);
+
+	next_index_ = 1; /* use 1-based indices for managed LWOs */
+        persistent_oids_ = ([ ]);
+        lightweight_oids_ = ([ ]);
     }
 }
 
@@ -150,6 +159,10 @@ void compile(mixed obj, string *source, string *inherited)
     }
 }
 
+/*
+ * NAME:        clone()
+ * DESCRIPTION: the given object has just been cloned
+ */
 void clone(object obj)
 {
     int index, oid;
@@ -160,6 +173,10 @@ void clone(object obj)
     persistent_oids_[oid] = obj;
 }
 
+/*
+ * NAME:        destruct()
+ * DESCRIPTION: the given object is about to be destructed
+ */
 void destruct(object obj)
 {
     int category, index, oid;

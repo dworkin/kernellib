@@ -11,7 +11,7 @@ private mapping  inventory_;    /* ([ int oid: object obj ]) */
 
 /*
  * NAME:	creator()
- * DESCRIPTION:	get creator of file
+ * DESCRIPTION: get creator of file
  */
 private string creator(string path)
 {
@@ -20,7 +20,7 @@ private string creator(string path)
 
 /*
  * NAME:        normalize_path()
- * DESCRIPTION:	normalize a path relative to this object
+ * DESCRIPTION: normalize a path relative to this object
  */
 private string normalize_path(string path)
 {
@@ -32,6 +32,10 @@ private string normalize_path(string path)
     return driver->normalize_path(path, name + "/..", driver->creator(name));
 }
 
+/*
+ * NAME:        undefined_error()
+ * DESCRIPTION: log and raise an undefined function error
+ */
 private void undefined_error(string name, mapping undefined)
 {
     string  *programs, **functions;
@@ -57,6 +61,10 @@ private void undefined_error(string name, mapping undefined)
     error("Non-inheritable object cannot have undefined functions");
 }
 
+/*
+ * NAME:        _object_number()
+ * DESCRIPTION: return the object number of a persistent object
+ */
 private int _object_number(object obj)
 {
     string  path, owner;
@@ -65,6 +73,7 @@ private int _object_number(object obj)
     path = object_name(obj);
     if (sscanf(path, "%*s#%d", index)) {
         if (index == -1) {
+            /* non-persistent object */
             return 0;
         }
 
@@ -73,7 +82,7 @@ private int _object_number(object obj)
     } else {
         category = OID_MASTER;
         owner = creator(path);
-        index = ::status(obj)[O_INDEX] + 1;
+        index = ::status(obj)[O_INDEX] + 1; /* use 1-based object indices */
     }
     uid = ::find_object(OBJECTD)->query_uid(owner);
     return category | (uid << OID_OWNER_OFFSET) | (index << OID_INDEX_OFFSET);
@@ -81,13 +90,14 @@ private int _object_number(object obj)
 
 /*
  * NAME:        normalize_data()
- * DESCRIPTION: normalize managed light-weight object
+ * DESCRIPTION: normalize a managed light-weight object
  */
 private void normalize_data()
 {
     if (oid_ < 0
         && (!environment_ || environment_->_F_find(oid_) != this_object()))
     {
+        /* demote to unmanaged light-weight object */
         oid_ = 0;
         environment_ = nil;
     }
@@ -97,7 +107,7 @@ private void normalize_data()
  * NAME:        create()
  * DESCRIPTION: dummy initialization function
  */
-static void create(mixed args...)
+static void create(mixed arguments...)
 { }
 
 /*
@@ -118,6 +128,7 @@ nomask int _F_system_create(varargs int clone)
         }
     }
 
+    /* initialize object number */
     oid_ = _object_number(this_object());
 
     if (clone) {
@@ -183,8 +194,10 @@ nomask void _F_move(object destination)
     }
     environment_ = destination;
     if (oid_ < 0) {
+        /* move managed light-weight object */
         ::find_object(OBJECTD)->move_data(oid_, environment_);
     } else if (!oid_ && environment_) {
+        /* promote unmanaged light-weight object to managed */
         oid_ = ::find_object(OBJECTD)->add_data(query_owner(), environment_);
     }
     if (environment_) {

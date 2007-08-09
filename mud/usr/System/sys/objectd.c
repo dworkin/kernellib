@@ -13,9 +13,43 @@ private inherit tls   API_TLS;
 
 object   driver_;    /* driver object */
 object   initd_;     /* system initialization manager */
-int      next_uid_;  /* next UID */
-mapping  uids_;      /* ([ string owner: int uid ]) */
-mapping  nodes_;     /* ([ int uid: object node ]) */
+int      next_uid_;  /* next user ID */
+mapping  uids_;      /* ([ string owner: int uid ]), where uid >= 1 */
+mapping  nodes_;     /* ([ int uid: object owner_node ]), where uid >= 1 */
+
+/*
+ * NAME:        add_owner()
+ * DESCRIPTION: register a new or existing owner
+ */
+private int add_owner(string owner)
+{
+    mixed uid;
+
+    uid = uids_[owner];
+    if (!uid) {
+	/* register new owner and create owner node */
+	uid = uids_[owner] = next_uid_++;
+        nodes_[uid] = clone_object(OWNER_NODE, owner);
+    }
+    return uid;
+}
+
+/*
+ * NAME:        program_dir_map()
+ * DESCRIPTION: return a mapping for a directory array
+ */
+private mapping program_dir_map(string *directories)
+{
+    int      i, size;
+    mapping  map;
+
+    map = ([ ]);
+    size = sizeof(directories);
+    for (i = 0; i < size; ++i) {
+        map[directories[i]] = ({ -2 });
+    }
+    return map;
+}
 
 /*
  * NAME:        create()
@@ -27,25 +61,9 @@ static void create()
     tls::create();
     driver_ = find_object(DRIVER);
     initd_ = find_object(INITD);
-    next_uid_ = 1;
+    next_uid_ = 1; /* use 1-based UIDs */
     uids_ = ([ ]);
     nodes_ = ([ ]);
-}
-
-/*
- * NAME:        add_owner()
- * DESCRIPTION: register a new or existing owner
- */
-private int add_owner(string owner)
-{
-    if (uids_[owner] == nil) {
-        int uid;
-
-	/* new owner: register and create owner object */
-	uid = uids_[owner] = next_uid_++;
-        nodes_[uid] = clone_object(OWNER_NODE, owner);
-    }
-    return uids_[owner];
 }
 
 /*
@@ -54,7 +72,10 @@ private int add_owner(string owner)
  */
 int query_uid(string owner)
 {
-    return uids_[owner] ? uids_[owner] : 0;
+    mixed uid;
+
+    uid = uids_[owner];
+    return uid ? uid : 0;
 }
 
 /*
@@ -162,7 +183,6 @@ int forbid_inherit(string from, string path, int priv)
     string from_creator, path_creator;
 
     ASSERT_ACCESS(previous_object() == driver_);
-
     from_creator = driver_->creator(from);
     path_creator = driver_->creator(path);
 
@@ -233,19 +253,6 @@ mixed *query_program(int oid)
     ASSERT_ACCESS(previous_program() == OWNER_NODE);
     uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
     return nodes_[uid]->query_program(oid);
-}
-
-static mapping program_dir_map(string *directories)
-{
-    int      i, size;
-    mapping  map;
-
-    map = ([ ]);
-    size = sizeof(directories);
-    for (i = 0; i < size; ++i) {
-        map[directories[i]] = ({ -2 });
-    }
-    return map;
 }
 
 /*

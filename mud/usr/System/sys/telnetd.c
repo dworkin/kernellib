@@ -5,23 +5,41 @@
 
 object userd;
 
+/*
+ * NAME:        create()
+ * DESCRIPTION: initialize object
+ */
 static void create()
 {
     userd = find_object(USERD);
 }
 
+/*
+ * NAME:        select()
+ * DESCRIPTION: return a user object based on the first line of input
+ */
 object select(string str)
 {
     ASSERT_ACCESS(previous_object() == userd);
     return clone_object(SYSTEM_USER);
 }
 
+/*
+ * NAME:        query_timeout()
+ * DESCRIPTION: return a timeout for the given connection, or -1 to close it
+ *              immediately
+ */
 int query_timeout(object connection)
 {
     ASSERT_ACCESS(previous_object() == userd);
     return DEFAULT_TIMEOUT;
 }
 
+/*
+ * NAME:        query_banner()
+ * DESCRIPTION: return a login banner for the given connection, or nil for no
+ *              banner
+ */
 string query_banner(object connection)
 {
     ASSERT_ACCESS(previous_object() == userd);
