@@ -1,0 +1,19 @@
+NAME
+        create - initialize object
+
+SYNOPSIS
+        void create()
+        void create(mixed arguments...)
+
+DESCRIPTION
+        This function is called when an object is initialized. The first form
+        is used for master objects, and the second for clones and light-weight
+        objects. The arguments passed to this function in the second form are
+        the extra arguments specified for the clone_object() or new_object()
+        call that created this object.
+
+        Since object creation is atomic, objects can raise an error in create()
+        to undo their creation.
+
+SEE ALSO
+        efun/clone_object, efun/compile_object, efun/new_object

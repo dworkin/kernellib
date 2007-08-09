@@ -1,0 +1,28 @@
+NAME
+        new_object - create a new light-weight object
+
+SYNOPSIS
+        atomic object new_object(string master, mixed arguments...)
+        atomic object new_object(object obj)
+
+DESCRIPTION
+        Create a new light-weight instance of the specified object. The new
+        object is returned. It will have the same owner as this object.
+        Light-weight objects have names of the form "master#-1". They are
+        garbage-collected and cannot be explicitly destructed.
+
+        In the first form of calling this function, the first argument is the
+        master object to use when creating the new object. The argument will
+        first be normalized as a path relative to the current object. The
+        create() function will be called in the new object immediately. Any
+        additional arguments will be passed on to the create() function.
+
+        In the second form, the argument is itself a light-weight object to be
+        copied. The create() function will not be called in this case.
+
+ACCESS
+        Unless the argument is itself a light-weight object to be copied, the
+        current object must have read access to the file of the master object.
+
+SEE ALSO
+        efun/clone_object, efun/move_object, lfun/create

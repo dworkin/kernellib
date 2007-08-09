@@ -1,0 +1,27 @@
+NAME
+        clone_object - clone an object
+
+SYNOPSIS
+        atomic object clone_object(string master, mixed arguments...)
+
+DESCRIPTION
+        Create a clone of the specified master object. The new object is
+        returned. It has the same owner as the current object. Clones have
+        names of the form "master#number", with a positive number.
+
+        The create() function will be called in the cloned object immediately.
+        Any additional arguments specified are passed on to the create()
+        function.
+
+ACCESS
+        The current object must have read access to the file of the master
+        object.
+
+ERRORS
+        If the number of existing objects is equal to the value of the
+        ST_OTABSIZE field of the array returned by status(), where ST_OTABSIZE
+        is defined in the include file <status.h>, attempting to clone a new
+        object will raise an error.
+
+SEE ALSO
+        efun/destruct_object, efun/new_object, lfun/create

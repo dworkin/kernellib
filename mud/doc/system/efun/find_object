@@ -2,12 +2,14 @@ NAME
         find_object - find an object
 
 SYNOPSIS
-        object find_object(mixed obj)
+        object find_object(string name)
+        object find_object(int number)
 
 DESCRIPTION
-        Find an object by name or number. If the argument is a string, it will
-        first be normalized as a path relative to this object. Either the
-        object, if found, or nil is returned.
+        Find an object by name or number. Either the object, if found, or nil
+        is returned. In the first form, the argument is first normalized as a
+        path relative to this object. The normalized path is then used to find
+        the object. In the second form, the object is found by number. 
 
 	Master objects with an ancestor directory named "data", "lib", or "obj"
         cannot be found with this function. Managed light-weight objects can
