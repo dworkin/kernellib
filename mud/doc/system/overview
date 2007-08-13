@@ -39,8 +39,8 @@ cannot find the master objects or call functions in them.
 
 4. Restrictions on undefined functions
 
-Non-inheritable objects cannot have undefined functions. Undefined functions
-cannot be privately inherited.
+Non-inheritable objects are not allowed to have undefined functions. Private
+inheritance of inheritable objects with undefined functions is forbidden.
 
 
 5. Atomic object creation

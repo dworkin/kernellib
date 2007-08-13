@@ -90,14 +90,14 @@ private int _object_number(object obj)
 
 /*
  * NAME:        normalize_data()
- * DESCRIPTION: normalize a managed light-weight object
+ * DESCRIPTION: normalize middle-weight object
  */
 private void normalize_data()
 {
     if (oid_ < 0
         && (!environment_ || environment_->_F_find(oid_) != this_object()))
     {
-        /* demote to unmanaged light-weight object */
+        /* degrade to light-weight object */
         oid_ = 0;
         environment_ = nil;
     }
@@ -194,10 +194,10 @@ nomask void _F_move(object destination)
     }
     environment_ = destination;
     if (oid_ < 0) {
-        /* move managed light-weight object */
+        /* move middle-weight object */
         ::find_object(OBJECTD)->move_data(oid_, environment_);
     } else if (!oid_ && environment_) {
-        /* promote unmanaged light-weight object to managed */
+        /* promote light-weight object to middle-weight */
         oid_ = ::find_object(OBJECTD)->add_data(query_owner(), environment_);
     }
     if (environment_) {
