@@ -1,0 +1,12 @@
+NAME
+        environment - return the environment of an object
+
+SYNOPSIS
+        object environment(object obj)
+
+DESCRIPTION
+        Return the environment of the specified object, or nil if it does not
+        have an environment.
+
+SEE ALSO
+        efun/environment, efun/move_object

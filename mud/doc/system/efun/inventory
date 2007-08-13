@@ -1,0 +1,12 @@
+NAME
+        inventory - return the inventory of an object
+
+SYNOPSIS
+        object *inventory(object obj)
+
+DESCRIPTION
+        Return the inventory of the specified object. This function never
+        returns nil.
+
+SEE ALSO
+        efun/inventory, efun/move_object

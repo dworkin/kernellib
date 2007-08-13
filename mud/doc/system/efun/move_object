@@ -2,7 +2,7 @@ NAME
         move_object - move an object to another environment
 
 SYNOPSIS
-        int move_object(object obj, object environment)
+        atomic int move_object(object obj, object environment)
 
 DESCRIPTION
         Move the specified object to a new environment. The functions
@@ -15,11 +15,13 @@ DESCRIPTION
         middle-weight object. Middle-weight objects are light-weight objects
         that are specially managed by the system so that they can replace
         persistent objects for some uses. Middle-weight objects have unique
-        object numbers and can have callouts.
+        object numbers and can have callouts. They retain their light-weight
+        object names on the form "master#-1".
 
-        The environment must be either nil or a persistent object. Moving a
-        middle-weight object to a nil environment demotes it back to a light-
-        weight object.
+        The environment must be either nil or a persistent object. Middle-
+        weight objects are disposed of by moving them to a nil environment.
+        This demotes them back to light-weight objects so that they can be
+        garbage-collected.
 
 SEE ALSO
         efun/environment, efun/inventory, efun/object_number, lfun/allow_enter,
