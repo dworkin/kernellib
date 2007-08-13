@@ -1,9 +1,8 @@
 # include <status.h>
 # include <kernel/user.h>
-# include <system/assert.h>
 # include <system/user.h>
 
-object userd;
+object userd_;
 
 /*
  * NAME:        create()
@@ -11,7 +10,7 @@ object userd;
  */
 static void create()
 {
-    userd = find_object(USERD);
+    userd_ = find_object(USERD);
 }
 
 /*
@@ -20,8 +19,9 @@ static void create()
  */
 object select(string str)
 {
-    ASSERT_ACCESS(previous_object() == userd);
-    return clone_object(SYSTEM_USER);
+    if (previous_object() == userd_) {
+        return clone_object(SYSTEM_USER);
+    }
 }
 
 /*
@@ -31,8 +31,9 @@ object select(string str)
  */
 int query_timeout(object connection)
 {
-    ASSERT_ACCESS(previous_object() == userd);
-    return DEFAULT_TIMEOUT;
+    if (previous_object() == userd_) {
+        return DEFAULT_TIMEOUT;
+    }
 }
 
 /*
@@ -42,15 +43,16 @@ int query_timeout(object connection)
  */
 string query_banner(object connection)
 {
-    ASSERT_ACCESS(previous_object() == userd);
-    return "\nWelcome to Leprechaun.\n\n"
-        + "Log in with one of:\n\n"
-        + "  <name>\n"
-        + "  <name> the [<gender>] [<race>] [<guild>]\n\n"
-        + "Gender:  Female or male.\n"
-        + "Race:    Dwarf, elf, goblin, human, or leprechaun.\n"
-        + "Guild:   Bard, knight, monk, priest, ranger, thief, warrior, "
-        + "or wizard.\n\n"
-        + "Unspecified options will be randomly selected.\n\n"
-        + "login: ";
+    if (previous_object() == userd_) {
+        return "\nWelcome to Leprechaun.\n\n"
+            + "Log in with one of:\n\n"
+            + "  <name>\n"
+            + "  <name> the [<gender>] [<race>] [<guild>]\n\n"
+            + "Gender:  Female or male.\n"
+            + "Race:    Dwarf, elf, goblin, human, or leprechaun.\n"
+            + "Guild:   Bard, knight, monk, priest, ranger, thief, warrior, "
+            + "or wizard.\n\n"
+            + "Unspecified options will be randomly selected.\n\n"
+            + "login: ";
+    }
 }

@@ -117,14 +117,14 @@ static void create()
 
     /*
      * the increased TLS size does not affect the current execution round, so
-     * initialize user code in call-outs
+     * initialize user code in callouts
      */
     call_out("initialize_owner", 0, query_owners() - ({ nil, "System" }), 0);
 }
 
 /*
  * NAME:        initialize_owner
- * DESCRIPTION: create user initialization manager after call-out
+ * DESCRIPTION: create user initialization manager after callout
  */
 static void initialize_owner(string *owners, int i)
 {

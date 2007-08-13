@@ -1,7 +1,6 @@
 # include <status.h>
 # include <type.h>
 # include <kernel/kernel.h>
-# include <system/assert.h>
 # include <system/object.h>
 
 object   driver_;             /* driver object */
@@ -121,41 +120,41 @@ static void create(int clone)
  */
 void compile(mixed obj, string *source, string *inherited)
 {
-    string   path;
-    int      index, oid, i, size;
-    mixed   *entry;
-
-    ASSERT_ACCESS(previous_object() == objectd_);
-    path = (typeof(obj) == T_STRING) ? obj : object_name(obj);
-
-    if (path != DRIVER && path != AUTO && !sizeof(inherited)) {
-        inherited = ({ AUTO });
-    }
-
-    index = status(path)[O_INDEX] + 1;
-    oid = OID_MASTER | (uid_ << OID_OWNER_OFFSET)
-        | (index << OID_INDEX_OFFSET);
-    entry = pdb_entries_[oid];
-    if (entry) {
-        int *parent_oids;
-
-        parent_oids = map_indices(entry[PDB_PREVIOUS]);
-        size = sizeof(parent_oids);
-        for (i = 0; i < size; ++i) {
-            unlink_child(oid, entry, parent_oids[i]);
+    if (previous_object() == objectd_) {
+        string   path;
+        int      index, oid, i, size;
+        mixed   *entry;
+        
+        path = (typeof(obj) == T_STRING) ? obj : object_name(obj);
+        if (path != DRIVER && path != AUTO && !sizeof(inherited)) {
+            inherited = ({ AUTO });
         }
-    } else {
-        entry = pdb_entries_[oid] = ({ path, ([ ]), ([ ]), 0 });
-    }
-    size = sizeof(inherited);
-    for (i = 0; i < size; ++i) {
-        link_child(oid, entry, inherited[i]);
-    }
 
-    if (pdb_paths_[path]) {
-        pdb_paths_[path] += ({ oid });
-    } else {
-        pdb_paths_[path] = ({ oid });
+        index = status(path)[O_INDEX] + 1;
+        oid = OID_MASTER | (uid_ << OID_OWNER_OFFSET)
+            | (index << OID_INDEX_OFFSET);
+        entry = pdb_entries_[oid];
+        if (entry) {
+            int *parent_oids;
+            
+            parent_oids = map_indices(entry[PDB_PREVIOUS]);
+            size = sizeof(parent_oids);
+            for (i = 0; i < size; ++i) {
+                unlink_child(oid, entry, parent_oids[i]);
+            }
+        } else {
+            entry = pdb_entries_[oid] = ({ path, ([ ]), ([ ]), 0 });
+        }
+        size = sizeof(inherited);
+        for (i = 0; i < size; ++i) {
+            link_child(oid, entry, inherited[i]);
+        }
+        
+        if (pdb_paths_[path]) {
+            pdb_paths_[path] += ({ oid });
+        } else {
+            pdb_paths_[path] = ({ oid });
+        }
     }
 }
 
@@ -165,12 +164,14 @@ void compile(mixed obj, string *source, string *inherited)
  */
 void clone(object obj)
 {
-    int index, oid;
+    if (previous_object() == objectd_) {
+        int index, oid;
 
-    ASSERT_ACCESS(previous_object() == objectd_);
-    sscanf(object_name(obj), "%*s#%d", index);
-    oid = OID_CLONE | (uid_ << OID_OWNER_OFFSET) | (index << OID_INDEX_OFFSET);
-    persistent_oids_[oid] = obj;
+        sscanf(object_name(obj), "%*s#%d", index);
+        oid = OID_CLONE | (uid_ << OID_OWNER_OFFSET)
+            | (index << OID_INDEX_OFFSET);
+        persistent_oids_[oid] = obj;
+    }
 }
 
 /*
@@ -179,17 +180,19 @@ void clone(object obj)
  */
 void destruct(object obj)
 {
-    int category, index, oid;
+    if (previous_object() == objectd_) {
+        int category, index, oid;
 
-    ASSERT_ACCESS(previous_object() == objectd_);
-    if (sscanf(object_name(obj), "%*s#%d", index)) {
-        category = OID_CLONE;
-    } else {
-        category = OID_MASTER;
-        index = status(obj)[O_INDEX] + 1;
+        if (sscanf(object_name(obj), "%*s#%d", index)) {
+            category = OID_CLONE;
+        } else {
+            category = OID_MASTER;
+            index = status(obj)[O_INDEX] + 1;
+        }
+        oid = category | (uid_ << OID_OWNER_OFFSET)
+            | (index << OID_INDEX_OFFSET);
+        persistent_oids_[oid] = nil;
     }
-    oid = category | (uid_ << OID_OWNER_OFFSET) | (index << OID_INDEX_OFFSET);
-    persistent_oids_[oid] = nil;
 }
 
 /*
@@ -198,21 +201,22 @@ void destruct(object obj)
  */
 object find(int oid)
 {
-    ASSERT_ACCESS(previous_object() == objectd_);
-    if ((oid & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT) {
-        int      index;
-        mapping  bucket;
-        object   environment;
+    if (previous_object() == objectd_) {
+        if ((oid & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT) {
+            int      index;
+            mapping  bucket;
+            object   environment;
 
-        index = (oid & OID_INDEX_MASK) >> OID_INDEX_OFFSET;
-        bucket = middleweight_oids_[(index - 1) / DATA_BUCKET_SIZE];
-        if (!bucket) {
-            return nil;
+            index = (oid & OID_INDEX_MASK) >> OID_INDEX_OFFSET;
+            bucket = middleweight_oids_[(index - 1) / DATA_BUCKET_SIZE];
+            if (!bucket) {
+                return nil;
+            }
+            environment = bucket[oid];
+            return environment ? environment->_F_find(oid) : nil;
+        } else {
+            return persistent_oids_[oid];
         }
-        environment = bucket[oid];
-        return environment ? environment->_F_find(oid) : nil;
-    } else {
-        return persistent_oids_[oid];
     }
 }
 
@@ -222,26 +226,27 @@ object find(int oid)
  */
 void remove_program(string path, int index)
 {
-    int      oid, i, size, *parent_oids;
-    mixed   *entry;
+    if (previous_object() == objectd_) {
+        int     oid, i, size, *parent_oids;
+        mixed  *entry;
 
-    ASSERT_ACCESS(previous_object() == objectd_);
-    ++index; /* use 1-based indices, not 0-based as supplied by DGD */
-    oid = OID_MASTER | (uid_ << OID_OWNER_OFFSET)
-        | (index << OID_INDEX_OFFSET);
-    entry = pdb_entries_[oid];
+        ++index; /* use 1-based indices, not 0-based as supplied by DGD */
+        oid = OID_MASTER | (uid_ << OID_OWNER_OFFSET)
+            | (index << OID_INDEX_OFFSET);
+        entry = pdb_entries_[oid];
 
-    pdb_paths_[path] -= ({ oid });
-    if (!sizeof(pdb_paths_[path])) {
-        pdb_paths_[path] = nil;
+        pdb_paths_[path] -= ({ oid });
+        if (!sizeof(pdb_paths_[path])) {
+            pdb_paths_[path] = nil;
+        }
+
+        parent_oids = map_indices(entry[PDB_PREVIOUS]);
+        size = sizeof(parent_oids);
+        for (i = 0; i < size; ++i) {
+            unlink_child(oid, entry, parent_oids[i]);
+        }
+        pdb_entries_[oid] = nil;
     }
-
-    parent_oids = map_indices(entry[PDB_PREVIOUS]);
-    size = sizeof(parent_oids);
-    for (i = 0; i < size; ++i) {
-        unlink_child(oid, entry, parent_oids[i]);
-    }
-    pdb_entries_[oid] = nil;
 }
 
 /*
@@ -250,14 +255,15 @@ void remove_program(string path, int index)
  */
 mixed *query_program(int oid)
 {
-    mixed *entry;
+    if (previous_object() == objectd_) {
+        mixed *entry;
 
-    ASSERT_ACCESS(previous_object() == objectd_);
-    entry = pdb_entries_[oid];
-    if (!entry) {
-        error("No such program");
+        entry = pdb_entries_[oid];
+        if (!entry) {
+            error("No such program");
+        }
+        return entry;
     }
-    return entry;
 }
 
 /*
@@ -266,35 +272,35 @@ mixed *query_program(int oid)
  */
 mapping get_program_dir(string path)
 {
-    int       i, size;
-    string   *paths;
-    mapping   names, directories, programs;
-
-    ASSERT_ACCESS(previous_object() == objectd_);
-
-    names = pdb_paths_[path + "/" .. path + "0"] - ({ path + "0" }); 
-    paths = map_indices(names);
-    directories = ([ ]);
-    programs = ([ ]);
-    size = sizeof(paths);
-    for (i = 0; i < size; ++i) {
-        string base;
-
-        base = paths[i][strlen(path) + 1 ..];
-        if (sscanf(base, "%s/", base) == 1) {
-            directories[base] = TRUE;
-        } else {
-            programs[base] = names[paths[i]];
+    if (previous_object() == objectd_) {
+        int       i, size;
+        string   *paths;
+        mapping   names, directories, programs;
+        
+        names = pdb_paths_[path + "/" .. path + "0"] - ({ path + "0" }); 
+        paths = map_indices(names);
+        directories = ([ ]);
+        programs = ([ ]);
+        size = sizeof(paths);
+        for (i = 0; i < size; ++i) {
+            string base;
+            
+            base = paths[i][strlen(path) + 1 ..];
+            if (sscanf(base, "%s/", base) == 1) {
+                directories[base] = TRUE;
+            } else {
+                programs[base] = names[paths[i]];
+            }
         }
+        
+        paths = map_indices(directories);
+        size = sizeof(paths);
+        for (i = 0; i < size; ++i) {
+            programs[paths[i]] = programs[paths[i]]
+                ? ({ -2 }) + programs[paths[i]] : ({ -2 });
+        }
+        return programs;
     }
-
-    paths = map_indices(directories);
-    size = sizeof(paths);
-    for (i = 0; i < size; ++i) {
-        programs[paths[i]] = programs[paths[i]] ? ({ -2 }) + programs[paths[i]]
-            : ({ -2 });
-    }
-    return programs;
 }
 
 /*
@@ -303,19 +309,21 @@ mapping get_program_dir(string path)
  */
 int add_data(object environment)
 {
-    int      oid, index;
-    mapping  bucket;
+    if (previous_object() == objectd_) {
+        int      oid, index;
+        mapping  bucket;
 
-    ASSERT_ACCESS(previous_object() == objectd_);
-    index = next_index_++;
-    oid = OID_MIDDLEWEIGHT | (uid_ << OID_OWNER_OFFSET)
-        | (index << OID_INDEX_OFFSET);
-    bucket = middleweight_oids_[(index - 1) / DATA_BUCKET_SIZE];
-    if (!bucket) {
-        bucket = middleweight_oids_[(index - 1) / DATA_BUCKET_SIZE] = ([ ]);
+        index = next_index_++;
+        oid = OID_MIDDLEWEIGHT | (uid_ << OID_OWNER_OFFSET)
+            | (index << OID_INDEX_OFFSET);
+        bucket = middleweight_oids_[(index - 1) / DATA_BUCKET_SIZE];
+        if (!bucket) {
+            bucket = middleweight_oids_[(index - 1) / DATA_BUCKET_SIZE]
+                = ([ ]);
+        }
+        bucket[oid] = environment;
+        return oid;
     }
-    bucket[oid] = environment;
-    return oid;
 }
 
 /*
@@ -324,15 +332,16 @@ int add_data(object environment)
  */
 void move_data(int oid, object environment)
 {
-    int      index;
-    mapping  bucket;
-
-    ASSERT_ACCESS(previous_object() == objectd_);
-    index = (oid & OID_INDEX_MASK) >> OID_INDEX_OFFSET;
-    bucket = middleweight_oids_[(index - 1) / DATA_BUCKET_SIZE];
-    bucket[oid] = environment;
-    if (!environment && !map_sizeof(bucket)) {
-        middleweight_oids_[(index - 1) / DATA_BUCKET_SIZE] = nil;
+    if (previous_object() == objectd_) {
+        int      index;
+        mapping  bucket;
+        
+        index = (oid & OID_INDEX_MASK) >> OID_INDEX_OFFSET;
+        bucket = middleweight_oids_[(index - 1) / DATA_BUCKET_SIZE];
+        bucket[oid] = environment;
+        if (!environment && !map_sizeof(bucket)) {
+            middleweight_oids_[(index - 1) / DATA_BUCKET_SIZE] = nil;
+        }
     }
 }
 
@@ -342,8 +351,9 @@ void move_data(int oid, object environment)
  */
 int data_callout(int oid, string function, mixed delay, mixed *arguments)
 {
-    ASSERT_ACCESS(previous_object() == objectd_);
-    return call_out("call_data", delay, oid, function, arguments);
+    if (previous_object() == objectd_) {
+        return call_out("call_data", delay, oid, function, arguments);
+    }
 }
 
 /*
@@ -352,22 +362,23 @@ int data_callout(int oid, string function, mixed delay, mixed *arguments)
  */
 mixed remove_data_callout(int oid, int handle)
 {
-    int      i;
-    mixed  **callouts;
+    if (previous_object() == objectd_) {
+        int      i;
+        mixed  **callouts;
 
-    ASSERT_ACCESS(previous_object() == objectd_);
-    callouts = status(this_object())[O_CALLOUTS];
-    for (i = sizeof(callouts) - 1; i >= 0; --i) {
-        if (callouts[i][CO_HANDLE] == handle) {
-            /*
-             * Found the callout. Remove it only if it belongs to the middle-
-             * weight object.
-             */
-            return (callouts[i][CO_FIRSTXARG] == oid)
-                ? remove_call_out(handle) : -1;
+        callouts = status(this_object())[O_CALLOUTS];
+        for (i = sizeof(callouts) - 1; i >= 0; --i) {
+            if (callouts[i][CO_HANDLE] == handle) {
+                /*
+                 * Found the callout. Remove it only if it belongs to the
+                 * middle-weight object.
+                 */
+                return (callouts[i][CO_FIRSTXARG] == oid)
+                    ? remove_call_out(handle) : -1;
+            }
         }
+        return -1;
     }
-    return -1;
 }
 
 /*
@@ -376,30 +387,30 @@ mixed remove_data_callout(int oid, int handle)
  */
 mixed *query_data_callouts(string owner, int oid)
 {
-    int      i, j, size, owned;
-    mixed  **callouts;
+    if (previous_object() == objectd_) {
+        int      i, j, size, owned;
+        mixed  **callouts;
 
-    ASSERT_ACCESS(previous_object() == objectd_);
+        /* filter callouts by object number */
+        callouts = status(this_object())[O_CALLOUTS];
+        size = sizeof(callouts);
+        owned = (owner && owner == query_owner());
+        for (i = j = 0; i < size; ++i) {
+            if (callouts[i][CO_FIRSTXARG] == oid) {
+                mixed *callout;
 
-    /* filter callouts by object number */
-    callouts = status(this_object())[O_CALLOUTS];
-    size = sizeof(callouts);
-    owned = (owner && owner == query_owner());
-    for (i = j = 0; i < size; ++i) {
-        if (callouts[i][CO_FIRSTXARG] == oid) {
-            mixed *callout;
-
-            callout = ({ callouts[i][CO_HANDLE],
-                         callouts[i][CO_FIRSTXARG + 1],
-                         callouts[i][CO_DELAY] });
-            if (owned) {
-                /* include arguments */
-                callout += callouts[i][CO_FIRSTXARG + 2];
+                callout = ({ callouts[i][CO_HANDLE],
+                                 callouts[i][CO_FIRSTXARG + 1],
+                                 callouts[i][CO_DELAY] });
+                if (owned) {
+                    /* include arguments */
+                    callout += callouts[i][CO_FIRSTXARG + 2];
+                }
+                callouts[j++] = callout;
             }
-            callouts[j++] = callout;
         }
+        return callouts[.. j - 1];
     }
-    return callouts[.. j - 1];
 }
 
 /*

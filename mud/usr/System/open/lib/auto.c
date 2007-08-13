@@ -116,46 +116,48 @@ static void create(mixed arguments...)
  */
 nomask int _F_system_create(varargs int clone)
 {
-    ASSERT_ACCESS(previous_program() == AUTO);
+    if (previous_program() == AUTO) {
+        /* forbid undefined functions for non-inheritable objects */
+        if (!clone) {
+            mapping undefined;
 
-    /* forbid undefined functions for non-inheritable objects */
-    if (!clone) {
-        mapping undefined;
-
-        undefined = status(this_object())[O_UNDEFINED];
-        if (undefined) {
-            undefined_error(object_name(this_object()), undefined);
+            undefined = status(this_object())[O_UNDEFINED];
+            if (undefined) {
+                undefined_error(object_name(this_object()), undefined);
+            }
         }
-    }
 
-    /* initialize object number */
-    oid_ = _object_number(this_object());
+        /* initialize object number */
+        oid_ = _object_number(this_object());
 
-    if (clone) {
-	mixed *arguments;
+        if (clone) {
+            mixed *arguments;
 
-	arguments = ::find_object(OBJECTD)->fetch_create_arguments();
-	if (arguments) {
-            /* pass arguments to create() */
-	    call_limited("create", arguments...);
-	} else {
-            /* no arguments */
-	    call_limited("create");
-	}
-    } else {
-        string path;
+            arguments = ::find_object(OBJECTD)->fetch_create_arguments();
+            if (arguments) {
+                /* pass arguments to create() */
+                call_limited("create", arguments...);
+            } else {
+                /* no arguments */
+                call_limited("create");
+            }
+        } else {
+            string path;
 
-        /* do not call create() for clonable or light-weight master objects */
-        path = object_name(this_object());
-        if (!sscanf(path, "%*s" + CLONABLE_SUBDIR)
-            && !sscanf(path, "%*s" + LIGHTWEIGHT_SUBDIR))
-        {
-            call_limited("create"); 
+            /*
+             * do not call create() for clonable or light-weight master objects
+             */
+            path = object_name(this_object());
+            if (!sscanf(path, "%*s" + CLONABLE_SUBDIR)
+                && !sscanf(path, "%*s" + LIGHTWEIGHT_SUBDIR))
+            {
+                call_limited("create"); 
+            }
         }
-    }
 
-    /* kernel creator function should not call create() */
-    return TRUE;
+        /* kernel creator function should not call create() */
+        return TRUE;
+    }
 }
 
 /*
@@ -164,9 +166,10 @@ nomask int _F_system_create(varargs int clone)
  */
 nomask int _Q_oid()
 {
-    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    normalize_data();
-    return oid_;
+    if (previous_program() == SYSTEM_AUTO) {
+        normalize_data();
+        return oid_;
+    }
 }
 
 /*
@@ -175,33 +178,35 @@ nomask int _Q_oid()
  */
 nomask void _F_move(object destination)
 {
-    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    normalize_data();
+    if (previous_program() == SYSTEM_AUTO) {
+        normalize_data();
 
-    if (oid_ && (oid_ & OID_CATEGORY_MASK) != OID_MIDDLEWEIGHT) {
-        object this, obj;
+        if (oid_ && (oid_ & OID_CATEGORY_MASK) != OID_MIDDLEWEIGHT) {
+            object this, obj;
 
-        this = this_object();
-        for (obj = destination; obj; obj = obj->_Q_environment()) {
-            if (obj == this) {
-                error("Cannot move object into itself");
+            this = this_object();
+            for (obj = destination; obj; obj = obj->_Q_environment()) {
+                if (obj == this) {
+                    error("Cannot move object into itself");
+                }
             }
         }
-    }
 
-    if (environment_) {
-        environment_->_F_leave(oid_);
-    }
-    environment_ = destination;
-    if ((oid_ & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT) {
-        /* move middle-weight object */
-        ::find_object(OBJECTD)->move_data(oid_, environment_);
-    } else if (!oid_ && environment_) {
-        /* promote light-weight object to middle-weight */
-        oid_ = ::find_object(OBJECTD)->add_data(query_owner(), environment_);
-    }
-    if (environment_) {
-        environment_->_F_enter(oid_, this_object());
+        if (environment_) {
+            environment_->_F_leave(oid_);
+        }
+        environment_ = destination;
+        if ((oid_ & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT) {
+            /* move middle-weight object */
+            ::find_object(OBJECTD)->move_data(oid_, environment_);
+        } else if (!oid_ && environment_) {
+            /* promote light-weight object to middle-weight */
+            oid_ = ::find_object(OBJECTD)->add_data(query_owner(),
+                                                    environment_);
+        }
+        if (environment_) {
+            environment_->_F_enter(oid_, this_object());
+        }
     }
 }
 
@@ -211,11 +216,12 @@ nomask void _F_move(object destination)
  */
 nomask void _F_enter(int oid, object obj)
 {
-    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    if (!inventory_) {
-        inventory_ = ([ ]);
+    if (previous_program() == SYSTEM_AUTO) {
+        if (!inventory_) {
+            inventory_ = ([ ]);
+        }
+        inventory_[oid] = obj;
     }
-    inventory_[oid] = obj;
 }
 
 /*
@@ -224,8 +230,9 @@ nomask void _F_enter(int oid, object obj)
  */
 nomask void _F_leave(int oid)
 {
-    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    inventory_[oid] = nil;
+    if (previous_program() == SYSTEM_AUTO) {
+        inventory_[oid] = nil;
+    }
 }
 
 /*
@@ -234,9 +241,11 @@ nomask void _F_leave(int oid)
  */
 nomask object _F_find(int oid)
 {
-    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO
-                  || previous_program() == OWNER_NODE);
-    return inventory_ ? inventory_[oid] : nil;
+    if (previous_program() == SYSTEM_AUTO
+        || previous_program() == OWNER_NODE)
+    {
+        return inventory_ ? inventory_[oid] : nil;
+    }
 }
 
 /*
@@ -245,8 +254,9 @@ nomask object _F_find(int oid)
  */
 nomask object *_Q_inventory()
 {
-    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    return inventory_ ? map_values(inventory_) : ({ });
+    if (previous_program() == SYSTEM_AUTO) {
+        return inventory_ ? map_values(inventory_) : ({ });
+    }
 }
 
 /*
@@ -255,9 +265,10 @@ nomask object *_Q_inventory()
  */
 nomask object _Q_environment()
 {
-    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    normalize_data();
-    return environment_;
+    if (previous_program() == SYSTEM_AUTO) {
+        normalize_data();
+        return environment_;
+    }
 }
 
 /*
@@ -276,7 +287,7 @@ static int object_number(object obj)
  */
 static object find_object(mixed name)
 {
-    object  obj;
+    object obj;
 
     switch (typeof(name)) {
     case T_INT:
@@ -543,18 +554,20 @@ static mixed remove_call_out(int handle)
  */
 nomask void _F_call_data(string function, mixed *arguments)
 {
-    object  this;
-    string  program;
+    if (previous_program() == OWNER_NODE) {
+        object  this;
+        string  program;
 
-    ASSERT_ACCESS(previous_program() == OWNER_NODE);
-    this = this_object();
-    program = ::function_object(function, this);
+        this = this_object();
+        program = ::function_object(function, this);
 
-    /*
-     * Ensure that it is still safe to call the function. This object may
-     * have been recompiled after the delayed call was added.
-     */
-    if (program && (creator(program) != "System" || function == "create")) {
-        call_other(this, function, arguments...);
+        /*
+         * Ensure that it is still safe to call the function. This object may
+         * have been recompiled after the delayed call was added.
+         */
+        if (program && (creator(program) != "System" || function == "create"))
+        {
+            call_other(this, function, arguments...);
+        }
     }
 }

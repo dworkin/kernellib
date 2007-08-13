@@ -3,7 +3,6 @@
 # include <kernel/kernel.h>
 # include <kernel/rsrc.h>
 # include <kernel/tls.h>
-# include <system/assert.h>
 # include <system/object.h>
 # include <system/system.h>
 # include <system/tls.h>
@@ -84,11 +83,12 @@ int query_uid(string owner)
  */
 void compile(string owner, object obj, string *source, string inherited...)
 {
-    int uid;
+    if (previous_object() == driver_ || previous_object() == initd_) {
+        int uid;
 
-    ASSERT_ACCESS(previous_object() == driver_ || previous_object() == initd_);
-    uid = add_owner(owner);
-    nodes_[uid]->compile(obj, source, inherited);
+        uid = add_owner(owner);
+        nodes_[uid]->compile(obj, source, inherited);
+    }
 }
 
 /*
@@ -98,11 +98,12 @@ void compile(string owner, object obj, string *source, string inherited...)
 void compile_lib(string owner, string path, string *source,
                  string inherited...)
 {
-    int uid;
+    if (previous_object() == driver_ || previous_object() == initd_) {
+        int uid;
 
-    ASSERT_ACCESS(previous_object() == driver_ || previous_object() == initd_);
-    uid = add_owner(owner);
-    nodes_[uid]->compile(path, source, inherited);
+        uid = add_owner(owner);
+        nodes_[uid]->compile(path, source, inherited);
+    }
 }
 
 /*
@@ -111,14 +112,15 @@ void compile_lib(string owner, string path, string *source,
  */
 void clone(string owner, object obj)
 {
-    int uid;
+    if (previous_object() == driver_) {
+        int uid;
 
-    ASSERT_ACCESS(previous_object() == driver_);
-    if (sscanf(object_name(obj), OWNER_NODE + "#%*s")) {
-        return;
+        if (sscanf(object_name(obj), OWNER_NODE + "#%*s")) {
+            return;
+        }
+        uid = add_owner(owner);
+        nodes_[uid]->clone(obj);
     }
-    uid = add_owner(owner);
-    nodes_[uid]->clone(obj);
 }
 
 /*
@@ -127,11 +129,12 @@ void clone(string owner, object obj)
  */
 void destruct(string owner, object obj)
 {
-    int uid;
+    if (previous_object() == driver_) {
+        int uid;
 
-    ASSERT_ACCESS(previous_object() == driver_);
-    uid = query_uid(owner);
-    nodes_[uid]->destruct(obj);
+        uid = query_uid(owner);
+        nodes_[uid]->destruct(obj);
+    }
 }
 
 /*
@@ -140,11 +143,12 @@ void destruct(string owner, object obj)
  */
 void remove_program(string owner, string path, int timestamp, int index)
 {
-    int uid;
+    if (previous_object() == driver_) {
+        int uid;
 
-    ASSERT_ACCESS(previous_object() == driver_);
-    uid = uids_[owner];
-    nodes_[uid]->remove_program(path, index);
+        uid = uids_[owner];
+        nodes_[uid]->remove_program(path, index);
+    }
 }
 
 /*
@@ -153,13 +157,14 @@ void remove_program(string owner, string path, int timestamp, int index)
  */
 mixed include_file(string compiled, string from, string path)
 {
-    ASSERT_ACCESS(previous_object() == driver_);
-    if (from == "/include/std.h" && path == "/include/AUTO"
-        && driver_->creator(compiled) != "System")
-    {
-        return ({ "inherit \"" + SYSTEM_AUTO + "\";\n" });
-    } else {
-        return path;
+    if (previous_object() == driver_) {
+        if (from == "/include/std.h" && path == "/include/AUTO"
+            && driver_->creator(compiled) != "System")
+        {
+            return ({ "inherit \"" + SYSTEM_AUTO + "\";\n" });
+        } else {
+            return path;
+        }
     }
 }
 
@@ -169,9 +174,10 @@ mixed include_file(string compiled, string from, string path)
  */
 int forbid_call(string path)
 {
-    ASSERT_ACCESS(previous_object() == driver_);
-    return sscanf(path, "%*s" + CLONABLE_SUBDIR)
-        || sscanf(path, "%*s" + LIGHTWEIGHT_SUBDIR);
+    if (previous_object() == driver_) {
+        return sscanf(path, "%*s" + CLONABLE_SUBDIR)
+            || sscanf(path, "%*s" + LIGHTWEIGHT_SUBDIR);
+    }
 }
 
 /*
@@ -180,40 +186,41 @@ int forbid_call(string path)
  */
 int forbid_inherit(string from, string path, int priv)
 {
-    string from_creator, path_creator;
+    if (previous_object() == driver_) {
+        string from_creator, path_creator;
 
-    ASSERT_ACCESS(previous_object() == driver_);
-    from_creator = driver_->creator(from);
-    path_creator = driver_->creator(path);
-
-    /* system objects cannot inherit user objects */
-    if (from_creator == "System" && path_creator != "System") {
-        return TRUE;
-    }
-
-    /*
-     * user objects cannot inherit system objects, except for objects in
-     * ~System/open
-     */
-    if (from_creator != "System" && path_creator == "System"
-        && !sscanf(path, "/usr/System/open/%*s"))
-    {
-        return TRUE;
-    }
-
-    /* forbid private inheritance of undefined functions */
-    if (priv) {
-        mixed *status;
-    
-        status = status(path);
-        if (status && status[O_UNDEFINED]) {
-            driver_->message("Undefined functions cannot be privately "
-                            + "inherited\n");
+        from_creator = driver_->creator(from);
+        path_creator = driver_->creator(path);
+        
+        /* system objects cannot inherit user objects */
+        if (from_creator == "System" && path_creator != "System") {
             return TRUE;
         }
+        
+        /*
+         * user objects cannot inherit system objects, except for objects in
+         * ~System/open
+         */
+        if (from_creator != "System" && path_creator == "System"
+            && !sscanf(path, "/usr/System/open/%*s"))
+        {
+            return TRUE;
+        }
+        
+        /* forbid private inheritance of undefined functions */
+        if (priv) {
+            mixed *status;
+            
+            status = status(path);
+            if (status && status[O_UNDEFINED]) {
+                driver_->message("Undefined functions cannot be privately "
+                                 + "inherited\n");
+                return TRUE;
+            }
+        }
+        
+        return FALSE;
     }
-
-    return FALSE;
 }
 
 /*
@@ -222,8 +229,9 @@ int forbid_inherit(string from, string path, int priv)
  */
 void store_create_arguments(mixed *arguments)
 {
-    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    set_tlvar(TLS_CREATE_ARGUMENTS, arguments);
+    if (previous_program() == SYSTEM_AUTO) {
+        set_tlvar(TLS_CREATE_ARGUMENTS, arguments);
+    }
 }
 
 /*
@@ -232,14 +240,15 @@ void store_create_arguments(mixed *arguments)
  */
 mixed fetch_create_arguments()
 {
-    mixed *arguments;
-
-    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    arguments = get_tlvar(TLS_CREATE_ARGUMENTS);
-    if (arguments) {
-        set_tlvar(TLS_CREATE_ARGUMENTS, nil);
+    if (previous_program() == SYSTEM_AUTO) {
+        mixed *arguments;
+        
+        arguments = get_tlvar(TLS_CREATE_ARGUMENTS);
+        if (arguments) {
+            set_tlvar(TLS_CREATE_ARGUMENTS, nil);
+        }
+        return arguments;
     }
-    return arguments;
 }
 
 /*
@@ -248,11 +257,12 @@ mixed fetch_create_arguments()
  */
 mixed *query_program(int oid)
 {
-    int uid;
+    if (previous_program() == OWNER_NODE) {
+        int uid;
 
-    ASSERT_ACCESS(previous_program() == OWNER_NODE);
-    uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
-    return nodes_[uid]->query_program(oid);
+        uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
+        return nodes_[uid]->query_program(oid);
+    }
 }
 
 /*
@@ -261,22 +271,23 @@ mixed *query_program(int oid)
  */
 mapping get_program_dir(string path)
 {
-    string  creator;
-    mixed   uid;
+    if (previous_program() == API_OBJECT) {
+        string  creator;
+        mixed   uid;
 
-    ASSERT_ACCESS(previous_program() == API_OBJECT);
-    if (path == "/") {
-        return program_dir_map(({ "kernel", USR_DIR[1 ..] }));
-    } else if (path == USR_DIR) {
-        return program_dir_map(query_owners() - ({ nil }));
+        if (path == "/") {
+            return program_dir_map(({ "kernel", USR_DIR[1 ..] }));
+        } else if (path == USR_DIR) {
+            return program_dir_map(query_owners() - ({ nil }));
+        }
+        
+        creator = driver_->creator(path + "/");
+        uid = uids_[creator];
+        if (uid == nil) {
+            return ([ ]);
+        }
+        return nodes_[uid]->get_program_dir(path);
     }
-
-    creator = driver_->creator(path + "/");
-    uid = uids_[creator];
-    if (uid == nil) {
-        return ([ ]);
-    }
-    return nodes_[uid]->get_program_dir(path);
 }
 
 /*
@@ -285,11 +296,12 @@ mapping get_program_dir(string path)
  */
 int add_data(string owner, object environment)
 {
-    int uid;
+    if (previous_program() == SYSTEM_AUTO) {
+        int uid;
 
-    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    uid = add_owner(owner);
-    return nodes_[uid]->add_data(environment);
+        uid = add_owner(owner);
+        return nodes_[uid]->add_data(environment);
+    }
 }
 
 /*
@@ -298,13 +310,14 @@ int add_data(string owner, object environment)
  */
 object find(int oid)
 {
-    int     uid;
-    object  node;
+    if (previous_program() == SYSTEM_AUTO) {
+        int     uid;
+        object  node;
 
-    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
-    node = nodes_[uid];
-    return node ? node->find(oid) : nil;
+        uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
+        node = nodes_[uid];
+        return node ? node->find(oid) : nil;
+    }
 }
 
 /*
@@ -313,11 +326,12 @@ object find(int oid)
  */
 void move_data(int oid, object environment)
 {
-    int uid;
+    if (previous_program() == SYSTEM_AUTO) {
+        int uid;
 
-    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
-    nodes_[uid]->move_data(oid, environment);
+        uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
+        nodes_[uid]->move_data(oid, environment);
+    }
 }
 
 /*
@@ -326,11 +340,12 @@ void move_data(int oid, object environment)
  */
 int data_callout(int oid, string function, mixed delay, mixed *arguments)
 {
-    int uid;
+    if (previous_program() == SYSTEM_AUTO) {
+        int uid;
 
-    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
-    return nodes_[uid]->data_callout(oid, function, delay, arguments);
+        uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
+        return nodes_[uid]->data_callout(oid, function, delay, arguments);
+    }
 }
 
 /*
@@ -339,11 +354,12 @@ int data_callout(int oid, string function, mixed delay, mixed *arguments)
  */
 mixed remove_data_callout(int oid, int handle)
 {
-    int uid;
+    if (previous_program() == SYSTEM_AUTO) {
+        int uid;
 
-    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
-    return nodes_[uid]->remove_data_callout(oid, handle);
+        uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
+        return nodes_[uid]->remove_data_callout(oid, handle);
+    }
 }
 
 /*
@@ -352,9 +368,10 @@ mixed remove_data_callout(int oid, int handle)
  */
 mixed *query_data_callouts(string owner, int oid)
 {
-    int uid;
+    if (previous_program() == SYSTEM_AUTO) {
+        int uid;
 
-    ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
-    uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
-    return nodes_[uid]->query_data_callouts(owner, oid);
+        uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
+        return nodes_[uid]->query_data_callouts(owner, oid);
+    }
 }
