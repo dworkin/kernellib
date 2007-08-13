@@ -94,7 +94,7 @@ private int _object_number(object obj)
  */
 private void normalize_data()
 {
-    if (oid_ < 0
+    if ((oid_ & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT
         && (!environment_ || environment_->_F_find(oid_) != this_object()))
     {
         /* degrade to light-weight object */
@@ -178,7 +178,7 @@ nomask void _F_move(object destination)
     ASSERT_ACCESS(previous_program() == SYSTEM_AUTO);
     normalize_data();
 
-    if (oid_ > 0) {
+    if (oid_ && (oid_ & OID_CATEGORY_MASK) != OID_MIDDLEWEIGHT) {
         object this, obj;
 
         this = this_object();
@@ -193,7 +193,7 @@ nomask void _F_move(object destination)
         environment_->_F_leave(oid_);
     }
     environment_ = destination;
-    if (oid_ < 0) {
+    if ((oid_ & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT) {
         /* move middle-weight object */
         ::find_object(OBJECTD)->move_data(oid_, environment_);
     } else if (!oid_ && environment_) {
@@ -320,7 +320,7 @@ static atomic object clone_object(string master, mixed arguments...)
 {
     ASSERT_ARG_1(master);
 
-    /* pass arguments to create() via TLS */
+    /* forward arguments to create() via TLS */
     if (sizeof(arguments)) {
 	::find_object(OBJECTD)->store_create_arguments(arguments);
     }
@@ -334,12 +334,16 @@ static atomic object clone_object(string master, mixed arguments...)
  */
 static atomic object new_object(mixed master, mixed arguments...)
 {
-    if (typeof(master) == T_STRING) {  /* create new LWO */
-        /* pass arguments to create() via TLS */
+    if (typeof(master) == T_STRING) {
+        /*
+         * create a new light-weight object, forwarding arguments to create()
+         * via thread-local storage
+         */
 	if (sizeof(arguments)) {
             ::find_object(OBJECTD)->store_create_arguments(arguments);
 	}
-    } else {  /* copy existant LWO */
+    } else {
+        /* copy an existant light-weight object */
         ASSERT_ARG_1(typeof(master) == T_OBJECT
                      && sscanf(object_name(master), "%*s#-1") == 1);
 
@@ -370,7 +374,7 @@ static mixed *status(varargs mixed obj)
             int oid;
             
             oid = obj->_Q_oid();
-            if (oid < 0) {
+            if ((oid & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT) {
                 obj = ::find_object(OBJECTD);
                 status[O_CALLOUTS] = obj->query_data_callouts(query_owner(),
                                                               oid);
@@ -406,8 +410,8 @@ static int move_object(object obj, object destination)
  */
 static object environment(object obj)
 {
-    ASSERT_ARG(obj && obj <- SYSTEM_AUTO);
-    return obj->_Q_environment();
+    ASSERT_ARG(obj);
+    return obj <- SYSTEM_AUTO ? obj->_Q_environment() : nil;
 }
 
 /*
@@ -416,8 +420,8 @@ static object environment(object obj)
  */
 static object *inventory(object obj)
 {
-    ASSERT_ARG(obj && obj <- SYSTEM_AUTO);
-    return obj->_Q_inventory();
+    ASSERT_ARG(obj);
+    return obj <- SYSTEM_AUTO ? obj->_Q_inventory() : ({ });
 }
 
 /*
@@ -435,7 +439,7 @@ static atomic object compile_object(string path, string source...)
         return nil;
     }
 
-    /* forbid undefined functions for non-inheritable objects */
+    /* non-inheritable objects are not allowed to have undefined functions */
     path = object_name(obj);
     undefined = status(obj)[O_UNDEFINED];
     if (undefined) {
@@ -499,7 +503,7 @@ static mixed *file_info(string path)
 
 /*
  * NAME:        call_out()
- * DESCRIPTION: schedule a function call
+ * DESCRIPTION: add a delayed function call
  */
 static int call_out(string function, mixed delay, mixed arguments...)
 {
@@ -511,7 +515,7 @@ static int call_out(string function, mixed delay, mixed arguments...)
                  && (creator(program) != "System" || function == "create"));
     ASSERT_ARG_2(typeof(delay) == T_INT || typeof(delay) == T_FLOAT);
     normalize_data();
-    if (oid_ < 0) {
+    if ((oid_ & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT) {
         return ::find_object(OBJECTD)->data_callout(oid_, function, delay,
                                                     arguments);
     } else {
@@ -521,12 +525,12 @@ static int call_out(string function, mixed delay, mixed arguments...)
 
 /*
  * NAME:        remove_call_out()
- * DESCRIPTION: remove a scheduled function call
+ * DESCRIPTION: remove a delayed function call
  */
 static mixed remove_call_out(int handle)
 {
     normalize_data();
-    if (oid_ < 0) {
+    if ((oid_ & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT) {
         return ::find_object(OBJECTD)->remove_data_callout(oid_, handle);
     } else {
         return ::remove_call_out(handle);
@@ -535,7 +539,7 @@ static mixed remove_call_out(int handle)
 
 /*
  * NAME:        _F_call_data()
- * DESCRIPTION: dispatch a scheduled function call
+ * DESCRIPTION: dispatch a delayed function call
  */
 nomask void _F_call_data(string function, mixed *arguments)
 {
@@ -547,8 +551,8 @@ nomask void _F_call_data(string function, mixed *arguments)
     program = ::function_object(function, this);
 
     /*
-     * Make sure that it is still safe to call the function. This object may
-     * have been recompiled after the call was scheduled.
+     * Ensure that it is still safe to call the function. This object may
+     * have been recompiled after the delayed call was added.
      */
     if (program && (creator(program) != "System" || function == "create")) {
         call_other(this, function, arguments...);

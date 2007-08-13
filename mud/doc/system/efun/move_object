@@ -19,7 +19,7 @@ DESCRIPTION
         object names on the form "master#-1".
 
         The environment must be either nil or a persistent object. Middle-
-        weight objects are disposed of by moving them to a nil environment.
+        weight objects can be disposed of by moving them to a nil environment.
         This demotes them back to light-weight objects so that they can be
         garbage-collected.
 

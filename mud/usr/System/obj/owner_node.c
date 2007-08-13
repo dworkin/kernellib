@@ -4,16 +4,16 @@
 # include <system/assert.h>
 # include <system/object.h>
 
-object   driver_;            /* driver object */
-object   objectd_;           /* object manager */
-int      uid_;               /* UID of owner */
+object   driver_;             /* driver object */
+object   objectd_;            /* object manager */
+int      uid_;                /* UID of owner */
 
-mapping  pdb_entries_;       /* ([ int oid: mixed *entry ]) */
-mapping  pdb_paths_;         /* ([ string path: ({ int oid, ... }) ]) */
+mapping  pdb_entries_;        /* ([ int oid: mixed *entry ]) */
+mapping  pdb_paths_;          /* ([ string path: ({ int oid, ... }) ]) */
 
-int      next_index_;        /* index for the next managed LWO */
-mapping  persistent_oids_;   /* ([ int oid: object obj ]) */
-mapping  lightweight_oids_;  /* ([ bucket_index: ([ oid: environment ]) ]) */
+int      next_index_;         /* index for the next managed LWO */
+mapping  persistent_oids_;    /* ([ int oid: object obj ]) */
+mapping  middleweight_oids_;  /* ([ bucket_index: ([ oid: environment ]) ]) */
 
 /*
  * NAME:        link_child()
@@ -111,7 +111,7 @@ static void create(int clone)
 
 	next_index_ = 1; /* use 1-based indices for managed LWOs */
         persistent_oids_ = ([ ]);
-        lightweight_oids_ = ([ ]);
+        middleweight_oids_ = ([ ]);
     }
 }
 
@@ -199,13 +199,13 @@ void destruct(object obj)
 object find(int oid)
 {
     ASSERT_ACCESS(previous_object() == objectd_);
-    if ((oid & OID_CATEGORY_MASK) == OID_LIGHTWEIGHT) {
+    if ((oid & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT) {
         int      index;
         mapping  bucket;
         object   environment;
 
         index = (oid & OID_INDEX_MASK) >> OID_INDEX_OFFSET;
-        bucket = lightweight_oids_[(index - 1) / DATA_BUCKET_SIZE];
+        bucket = middleweight_oids_[(index - 1) / DATA_BUCKET_SIZE];
         if (!bucket) {
             return nil;
         }
@@ -299,7 +299,7 @@ mapping get_program_dir(string path)
 
 /*
  * NAME:        add_data()
- * DESCRIPTION: register an LWO for management
+ * DESCRIPTION: add a middle-weight object
  */
 int add_data(object environment)
 {
@@ -307,12 +307,12 @@ int add_data(object environment)
     mapping  bucket;
 
     ASSERT_ACCESS(previous_object() == objectd_);
-    oid = OID_LIGHTWEIGHT | (uid_ << OID_OWNER_OFFSET)
-        | (next_index_++ << OID_INDEX_OFFSET);
-    index = (oid & OID_INDEX_MASK) >> OID_INDEX_OFFSET;
-    bucket = lightweight_oids_[(index - 1) / DATA_BUCKET_SIZE];
+    index = next_index_++;
+    oid = OID_MIDDLEWEIGHT | (uid_ << OID_OWNER_OFFSET)
+        | (index << OID_INDEX_OFFSET);
+    bucket = middleweight_oids_[(index - 1) / DATA_BUCKET_SIZE];
     if (!bucket) {
-        bucket = lightweight_oids_[(index - 1) / DATA_BUCKET_SIZE] = ([ ]);
+        bucket = middleweight_oids_[(index - 1) / DATA_BUCKET_SIZE] = ([ ]);
     }
     bucket[oid] = environment;
     return oid;
@@ -320,7 +320,7 @@ int add_data(object environment)
 
 /*
  * NAME:        move_data()
- * DESCRIPTION: move a managed LWO to another environment
+ * DESCRIPTION: move a middle-weight object to another environment
  */
 void move_data(int oid, object environment)
 {
@@ -329,16 +329,16 @@ void move_data(int oid, object environment)
 
     ASSERT_ACCESS(previous_object() == objectd_);
     index = (oid & OID_INDEX_MASK) >> OID_INDEX_OFFSET;
-    bucket = lightweight_oids_[(index - 1) / DATA_BUCKET_SIZE];
+    bucket = middleweight_oids_[(index - 1) / DATA_BUCKET_SIZE];
     bucket[oid] = environment;
     if (!environment && !map_sizeof(bucket)) {
-        lightweight_oids_[(index - 1) / DATA_BUCKET_SIZE] = nil;
+        middleweight_oids_[(index - 1) / DATA_BUCKET_SIZE] = nil;
     }
 }
 
 /*
  * NAME:        data_callout()
- * DESCRIPTION: schedule a call-out for a managed LWO
+ * DESCRIPTION: add a callout for a middle-weight object
  */
 int data_callout(int oid, string function, mixed delay, mixed *arguments)
 {
@@ -348,7 +348,7 @@ int data_callout(int oid, string function, mixed delay, mixed *arguments)
 
 /*
  * NAME:        remove_data_callout()
- * DESCRIPTION: remove a call-out for a managed LWO
+ * DESCRIPTION: remove a callout for a middle-weight object
  */
 mixed remove_data_callout(int oid, int handle)
 {
@@ -360,8 +360,8 @@ mixed remove_data_callout(int oid, int handle)
     for (i = sizeof(callouts) - 1; i >= 0; --i) {
         if (callouts[i][CO_HANDLE] == handle) {
             /*
-             * Found the call-out. Remove it only if it belongs to the managed
-             * LWO.
+             * Found the callout. Remove it only if it belongs to the middle-
+             * weight object.
              */
             return (callouts[i][CO_FIRSTXARG] == oid)
                 ? remove_call_out(handle) : -1;
@@ -372,7 +372,7 @@ mixed remove_data_callout(int oid, int handle)
 
 /*
  * NAME:        query_data_callouts()
- * DESCRIPTION: return the call-outs of a managed LWO
+ * DESCRIPTION: return the callouts for a middle-weight object
  */
 mixed *query_data_callouts(string owner, int oid)
 {
@@ -381,7 +381,7 @@ mixed *query_data_callouts(string owner, int oid)
 
     ASSERT_ACCESS(previous_object() == objectd_);
 
-    /* filter call-outs by object number */
+    /* filter callouts by object number */
     callouts = status(this_object())[O_CALLOUTS];
     size = sizeof(callouts);
     owned = (owner && owner == query_owner());
@@ -404,7 +404,7 @@ mixed *query_data_callouts(string owner, int oid)
 
 /*
  * NAME:        call_data()
- * DESCRIPTION: dispatch a call-out to a managed LWO
+ * DESCRIPTION: dispatch a callout to a middle-weight object
  */
 static void call_data(int oid, string function, mixed *arguments)
 {
@@ -413,7 +413,7 @@ static void call_data(int oid, string function, mixed *arguments)
     object   environment, obj;
 
     index = (oid & OID_INDEX_MASK) >> OID_INDEX_OFFSET;
-    bucket = lightweight_oids_[(index - 1) / DATA_BUCKET_SIZE];
+    bucket = middleweight_oids_[(index - 1) / DATA_BUCKET_SIZE];
     if (!bucket) {
         return;
     }

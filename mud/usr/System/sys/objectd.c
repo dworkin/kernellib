@@ -281,7 +281,7 @@ mapping get_program_dir(string path)
 
 /*
  * NAME:        add_data()
- * DESCRIPTION: add a managed LWO
+ * DESCRIPTION: add a middle-weight object
  */
 int add_data(string owner, object environment)
 {
@@ -294,7 +294,7 @@ int add_data(string owner, object environment)
 
 /*
  * NAME:        find()
- * DESCRIPTION: find a persistent object or managed LWO by number
+ * DESCRIPTION: find a persistent or middle-weight object
  */
 object find(int oid)
 {
@@ -309,7 +309,7 @@ object find(int oid)
 
 /*
  * NAME:        move_data()
- * DESCRIPTION: move or remove a managed LWO
+ * DESCRIPTION: move or remove a middle-weight object
  */
 void move_data(int oid, object environment)
 {
@@ -322,7 +322,7 @@ void move_data(int oid, object environment)
 
 /*
  * NAME:        data_callout()
- * DESCRIPTION: make a call-out for a managed LWO
+ * DESCRIPTION: add a callout for a middle-weight object
  */
 int data_callout(int oid, string function, mixed delay, mixed *arguments)
 {
@@ -335,7 +335,7 @@ int data_callout(int oid, string function, mixed delay, mixed *arguments)
 
 /*
  * NAME:        remove_data_callout()
- * DESCRIPTION: remove a call-out for a managed LWO
+ * DESCRIPTION: remove a callout for a middle-weight object
  */
 mixed remove_data_callout(int oid, int handle)
 {
@@ -348,7 +348,7 @@ mixed remove_data_callout(int oid, int handle)
 
 /*
  * NAME:        query_data_callouts()
- * DESCRIPTION: return the call-outs for a managed LWO
+ * DESCRIPTION: return the callouts for a middle-weight object
  */
 mixed *query_data_callouts(string owner, int oid)
 {
