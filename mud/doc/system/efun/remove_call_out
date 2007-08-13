@@ -1,0 +1,20 @@
+NAME
+        remove_call_out - remove a delayed call to a function
+
+SYNOPSIS
+        mixed remove_call_out(int handle)
+
+DESCRIPTION
+        Remove the callout associated with the specified handle. The delay
+        after which the function would have been called is returned. The delay
+        is an integer or a floating point number, depending on how the callout
+        was started. If there is no scheduled call associated with the handle
+        in the current object, -1 is returned.
+
+        The delayed calls of an object can be retrieved using the status()
+        function. Light-weight objects cannot have callouts, but middle-weight
+        objects can. Light-weight objects can be promoted to middle-weight
+        objects using the move_object() function.
+
+SEE ALSO
+        efun/call_out, efun/move_object, efun/status

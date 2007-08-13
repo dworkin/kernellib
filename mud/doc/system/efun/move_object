@@ -1,0 +1,26 @@
+NAME
+        move_object - move an object to another environment
+
+SYNOPSIS
+        int move_object(object obj, object environment)
+
+DESCRIPTION
+        Move the specified object to a new environment. The functions
+        allow_move() and allow_enter() will be called in the object and the
+        environment, respectively. If any of these functions returns false, the
+        move is vetoed and this function returns false. Otherwise, the object
+        moves to the environment and this function returns true.
+
+        If the object is a light-weight object, it will be promoted to a
+        middle-weight object. Middle-weight objects are light-weight objects
+        that are specially managed by the system so that they can replace
+        persistent objects for some uses. Middle-weight objects have unique
+        object numbers and can have callouts.
+
+        The environment must be either nil or a persistent object. Moving a
+        middle-weight object to a nil environment demotes it back to a light-
+        weight object.
+
+SEE ALSO
+        efun/environment, efun/inventory, efun/object_number, lfun/allow_enter,
+        lfun/allow_move
