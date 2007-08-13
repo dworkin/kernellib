@@ -11,7 +11,7 @@ int      uid_;                /* UID of owner */
 mapping  pdb_entries_;        /* ([ int oid: mixed *entry ]) */
 mapping  pdb_paths_;          /* ([ string path: ({ int oid, ... }) ]) */
 
-int      next_index_;         /* index for the next managed LWO */
+int      next_index_;         /* index for the next middle-weight object */
 mapping  persistent_oids_;    /* ([ int oid: object obj ]) */
 mapping  middleweight_oids_;  /* ([ bucket_index: ([ oid: environment ]) ]) */
 
@@ -109,7 +109,7 @@ static void create(int clone)
         pdb_entries_ = ([ ]);
         pdb_paths_ = ([ ]);
 
-	next_index_ = 1; /* use 1-based indices for managed LWOs */
+	next_index_ = 1; /* use 1-based indices for middle-weight objects */
         persistent_oids_ = ([ ]);
         middleweight_oids_ = ([ ]);
     }
@@ -194,7 +194,7 @@ void destruct(object obj)
 
 /*
  * NAME:        find()
- * DESCRIPTION: find a persistent object or managed LWO by number
+ * DESCRIPTION: find a persistent or middle-weight object by number
  */
 object find(int oid)
 {
