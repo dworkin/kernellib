@@ -11,9 +11,9 @@ DESCRIPTION
         path relative to this object. The normalized path is then used to find
         the object. In the second form, the object is found by number. 
 
-	Master objects with an ancestor directory named "data", "lib", or "obj"
-        cannot be found with this function. Managed light-weight objects can
-        only be found by number.
+        Master objects with an ancestor directory named "data", "lib", or "obj"
+        cannot be found with this function. Middle-weight objects can only be
+        found by number.
 
 SEE ALSO
         kfun/object_name, efun/move_object, efun/object_number

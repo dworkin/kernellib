@@ -9,8 +9,8 @@ inherit obj   API_OBJECT;
 object user; /* associated user object */
 
 /*
- * NAME:	normalize_path()
- * DESCRIPTION:	normalize a path relative to the current directory and owner
+ * NAME:        normalize_path()
+ * DESCRIPTION: normalize a path relative to the current directory and owner
  */
 private string normalize_path(string path)
 {
@@ -36,21 +36,21 @@ private string format_oids(int *oids)
 }
 
 /*
- * NAME:	create()
- * DESCRIPTION:	initialize object
+ * NAME:        create()
+ * DESCRIPTION: initialize object
  */
 static void create(int clone)
 {
     if (clone) {
-	tool::create(200);
+        tool::create(200);
         obj::create();
-	user = this_user();
+        user = this_user();
     }
 }
 
 /*
- * NAME:	message()
- * DESCRIPTION:	pass on a message to the user
+ * NAME:        message()
+ * DESCRIPTION: pass on a message to the user
  */
 static void message(string str)
 {
@@ -58,43 +58,43 @@ static void message(string str)
 }
 
 /*
- * NAME:	input()
- * DESCRIPTION:	deal with input from user
+ * NAME:        input()
+ * DESCRIPTION: deal with input from user
  */
 void input(string str)
 {
     if (previous_object() == user) {
-	call_limited("process", str);
+        call_limited("process", str);
     }
 }
 
 /*
- * NAME:	process()
- * DESCRIPTION:	process user input
+ * NAME:        process()
+ * DESCRIPTION: process user input
  */
 static void process(string str)
 {
     string arg;
 
     if (query_editor(this_object())) {
-	if (strlen(str) != 0 && str[0] == '!') {
-	    str = str[1 ..];
-	} else {
-	    str = editor(str);
-	    if (str) {
-		message(str);
-	    }
-	    return;
-	}
+        if (strlen(str) != 0 && str[0] == '!') {
+            str = str[1 ..];
+        } else {
+            str = editor(str);
+            if (str) {
+                message(str);
+            }
+            return;
+        }
     }
 
     if (str == "") {
-	return;
+        return;
     }
 
     sscanf(str, "%s %s", str, arg);
     if (arg == "") {
-	arg = nil;
+        arg = nil;
     }
     switch (str) {
     case "code":
@@ -128,18 +128,18 @@ static void process(string str)
     case "statedump":
     case "shutdown":
     case "reboot":
-	call_other(this_object(), "cmd_" + str, user, str, arg);
-	break;
+        call_other(this_object(), "cmd_" + str, user, str, arg);
+        break;
 
     default:
-	message("No command: " + str + "\n");
-	break;
+        message("No command: " + str + "\n");
+        break;
     }
 }
 
 /*
- * NAME:	cmd_find()
- * DESCRIPTION:	find an object by name or $ident
+ * NAME:        cmd_find()
+ * DESCRIPTION: find an object by name or $ident
  */
 static void cmd_find(object user, string cmd, string str)
 {
@@ -181,8 +181,8 @@ static void cmd_find(object user, string cmd, string str)
 }
 
 /*
- * NAME:	cmd_pls()
- * DESCRIPTION:	list programs
+ * NAME:        cmd_pls()
+ * DESCRIPTION: list programs
  */
 static void cmd_pls(object user, string cmd, string str)
 {
@@ -214,7 +214,7 @@ static void cmd_pls(object user, string cmd, string str)
         } else {
             names[i] += " ";
         }
-        
+
         line = names[i];
         if (strlen(line) < 18) {
             line = "                  "[.. 18 - strlen(line) - 1] + line;

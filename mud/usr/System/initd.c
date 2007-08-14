@@ -28,7 +28,7 @@ private object load(string path)
         obj = compile_object(path);
     }
     if (obj) {
-	call_other(obj, "???");
+        call_other(obj, "???");
     }
     return obj;
 }

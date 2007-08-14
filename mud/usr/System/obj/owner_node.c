@@ -108,7 +108,7 @@ static void create(int clone)
         pdb_entries_ = ([ ]);
         pdb_paths_ = ([ ]);
 
-	next_index_ = 1; /* use 1-based indices for middle-weight objects */
+        next_index_ = 1; /* use 1-based indices for middle-weight objects */
         persistent_oids_ = ([ ]);
         middleweight_oids_ = ([ ]);
     }

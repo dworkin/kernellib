@@ -10,7 +10,7 @@ private object   environment_;  /* environment */
 private mapping  inventory_;    /* ([ int oid: object obj ]) */
 
 /*
- * NAME:	creator()
+ * NAME:        creator()
  * DESCRIPTION: get creator of file
  */
 private string creator(string path)
@@ -333,7 +333,7 @@ static atomic object clone_object(string master, mixed arguments...)
 
     /* forward arguments to create() via TLS */
     if (sizeof(arguments)) {
-	::find_object(OBJECTD)->store_create_arguments(arguments);
+        ::find_object(OBJECTD)->store_create_arguments(arguments);
     }
 
     return ::clone_object(master);

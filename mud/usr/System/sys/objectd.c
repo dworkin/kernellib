@@ -26,8 +26,8 @@ private int add_owner(string owner)
 
     uid = uids_[owner];
     if (!uid) {
-	/* register new owner and create owner node */
-	uid = uids_[owner] = next_uid_++;
+        /* register new owner and create owner node */
+        uid = uids_[owner] = next_uid_++;
         nodes_[uid] = clone_object(OWNER_NODE, owner);
     }
     return uid;

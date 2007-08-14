@@ -5,7 +5,7 @@ SYNOPSIS
         int object_number(object obj)
 
 DESCRIPTION
-	Return the number of the object argument. Persistent objects have
+        Return the number of the object argument. Persistent objects have
         positive numbers. Managed light-weight object have negative numbers.
         Zero is returned for other light-weight objects.
 
