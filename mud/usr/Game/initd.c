@@ -90,11 +90,11 @@ static void create()
     compile_object(SHIELD);
     compile_object(COIN);
 
-    move_object(clone_object(BAG), temple_);
-    move_object(clone_object(DWARF), crypt);
-    move_object(new_object(SWORD), crypt);
-    move_object(new_object(SHIELD), crypt);
-    move_object(new_object(COIN, "silver", 1 + random(20)), crypt);
+    clone_object(BAG)->move(temple_);
+    clone_object(DWARF)->move(crypt);
+    new_object(SWORD)->move(crypt);
+    new_object(SHIELD)->move(crypt);
+    new_object(COIN, "silver", 1 + random(20))->move(crypt);
 }
 
 static string select_element(string *array)
@@ -147,6 +147,6 @@ object LIB_CREATURE make_creature(varargs string str)
     creature->set_race(select_race(options));
     creature->set_guild(select_guild(options));
     
-    move_object(creature, temple_);
+    creature->move(temple_);
     return creature;
 }

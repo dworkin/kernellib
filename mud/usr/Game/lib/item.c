@@ -2,7 +2,14 @@
 
 inherit LIB_THING;
 
-int allow_move(object destination)
+int move(object destination)
 {
-    return !destination || destination <- LIB_THING;
+    if (destination
+        && (!(destination <- LIB_ROOM) && !(destination <- LIB_CREATURE)
+            || !destination->allow_move(this_object())))
+    {
+        return FALSE;
+    }
+    move_object(destination);
+    return TRUE;
 }

@@ -9,25 +9,26 @@ inherit UTIL_DESCRIPTION;
 inherit UTIL_MESSAGE;
 
 int item_;
-int cont_;
+int container_;
 
-static void create(object LIB_ITEM item, object LIB_CONTAINER cont)
+static void create(object LIB_ITEM item, object LIB_CONTAINER container)
 {
     ASSERT_ARG_1(item);
-    ASSERT_ARG_2(cont);
+    ASSERT_ARG_2(container);
     item_ = object_number(item);
-    cont_ = object_number(cont);
+    container_ = object_number(container);
 }
 
 void perform(object LIB_CREATURE actor)
 {
     object LIB_ITEM       item;
-    object LIB_CONTAINER  cont;
-    object LIB_THING      env;
+    object LIB_CONTAINER  container;
+    object LIB_THING      environment;
 
-    cont = find_object(cont_);
-    env = cont ? environment(cont) : nil;
-    if (!env || env != actor && env != (object LIB_ROOM) environment(actor))
+    container = find_object(container_);
+    environment = container ? environment(container) : nil;
+    if (!environment || environment != actor
+        && environment != (object LIB_ROOM) environment(actor))
     {
         tell_object(actor, "That is not here.");
         return;
@@ -39,14 +40,14 @@ void perform(object LIB_CREATURE actor)
         return;
     }
 
-    if (move_object(item, cont)) {
+    if (item->move(container)) {
         tell_object(actor, "You put " + definite_description(item)
-                    + " in " + definite_description(cont));
+                    + " in " + definite_description(container));
         tell_audience(actor, definite_description(actor)
                       + " puts " + indefinite_description(item)
-                      + " in " + indefinite_description(cont));
+                      + " in " + indefinite_description(container));
     } else {
         tell_object(actor, "You cannot put " + definite_description(item)
-                    + " in " + definite_description(cont));
+                    + " in " + definite_description(container));
     }
 }

@@ -39,7 +39,7 @@ void perform(object LIB_CREATURE actor)
         return;
     }
 
-    if (move_object(obj, actor)) {
+    if (obj->move(actor)) {
         tell_object(actor, "You take "
                     + definite_description(obj, actor));
         tell_audience(actor, definite_description(actor) + " takes "

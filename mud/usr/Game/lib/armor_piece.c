@@ -61,7 +61,7 @@ object LIB_CREATURE query_wearer()
         ? environment : nil;
 }
 
-int allow_move(object destination)
+int move(object destination)
 {
-    return query_wearer() ? FALSE : ::allow_move(destination);
+    return query_wearer() ? FALSE : ::move(destination);
 }

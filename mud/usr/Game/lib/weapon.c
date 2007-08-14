@@ -20,7 +20,7 @@ object LIB_CREATURE query_wielder()
         ? environment : nil;
 }
 
-int allow_move(object destination)
+int move(object destination)
 {
-    return query_wielder() ? FALSE : ::allow_move(destination);
+    return query_wielder() ? FALSE : ::move(destination);
 }

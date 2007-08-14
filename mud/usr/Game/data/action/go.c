@@ -9,43 +9,44 @@ inherit UTIL_DESCRIPTION;
 inherit UTIL_DIRECTION;
 inherit UTIL_MESSAGE;
 
-string dir_;
+string direction_;
 
-static void create(string dir)
+static void create(string direction)
 {
-    dir_ = dir;
+    direction_ = direction;
 }
 
-static string arrival_direction(string dir)
+static string arrival_direction(string direction)
 {
-    switch (dir) {
-    case "up":   return "below";
-    case "down": return "above";
-    default:     return "the " + reverse_direction(dir);
+    switch (direction) {
+    case "up":    return "below";
+    case "down":  return "above";
+    default:      return "the " + reverse_direction(direction);
     }
 }
 
 void perform(object LIB_CREATURE actor)
 {
-    object env, dest;
+    object LIB_ROOM room, destination;
 
-    env = environment(actor);
-    if (!env) {
+    room = environment(actor);
+    if (!room) {
         tell_object(actor, "You are in the void.");
         return;
     }
 
-    dest = env->query_exit(dir_);
-    if (!dest) {
-        tell_object(actor, "You cannot go " + dir_ + " from here.");
+    destination = room->query_exit(direction_);
+    if (!destination) {
+        tell_object(actor, "You cannot go " + direction_ + " from here.");
         return;
     }
 
-    if (move_object(actor, dest)) {
-        tell_inventory(env, definite_description(actor) + " leaves " + dir_);
-        tell_object(actor, verbose_description(dest, actor));
+    if (actor->move(destination)) {
+        tell_inventory(room, definite_description(actor) + " leaves "
+                       + direction_);
+        tell_object(actor, verbose_description(destination, actor));
         tell_audience(actor, indefinite_description(actor) + " arrives from "
-                      + arrival_direction(dir_));
+                      + arrival_direction(direction_));
     } else {
         tell_object(actor, "You cannot go there.");
     }

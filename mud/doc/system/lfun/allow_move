@@ -1,0 +1,12 @@
+NAME
+        allow_move - control object movement
+
+SYNOPSIS
+        int allow_move(object obj)
+
+DESCRIPTION
+        This function is called in the destination before moving an object.
+        Return true to allow the move, or false to veto it.
+
+SEE ALSO
+        efun/move_object

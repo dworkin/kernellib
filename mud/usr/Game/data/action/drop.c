@@ -36,7 +36,7 @@ void perform(object LIB_CREATURE actor)
         return;
     }
 
-    if (move_object(item, room)) {
+    if (item->move(room)) {
         tell_object(actor, "You drop "
                     + definite_description(item, actor));
         tell_audience(actor, definite_description(actor) + " drops "

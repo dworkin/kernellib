@@ -2,7 +2,7 @@
 
 inherit LIB_ITEM;
 
-int allow_enter(object obj)
+int allow_move(object obj)
 {
     return obj <- LIB_ITEM;
 }

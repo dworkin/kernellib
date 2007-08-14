@@ -276,7 +276,7 @@ static void drop_all()
     items = inventory(this_object());
     size = sizeof(items);
     for (i = 0; i < size; ++i) {
-        move_object(items[i], room);
+        items[i]->move(room);
     }
 }
 
@@ -286,7 +286,7 @@ static void make_corpse()
 
     room = environment(this_object());
     if (race_ && room) {
-        move_object(new_object(CORPSE, race_), room);
+        new_object(CORPSE, race_)->move(room);
     }
 }
 
@@ -299,14 +299,21 @@ void die()
     destruct_object(this_object());
 }
 
-int allow_enter(object obj)
+int allow_move(object obj)
 {
     return obj <- LIB_ITEM;
 }
 
-int allow_move(object destination)
+int move(object destination)
 {
-    return !destination || destination <- LIB_ROOM;
+    if (destination
+        && (!(destination <- LIB_ROOM)
+            || !destination->allow_move(this_object())))
+    {
+        return FALSE;
+    }
+    move_object(destination);
+    return TRUE;
 }
 
 static object LIB_ATTRIBUTE_AFFECTOR *query_attribute_affectors(string name)

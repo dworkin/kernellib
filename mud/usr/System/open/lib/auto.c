@@ -400,19 +400,46 @@ static mixed *status(varargs mixed obj)
 
 /*
  * NAME:        move_object()
- * DESCRIPTION: move an object to another environment
+ * DESCRIPTION: move this object to another environment
  */
-static int move_object(object obj, object destination)
+static atomic void move_object(object destination)
 {
-    ASSERT_ARG_1(obj);
-    ASSERT_ARG_2(!destination || !sscanf(object_name(destination), "%*s#-1"));
-    if (destination && !destination->allow_enter(obj) || !obj
-        || !obj->allow_move(destination) || !obj)
+    object this;
+
+    ASSERT_ARG(!destination || !sscanf(object_name(destination), "%*s#-1"));
+    this = this_object();
+    if (destination
+        && (!destination->allow_move(this) || !destination || !this))
     {
-        return FALSE;
+        error("Cannot move object to destination");
     }
-    obj->_F_move(destination);
-    return TRUE;
+
+    normalize_data();
+    if (oid_ && (oid_ & OID_CATEGORY_MASK) != OID_MIDDLEWEIGHT) {
+        object obj;
+
+        for (obj = destination; obj; obj = obj->_Q_environment()) {
+            if (obj == this) {
+                error("Cannot move object into itself");
+            }
+        }
+    }
+
+    if (environment_) {
+        environment_->_F_leave(oid_);
+    }
+    environment_ = destination;
+    if ((oid_ & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT) {
+        /* move middle-weight object */
+        ::find_object(OBJECTD)->move_data(oid_, environment_);
+    } else if (!oid_ && environment_) {
+        /* promote light-weight object */
+        oid_ = ::find_object(OBJECTD)->add_data(query_owner(),
+                                                environment_);
+    }
+    if (environment_) {
+        environment_->_F_enter(oid_, this_object());
+    }
 }
 
 /*

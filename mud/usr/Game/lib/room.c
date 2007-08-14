@@ -28,7 +28,7 @@ string *query_exits()
     return map_indices(exits_);
 }
 
-int allow_enter(object obj)
+int allow_move(object obj)
 {
-    return obj <- LIB_THING;
+    return obj <- LIB_CREATURE || obj <- LIB_ITEM;
 }

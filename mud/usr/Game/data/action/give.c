@@ -21,9 +21,9 @@ static void create(object LIB_ITEM obj, object LIB_CREATURE ind)
 
 void perform(object LIB_CREATURE actor)
 {
-    object LIB_ITEM obj;
-    object LIB_ROOM room;
-    object LIB_CREATURE ind;
+    object LIB_ITEM      obj;
+    object LIB_ROOM      room;
+    object LIB_CREATURE  ind;
 
     obj = find_object(obj_);
     if (!obj || (object LIB_THING) environment(obj) != actor) {
@@ -43,7 +43,7 @@ void perform(object LIB_CREATURE actor)
         return;
     }
 
-    if (move_object(obj, ind)) {
+    if (obj->move(ind)) {
         tell_object(actor, "You give " + definite_description(obj)
                     + " to " + definite_description(ind));
         tell_object(ind, definite_description(actor) + " gives "
