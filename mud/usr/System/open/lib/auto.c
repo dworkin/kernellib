@@ -350,9 +350,9 @@ static atomic object new_object(mixed master, mixed arguments...)
          * create a new light-weight object, forwarding arguments to create()
          * via thread-local storage
          */
-	if (sizeof(arguments)) {
+        if (sizeof(arguments)) {
             ::find_object(OBJECTD)->store_create_arguments(arguments);
-	}
+        }
     } else {
         /* copy an existant light-weight object */
         ASSERT_ARG_1(typeof(master) == T_OBJECT
