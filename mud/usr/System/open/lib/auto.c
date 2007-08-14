@@ -79,6 +79,7 @@ private int _object_number(object obj)
 
         category = OID_CLONE;
         owner = obj->query_owner();
+        ++index; /* use 1-based object indices */
     } else {
         category = OID_MASTER;
         owner = creator(path);

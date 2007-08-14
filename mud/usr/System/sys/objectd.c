@@ -252,16 +252,16 @@ mixed fetch_create_arguments()
 }
 
 /*
- * NAME:        query_program()
- * DESCRIPTION: return the program with the specified OID
+ * NAME:        query_entry()
+ * DESCRIPTION: return the program entry for the specified object number
  */
-mixed *query_program(int oid)
+mixed *query_entry(int oid)
 {
     if (previous_program() == OWNER_NODE) {
         int uid;
 
         uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
-        return nodes_[uid]->query_program(oid);
+        return nodes_[uid]->query_entry(oid);
     }
 }
 

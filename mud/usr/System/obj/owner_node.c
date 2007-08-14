@@ -30,7 +30,7 @@ private void link_child(int child_oid, mixed *child_entry, string parent_name)
     index = status(parent_name)[O_INDEX] + 1;
     parent_oid = OID_MASTER | (parent_uid << OID_OWNER_OFFSET)
         | (index << OID_INDEX_OFFSET);
-    parent_entry = objectd_->query_program(parent_oid);
+    parent_entry = objectd_->query_entry(parent_oid);
 
     /* link child */
     if (!parent_entry[PDB_CHILDREN]) {
@@ -44,9 +44,9 @@ private void link_child(int child_oid, mixed *child_entry, string parent_name)
         
         /* find links */
         first_oid = parent_entry[PDB_CHILDREN];
-        first_entry = objectd_->query_program(first_oid);
+        first_entry = objectd_->query_entry(first_oid);
         previous_oid = first_entry[PDB_PREVIOUS][parent_oid];
-        previous_entry = objectd_->query_program(previous_oid);
+        previous_entry = objectd_->query_entry(previous_oid);
 
         /* add new child to chain */
         previous_entry[PDB_NEXT][parent_oid] = child_oid;
@@ -65,7 +65,7 @@ private void unlink_child(int child_oid, mixed *child_entry, int parent_oid)
     int     previous_oid;
     mixed  *parent_entry;
 
-    parent_entry = objectd_->query_program(parent_oid);
+    parent_entry = objectd_->query_entry(parent_oid);
     previous_oid = child_entry[PDB_PREVIOUS][parent_oid];
     if (child_oid == previous_oid) {
         /* only link: remove chain */
@@ -78,8 +78,8 @@ private void unlink_child(int child_oid, mixed *child_entry, int parent_oid)
 
         /* find entries */
         next_oid = child_entry[PDB_NEXT][parent_oid];
-        previous_entry = objectd_->query_program(previous_oid);
-        next_entry = objectd_->query_program(next_oid);
+        previous_entry = objectd_->query_entry(previous_oid);
+        next_entry = objectd_->query_entry(next_oid);
 
         /* unlink child */
         previous_entry[PDB_NEXT][parent_oid] = next_oid;
@@ -168,6 +168,7 @@ void clone(object obj)
         int index, oid;
 
         sscanf(object_name(obj), "%*s#%d", index);
+        ++index; /* use 1-based object indices */
         oid = OID_CLONE | (uid_ << OID_OWNER_OFFSET)
             | (index << OID_INDEX_OFFSET);
         persistent_oids_[oid] = obj;
@@ -250,10 +251,10 @@ void remove_program(string path, int index)
 }
 
 /*
- * NAME:        query_program()
- * DESCRIPTION: return the program with the specified OID
+ * NAME:        query_entry()
+ * DESCRIPTION: return the program entry with the specified object number
  */
-mixed *query_program(int oid)
+mixed *query_entry(int oid)
 {
     if (previous_object() == objectd_) {
         mixed *entry;

@@ -53,25 +53,19 @@ private void install_object_manager()
     objectd->compile("System", find_object(RSRCOBJ), nil);
     objectd->compile("System", find_object(ACCESSD), nil);
     objectd->compile("System", find_object(USERD), nil);
-
-    /* register kernel API objects */
-    load(API_OBJREG);
-    objectd->compile_lib("System", API_ACCESS, nil);
-    objectd->compile_lib("System", API_OBJREG, nil);
-    objectd->compile_lib("System", API_RSRC, nil);
-    objectd->compile_lib("System", API_TLS, nil);
-    objectd->compile_lib("System", API_USER, nil);
-
-    /* register kernel user objects */
     objectd->compile_lib("System", LIB_CONN, nil);
-    objectd->compile_lib("System", LIB_USER, nil);
-    objectd->compile_lib("System", LIB_WIZTOOL, nil, API_ACCESS, API_RSRC,
-                         API_USER);
     objectd->compile("System", find_object(TELNET_CONN), nil, LIB_CONN);
     objectd->compile("System", find_object(BINARY_CONN), nil, LIB_CONN);
+    objectd->compile_lib("System", LIB_USER, nil);
+    objectd->compile_lib("System", API_USER, nil);
+    objectd->compile_lib("System", API_ACCESS, nil);
     objectd->compile("System", find_object(DEFAULT_USER), nil, LIB_USER,
                      API_USER, API_ACCESS);
+    objectd->compile_lib("System", API_RSRC, nil);
+    objectd->compile_lib("System", LIB_WIZTOOL, nil, API_ACCESS, API_RSRC,
+                         API_USER);
     objectd->compile("System", find_object(DEFAULT_WIZTOOL), nil, LIB_WIZTOOL);
+    objectd->compile_lib("System", API_TLS, nil);
 
     /* register system objects */
     objectd->compile("System", this_object(), nil, API_RSRC, API_TLS);
