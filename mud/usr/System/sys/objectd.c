@@ -291,16 +291,16 @@ mapping get_program_dir(string path)
 }
 
 /*
- * NAME:        add_data()
+ * NAME:        add_mwo()
  * DESCRIPTION: add a middle-weight object
  */
-int add_data(string owner, object environment)
+int add_mwo(string owner, object environment)
 {
     if (previous_program() == SYSTEM_AUTO) {
         int uid;
 
         uid = add_owner(owner);
-        return nodes_[uid]->add_data(environment);
+        return nodes_[uid]->add_mwo(environment);
     }
 }
 
@@ -321,57 +321,57 @@ object find(int oid)
 }
 
 /*
- * NAME:        move_data()
+ * NAME:        move_mwo()
  * DESCRIPTION: move or remove a middle-weight object
  */
-void move_data(int oid, object environment)
+void move_mwo(int oid, object environment)
 {
     if (previous_program() == SYSTEM_AUTO) {
         int uid;
 
         uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
-        nodes_[uid]->move_data(oid, environment);
+        nodes_[uid]->move_mwo(oid, environment);
     }
 }
 
 /*
- * NAME:        data_callout()
+ * NAME:        add_mwo_callout()
  * DESCRIPTION: add a callout for a middle-weight object
  */
-int data_callout(int oid, string function, mixed delay, mixed *arguments)
+int add_mwo_callout(int oid, string function, mixed delay, mixed *arguments)
 {
     if (previous_program() == SYSTEM_AUTO) {
         int uid;
 
         uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
-        return nodes_[uid]->data_callout(oid, function, delay, arguments);
+        return nodes_[uid]->add_mwo_callout(oid, function, delay, arguments);
     }
 }
 
 /*
- * NAME:        remove_data_callout()
+ * NAME:        remove_mwo_callout()
  * DESCRIPTION: remove a callout for a middle-weight object
  */
-mixed remove_data_callout(int oid, int handle)
+mixed remove_mwo_callout(int oid, int handle)
 {
     if (previous_program() == SYSTEM_AUTO) {
         int uid;
 
         uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
-        return nodes_[uid]->remove_data_callout(oid, handle);
+        return nodes_[uid]->remove_mwo_callout(oid, handle);
     }
 }
 
 /*
- * NAME:        query_data_callouts()
+ * NAME:        query_mwo_callouts()
  * DESCRIPTION: return the callouts for a middle-weight object
  */
-mixed *query_data_callouts(string owner, int oid)
+mixed *query_mwo_callouts(string owner, int oid)
 {
     if (previous_program() == SYSTEM_AUTO) {
         int uid;
 
         uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
-        return nodes_[uid]->query_data_callouts(owner, oid);
+        return nodes_[uid]->query_mwo_callouts(owner, oid);
     }
 }

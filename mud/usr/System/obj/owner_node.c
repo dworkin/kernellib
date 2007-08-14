@@ -304,10 +304,10 @@ mapping get_program_dir(string path)
 }
 
 /*
- * NAME:        add_data()
+ * NAME:        add_mwo()
  * DESCRIPTION: add a middle-weight object
  */
-int add_data(object environment)
+int add_mwo(object environment)
 {
     if (previous_object() == objectd_) {
         int      oid, index;
@@ -327,10 +327,10 @@ int add_data(object environment)
 }
 
 /*
- * NAME:        move_data()
+ * NAME:        move_mwo()
  * DESCRIPTION: move a middle-weight object to another environment
  */
-void move_data(int oid, object environment)
+void move_mwo(int oid, object environment)
 {
     if (previous_object() == objectd_) {
         int      index;
@@ -346,21 +346,21 @@ void move_data(int oid, object environment)
 }
 
 /*
- * NAME:        data_callout()
+ * NAME:        add_mwo_callout()
  * DESCRIPTION: add a callout for a middle-weight object
  */
-int data_callout(int oid, string function, mixed delay, mixed *arguments)
+int add_mwo_callout(int oid, string function, mixed delay, mixed *arguments)
 {
     if (previous_object() == objectd_) {
-        return call_out("call_data", delay, oid, function, arguments);
+        return call_out("mwo_callout", delay, oid, function, arguments);
     }
 }
 
 /*
- * NAME:        remove_data_callout()
+ * NAME:        remove_mwo_callout()
  * DESCRIPTION: remove a callout for a middle-weight object
  */
-mixed remove_data_callout(int oid, int handle)
+mixed remove_mwo_callout(int oid, int handle)
 {
     if (previous_object() == objectd_) {
         int      i;
@@ -382,10 +382,10 @@ mixed remove_data_callout(int oid, int handle)
 }
 
 /*
- * NAME:        query_data_callouts()
+ * NAME:        query_mwo_callouts()
  * DESCRIPTION: return the callouts for a middle-weight object
  */
-mixed *query_data_callouts(string owner, int oid)
+mixed *query_mwo_callouts(string owner, int oid)
 {
     if (previous_object() == objectd_) {
         int      i, j, size, owned;
@@ -400,8 +400,8 @@ mixed *query_data_callouts(string owner, int oid)
                 mixed *callout;
 
                 callout = ({ callouts[i][CO_HANDLE],
-                                 callouts[i][CO_FIRSTXARG + 1],
-                                 callouts[i][CO_DELAY] });
+                             callouts[i][CO_FIRSTXARG + 1],
+                             callouts[i][CO_DELAY] });
                 if (owned) {
                     /* include arguments */
                     callout += callouts[i][CO_FIRSTXARG + 2];
@@ -414,10 +414,10 @@ mixed *query_data_callouts(string owner, int oid)
 }
 
 /*
- * NAME:        call_data()
+ * NAME:        mwo_callout()
  * DESCRIPTION: dispatch a callout to a middle-weight object
  */
-static void call_data(int oid, string function, mixed *arguments)
+static void mwo_callout(int oid, string function, mixed *arguments)
 {
     int      index;
     mapping  bucket;
@@ -434,6 +434,6 @@ static void call_data(int oid, string function, mixed *arguments)
     }
     obj = environment->_F_find(oid);
     if (obj) {
-        obj->_F_call_data(function, arguments);
+        obj->_F_mwo_callout(function, arguments);
     }
 }

@@ -89,10 +89,10 @@ private int _object_number(object obj)
 }
 
 /*
- * NAME:        normalize_data()
+ * NAME:        normalize_mwo()
  * DESCRIPTION: normalize middle-weight object
  */
-private void normalize_data()
+private void normalize_mwo()
 {
     if ((oid_ & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT
         && (!environment_ || environment_->_F_find(oid_) != this_object()))
@@ -167,7 +167,7 @@ nomask int _F_system_create(varargs int clone)
 nomask int _Q_oid()
 {
     if (previous_program() == SYSTEM_AUTO) {
-        normalize_data();
+        normalize_mwo();
         return oid_;
     }
 }
@@ -228,7 +228,7 @@ nomask object *_Q_inventory()
 nomask object _Q_environment()
 {
     if (previous_program() == SYSTEM_AUTO) {
-        normalize_data();
+        normalize_mwo();
         return environment_;
     }
 }
@@ -349,8 +349,8 @@ static mixed *status(varargs mixed obj)
             oid = obj->_Q_oid();
             if ((oid & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT) {
                 obj = ::find_object(OBJECTD);
-                status[O_CALLOUTS] = obj->query_data_callouts(query_owner(),
-                                                              oid);
+                status[O_CALLOUTS] = obj->query_mwo_callouts(query_owner(),
+                                                             oid);
             }
         }
         return status;
@@ -376,7 +376,7 @@ static atomic void move_object(object destination)
         error("Cannot move object to destination");
     }
 
-    normalize_data();
+    normalize_mwo();
     if (oid_ && (oid_ & OID_CATEGORY_MASK) != OID_MIDDLEWEIGHT) {
         object obj;
 
@@ -393,11 +393,10 @@ static atomic void move_object(object destination)
     environment_ = destination;
     if ((oid_ & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT) {
         /* move middle-weight object */
-        ::find_object(OBJECTD)->move_data(oid_, environment_);
+        ::find_object(OBJECTD)->move_mwo(oid_, environment_);
     } else if (!oid_ && environment_) {
         /* promote light-weight object */
-        oid_ = ::find_object(OBJECTD)->add_data(query_owner(),
-                                                environment_);
+        oid_ = ::find_object(OBJECTD)->add_mwo(query_owner(), environment_);
     }
     if (environment_) {
         environment_->_F_enter(oid_, this_object());
@@ -514,10 +513,10 @@ static int call_out(string function, mixed delay, mixed arguments...)
     ASSERT_ARG_1(program
                  && (creator(program) != "System" || function == "create"));
     ASSERT_ARG_2(typeof(delay) == T_INT || typeof(delay) == T_FLOAT);
-    normalize_data();
+    normalize_mwo();
     if ((oid_ & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT) {
-        return ::find_object(OBJECTD)->data_callout(oid_, function, delay,
-                                                    arguments);
+        return ::find_object(OBJECTD)->add_mwo_callout(oid_, function, delay,
+                                                       arguments);
     } else {
         return ::call_out(function, delay, arguments...);
     }
@@ -529,19 +528,19 @@ static int call_out(string function, mixed delay, mixed arguments...)
  */
 static mixed remove_call_out(int handle)
 {
-    normalize_data();
+    normalize_mwo();
     if ((oid_ & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT) {
-        return ::find_object(OBJECTD)->remove_data_callout(oid_, handle);
+        return ::find_object(OBJECTD)->remove_mwo_callout(oid_, handle);
     } else {
         return ::remove_call_out(handle);
     }
 }
 
 /*
- * NAME:        _F_call_data()
- * DESCRIPTION: dispatch a delayed function call
+ * NAME:        _F_mwo_callout()
+ * DESCRIPTION: dispatch a callout in a middle-weight object
  */
-nomask void _F_call_data(string function, mixed *arguments)
+nomask void _F_mwo_callout(string function, mixed *arguments)
 {
     if (previous_program() == OWNER_NODE) {
         object  this;
