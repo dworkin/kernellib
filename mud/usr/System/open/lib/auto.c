@@ -173,44 +173,6 @@ nomask int _Q_oid()
 }
 
 /*
- * NAME:        _F_move()
- * DESCRIPTION: move this object to another environment
- */
-nomask void _F_move(object destination)
-{
-    if (previous_program() == SYSTEM_AUTO) {
-        normalize_data();
-
-        if (oid_ && (oid_ & OID_CATEGORY_MASK) != OID_MIDDLEWEIGHT) {
-            object this, obj;
-
-            this = this_object();
-            for (obj = destination; obj; obj = obj->_Q_environment()) {
-                if (obj == this) {
-                    error("Cannot move object into itself");
-                }
-            }
-        }
-
-        if (environment_) {
-            environment_->_F_leave(oid_);
-        }
-        environment_ = destination;
-        if ((oid_ & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT) {
-            /* move middle-weight object */
-            ::find_object(OBJECTD)->move_data(oid_, environment_);
-        } else if (!oid_ && environment_) {
-            /* promote light-weight object to middle-weight */
-            oid_ = ::find_object(OBJECTD)->add_data(query_owner(),
-                                                    environment_);
-        }
-        if (environment_) {
-            environment_->_F_enter(oid_, this_object());
-        }
-    }
-}
-
-/*
  * NAME:        _F_enter()
  * DESCRIPTION: add an object to the inventory of this object
  */
