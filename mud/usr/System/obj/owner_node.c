@@ -33,9 +33,9 @@ private void link_child(int child_oid, mixed *child_entry, string parent_name)
     parent_entry = objectd_->query_entry(parent_oid);
 
     /* link child */
-    if (!parent_entry[PDB_CHILDREN]) {
+    if (!parent_entry[PDB_CHAIN]) {
         /* first child: create chain */
-        parent_entry[PDB_CHILDREN] = child_oid;
+        parent_entry[PDB_CHAIN] = child_oid;
         child_entry[PDB_PREVIOUS][parent_oid] = child_oid;
         child_entry[PDB_NEXT][parent_oid] = child_oid;
     } else {
@@ -43,7 +43,7 @@ private void link_child(int child_oid, mixed *child_entry, string parent_name)
         mixed  *first_entry, *previous_entry;
         
         /* find links */
-        first_oid = parent_entry[PDB_CHILDREN];
+        first_oid = parent_entry[PDB_CHAIN];
         first_entry = objectd_->query_entry(first_oid);
         previous_oid = first_entry[PDB_PREVIOUS][parent_oid];
         previous_entry = objectd_->query_entry(previous_oid);
@@ -69,14 +69,14 @@ private void unlink_child(int child_oid, mixed *child_entry, int parent_oid)
     previous_oid = child_entry[PDB_PREVIOUS][parent_oid];
     if (child_oid == previous_oid) {
         /* only link: remove chain */
-        parent_entry[PDB_CHILDREN] = 0;
+        parent_entry[PDB_CHAIN] = 0;
         child_entry[PDB_PREVIOUS][parent_oid] = nil;
         child_entry[PDB_NEXT][parent_oid] = nil;
     } else {
         int     next_oid;
         mixed  *previous_entry, *next_entry;
 
-        /* find entries */
+        /* find links */
         next_oid = child_entry[PDB_NEXT][parent_oid];
         previous_entry = objectd_->query_entry(previous_oid);
         next_entry = objectd_->query_entry(next_oid);
@@ -87,9 +87,9 @@ private void unlink_child(int child_oid, mixed *child_entry, int parent_oid)
         next_entry[PDB_PREVIOUS][parent_oid] = previous_oid;
         child_entry[PDB_NEXT][parent_oid] = nil;
 
-        if (parent_entry[PDB_CHILDREN] == child_oid) {
+        if (parent_entry[PDB_CHAIN] == child_oid) {
             /* child was first in chain: appoint next child instead */
-            parent_entry[PDB_CHILDREN] = next_oid;
+            parent_entry[PDB_CHAIN] = next_oid;
         }
     }
 }
@@ -204,12 +204,13 @@ object find(int oid)
 {
     if (previous_object() == objectd_) {
         if ((oid & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT) {
-            int      index;
+            int      index, bucket_index;
             mapping  bucket;
             object   environment;
 
             index = (oid & OID_INDEX_MASK) >> OID_INDEX_OFFSET;
-            bucket = middleweight_oids_[(index - 1) / MWO_BUCKET_SIZE];
+            bucket_index = (index - 1) / MWO_BUCKET_SIZE;
+            bucket = middleweight_oids_[bucket_index];
             if (!bucket) {
                 return nil;
             }
@@ -311,16 +312,16 @@ mapping get_program_dir(string path)
 int add_mwo(object environment)
 {
     if (previous_object() == objectd_) {
-        int      oid, index;
+        int      oid, index, bucket_index;
         mapping  bucket;
 
         index = next_index_++;
         oid = OID_MIDDLEWEIGHT | (uid_ << OID_OWNER_OFFSET)
             | (index << OID_INDEX_OFFSET);
-        bucket = middleweight_oids_[(index - 1) / MWO_BUCKET_SIZE];
+        bucket_index = (index - 1) / MWO_BUCKET_SIZE;
+        bucket = middleweight_oids_[bucket_index];
         if (!bucket) {
-            bucket = middleweight_oids_[(index - 1) / MWO_BUCKET_SIZE]
-                = ([ ]);
+            bucket = middleweight_oids_[bucket_index] = ([ ]);
         }
         bucket[oid] = environment;
         return oid;
@@ -334,14 +335,15 @@ int add_mwo(object environment)
 void move_mwo(int oid, object environment)
 {
     if (previous_object() == objectd_) {
-        int      index;
+        int      index, bucket_index;
         mapping  bucket;
         
         index = (oid & OID_INDEX_MASK) >> OID_INDEX_OFFSET;
-        bucket = middleweight_oids_[(index - 1) / MWO_BUCKET_SIZE];
+        bucket_index = (index - 1) / MWO_BUCKET_SIZE;
+        bucket = middleweight_oids_[bucket_index];
         bucket[oid] = environment;
         if (!environment && !map_sizeof(bucket)) {
-            middleweight_oids_[(index - 1) / MWO_BUCKET_SIZE] = nil;
+            middleweight_oids_[bucket_index] = nil;
         }
     }
 }
@@ -420,12 +422,13 @@ mixed *query_mwo_callouts(string owner, int oid)
  */
 static void mwo_callout(int oid, string function, mixed *arguments)
 {
-    int      index;
+    int      index, bucket_index;
     mapping  bucket;
     object   environment, obj;
 
     index = (oid & OID_INDEX_MASK) >> OID_INDEX_OFFSET;
-    bucket = middleweight_oids_[(index - 1) / MWO_BUCKET_SIZE];
+    bucket_index = (index - 1) / MWO_BUCKET_SIZE;
+    bucket = middleweight_oids_[bucket_index];
     if (!bucket) {
         return;
     }

@@ -14,6 +14,6 @@
 # define PDB_PATH      0  /* program name */
 # define PDB_PREVIOUS  1  /* ([ int parent_oid: int previous_oid ]) */
 # define PDB_NEXT      2  /* ([ int parent_oid: int next_oid ]) */
-# define PDB_CHILDREN  3  /* clone count or OID of first child */
+# define PDB_CHAIN     3  /* object number of first child program */
 
 # define MWO_BUCKET_SIZE  1024

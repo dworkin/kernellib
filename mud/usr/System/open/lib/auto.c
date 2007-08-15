@@ -108,8 +108,7 @@ private void normalize_mwo()
  * NAME:        create()
  * DESCRIPTION: dummy initialization function
  */
-static void create(mixed arguments...)
-{ }
+static void create(mixed arguments...) { }
 
 /*
  * NAME:        _F_system_create()
@@ -362,12 +361,19 @@ static mixed *status(varargs mixed obj)
 }
 
 /*
+ * NAME:        promote()
+ * DESCRIPTION: dummy promotion function for middle-weight objects
+ */
+static void promote() { }
+
+/*
  * NAME:        move_object()
  * DESCRIPTION: move this object to another environment
  */
 static atomic void move_object(object destination)
 {
-    object this;
+    object  this;
+    int     promoted;
 
     ASSERT_ARG(!destination || !sscanf(object_name(destination), "%*s#-1"));
     this = this_object();
@@ -394,13 +400,18 @@ static atomic void move_object(object destination)
     environment_ = destination;
     if ((oid_ & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT) {
         /* move middle-weight object */
+        promoted = FALSE;
         ::find_object(OBJECTD)->move_mwo(oid_, environment_);
     } else if (!oid_ && environment_) {
         /* promote light-weight object */
+        promoted = TRUE;
         oid_ = ::find_object(OBJECTD)->add_mwo(query_owner(), environment_);
     }
     if (environment_) {
         environment_->_F_enter(oid_, this_object());
+    }
+    if (promoted) {
+        promote();
     }
 }
 
