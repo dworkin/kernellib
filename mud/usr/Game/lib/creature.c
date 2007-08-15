@@ -83,7 +83,7 @@ static void create()
     add_event("observe");
     add_event("error");
 
-    gender_ = random(2) ? "female" : "male";
+    gender_ = random(2) ? FEMALE_GENDER : MALE_GENDER;
     race_ = find_object(HUMAN_RACE);
     guild_ = find_object(WARRIOR_GUILD);
 
@@ -218,7 +218,7 @@ object LIB_ARMOR_PIECE *query_worn()
     return worn;
 }
 
-string query_look(varargs object LIB_THING observer)
+string describe(varargs object LIB_THING observer)
 {
     string name;
     

@@ -32,13 +32,13 @@ string query_armor_type()
     return armor_type_;
 }
 
-string query_look(varargs object LIB_THING observer)
+string describe(varargs object LIB_THING observer)
 {
-    string look;
+    string description;
 
-    look = ::query_look(observer);
-    if (look) {
-        return look;
+    description = ::describe(observer);
+    if (description) {
+        return description;
     }
 
     switch (armor_type_) {

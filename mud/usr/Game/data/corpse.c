@@ -22,7 +22,8 @@ static void create(object LIB_RACE race)
     race_name = lower_case(race->query_name());
     add_noun(race_name);
     add_noun("corpse");
-    set_look(indefinite_article(race_name) + " " + race_name + " corpse");
+    set_description(indefinite_article(race_name) + " " + race_name
+                    + " corpse");
 }
 
 object LIB_RACE query_race()

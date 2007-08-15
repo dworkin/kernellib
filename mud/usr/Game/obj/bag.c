@@ -6,5 +6,5 @@ static void create()
 {
     ::create();
     add_noun("bag");
-    set_look("a bag");
+    set_description("a bag");
 }

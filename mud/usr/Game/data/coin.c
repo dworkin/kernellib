@@ -1,4 +1,5 @@
 # include <game/language.h>
+# include <game/message.h>
 # include <game/thing.h>
 # include <system/assert.h>
 
@@ -22,7 +23,7 @@ string query_material()
     return material_;
 }
 
-string query_look(varargs object LIB_THING observer)
+string describe(varargs object LIB_OBSERVER observer)
 {
     int count;
    

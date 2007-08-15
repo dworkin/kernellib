@@ -1,30 +1,26 @@
-# include <game/thing.h>
+# include <game/message.h>
 
-string look_;   /* brief look */
-string vlook_;  /* verbose look */
+string description_;
+string verbose_description_;
 
-static void create()
+static void create() { }
+
+static void set_description(string description)
 {
-    look_ = nil;
-    vlook_ = nil;
+    description_ = description;
 }
 
-static void set_look(string look)
+static void set_verbose_description(string verbose_description)
 {
-    look_ = look;
+    verbose_description_ = verbose_description;
 }
 
-string query_look(varargs object LIB_THING observer)
+string describe(varargs object LIB_OBSERVER observer)
 {
-    return look_;
+    return description_;
 }
 
-static void set_verbose_look(string vlook)
+string describe_verbose(varargs object LIB_OBSERVER observer)
 {
-    vlook_ = vlook;
-}
-
-string query_verbose_look(varargs object LIB_THING observer)
-{
-    return vlook_;
+    return verbose_description_;
 }

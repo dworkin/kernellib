@@ -6,60 +6,63 @@
 private inherit UTIL_LANGUAGE;
 private inherit UTIL_STRING;
 
-static string indefinite_description(object LIB_THING obj,
+static string indefinite_description(object LIB_THING thing,
                                      varargs object LIB_THING observer)
 {
-    string desc;
+    string description;
 
-    desc = obj->query_look();
-    if (!desc) {
-        if (obj <- LIB_CREATURE) {
-            desc = "a creature";
-        } else if (obj <- LIB_ITEM) {
-            desc = "an item";
-        } else if (obj <- LIB_ROOM) {
-            desc = "a room";
+    description = thing->describe(observer);
+    if (!description) {
+        if (thing <- LIB_CREATURE) {
+            description = "a creature";
+        } else if (thing <- LIB_ITEM) {
+            description = "an item";
+        } else if (thing <- LIB_ROOM) {
+            description = "a room";
         } else {
-            desc = "a thing";
+            description = "a thing";
         }
     }
-    return desc;
+    return description;
 }
 
-static string definite_description(object LIB_THING obj,
+static string definite_description(object LIB_THING thing,
                                    varargs object LIB_THING observer)
 {
-    string desc;
+    string description;
 
-    desc = indefinite_description(obj, observer);
-    if (sscanf(desc, "a %s", desc) || sscanf(desc, "an %s", desc)) {
-        desc = "the " + desc;
+    description = indefinite_description(thing, observer);
+    if (sscanf(description, "a %s", description)
+        || sscanf(description, "an %s", description))
+    {
+        description = "the " + description;
     }
-    return desc;
+    return description;
 }
 
 static string describe_exits(object LIB_ROOM room)
 {
-    string *dirs;
+    string *exits;
 
-    dirs = room->query_exits();
-    switch (sizeof(dirs)) {
+    exits = room->query_exits();
+    switch (sizeof(exits)) {
     case 0:
         return "There are no obvious exits.";
 
     case 1:
-        return "The only obvious exit is " + dirs[0] + ".";
+        return "The only obvious exit is " + exits[0] + ".";
 
     default:
-        return "The obvious exits are " + list_strings(dirs) + ".";
+        return "The obvious exits are " + list_strings(exits) + ".";
     }
 }
 
 static object LIB_THING **split_creatures_and_items(object LIB_THING *things)
 {
     int i, size, j, k;
-    object LIB_CREATURE *creatures;
-    object LIB_ITEM *items;
+
+    object LIB_CREATURE  *creatures;
+    object LIB_ITEM      *items;
 
     size = sizeof(things);
     creatures = allocate(size);
@@ -78,22 +81,20 @@ static string *describe_each_thing(object LIB_THING *things,
                                    object LIB_THING observer)
 {
     int i, size;
-    string *descs;
+    string *descriptions;
 
     size = sizeof(things);
-    descs = allocate(size);
+    descriptions = allocate(size);
     for (i = 0; i < size; ++i) {
-        descs[i] = (things[i] == observer) ? "you"
-            : indefinite_description(things[i], observer);
+        descriptions[i] = indefinite_description(things[i], observer);
     }
-    return descs;
+    return descriptions;
 }
 
 static string list_things(object LIB_THING *things, object LIB_THING observer)
 {
     return sizeof(things)
-        ? list_strings(describe_each_thing(things, observer))
-        : "nothing";
+        ? list_strings(describe_each_thing(things, observer)) : "nothing";
 }
 
 static string describe_creature_inventory(object LIB_CREATURE creature,
@@ -132,15 +133,15 @@ static string describe_creature_inventory(object LIB_CREATURE creature,
     return implode(lists, " ");
 }
 
-static string describe_container_inventory(object LIB_CONTAINER cont,
+static string describe_container_inventory(object LIB_CONTAINER container,
                                            object LIB_THING observer)
 {
-    object LIB_THING *inv;
+    object LIB_ITEM *items;
 
-    inv = inventory(cont);
-    if (sizeof(inv)) {
+    items = inventory(container);
+    if (sizeof(items)) {
         return "It contains "
-            + list_strings(describe_each_thing(inv, observer)) + ".";
+            + list_strings(describe_each_thing(items, observer)) + ".";
     } else {
         return "It is empty.";
     }
@@ -218,20 +219,20 @@ static string describe_inventory(object LIB_THING thing,
 static string verbose_description(object LIB_THING thing,
                                   varargs object LIB_THING observer)
 {
-    string desc;
+    string description;
 
-    desc = thing->query_verbose_look();
-    if (!desc) {
-        desc = "You see nothing special.";
+    description = thing->describe_verbose(observer);
+    if (!description) {
+        description = "You see nothing special.";
     }
     if (thing <- LIB_ROOM) {
-        desc += " " + describe_exits(thing);
+        description += " " + describe_exits(thing);
     }
     if (thing <- LIB_ROOM) {
-        desc = break_string(desc)
+        description = break_string(description)
             + indent_string(describe_inventory(thing, observer));
     } else if (thing <- LIB_CREATURE || thing <- LIB_CONTAINER) {
-        desc += " " + describe_inventory(thing, observer);
+        description += " " + describe_inventory(thing, observer);
     }
-    return desc;
+    return description;
 }

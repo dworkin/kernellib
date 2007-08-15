@@ -6,6 +6,6 @@ static void create()
 {
     ::create();
     add_noun("crypt");
-    set_look("a crypt");
+    set_description("a crypt");
     set_exit("up", "temple");
 }
