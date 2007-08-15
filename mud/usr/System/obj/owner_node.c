@@ -209,7 +209,7 @@ object find(int oid)
             object   environment;
 
             index = (oid & OID_INDEX_MASK) >> OID_INDEX_OFFSET;
-            bucket = middleweight_oids_[(index - 1) / DATA_BUCKET_SIZE];
+            bucket = middleweight_oids_[(index - 1) / MWO_BUCKET_SIZE];
             if (!bucket) {
                 return nil;
             }
@@ -317,9 +317,9 @@ int add_mwo(object environment)
         index = next_index_++;
         oid = OID_MIDDLEWEIGHT | (uid_ << OID_OWNER_OFFSET)
             | (index << OID_INDEX_OFFSET);
-        bucket = middleweight_oids_[(index - 1) / DATA_BUCKET_SIZE];
+        bucket = middleweight_oids_[(index - 1) / MWO_BUCKET_SIZE];
         if (!bucket) {
-            bucket = middleweight_oids_[(index - 1) / DATA_BUCKET_SIZE]
+            bucket = middleweight_oids_[(index - 1) / MWO_BUCKET_SIZE]
                 = ([ ]);
         }
         bucket[oid] = environment;
@@ -338,10 +338,10 @@ void move_mwo(int oid, object environment)
         mapping  bucket;
         
         index = (oid & OID_INDEX_MASK) >> OID_INDEX_OFFSET;
-        bucket = middleweight_oids_[(index - 1) / DATA_BUCKET_SIZE];
+        bucket = middleweight_oids_[(index - 1) / MWO_BUCKET_SIZE];
         bucket[oid] = environment;
         if (!environment && !map_sizeof(bucket)) {
-            middleweight_oids_[(index - 1) / DATA_BUCKET_SIZE] = nil;
+            middleweight_oids_[(index - 1) / MWO_BUCKET_SIZE] = nil;
         }
     }
 }
@@ -425,7 +425,7 @@ static void mwo_callout(int oid, string function, mixed *arguments)
     object   environment, obj;
 
     index = (oid & OID_INDEX_MASK) >> OID_INDEX_OFFSET;
-    bucket = middleweight_oids_[(index - 1) / DATA_BUCKET_SIZE];
+    bucket = middleweight_oids_[(index - 1) / MWO_BUCKET_SIZE];
     if (!bucket) {
         return;
     }

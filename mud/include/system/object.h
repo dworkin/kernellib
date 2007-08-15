@@ -1,6 +1,6 @@
-# define OBJECTD     "/usr/System/sys/objectd"             /* object manager */
-# define OWNER_NODE  "/usr/System/obj/owner_node"     /* per-owner mgmt node */
-# define API_OBJECT  "/usr/System/lib/api/object"   /* object management API */
+# define OBJECTD     "/usr/System/sys/objectd"     /* object manager */
+# define OWNER_NODE  "/usr/System/obj/owner_node"  /* per-owner mgmt node */
+# define API_OBJECT  "/usr/System/lib/api/object"  /* object management API */
 
 # define OID_CATEGORY_MASK  0xc0000000
 # define OID_MIDDLEWEIGHT   0x80000000
@@ -16,4 +16,4 @@
 # define PDB_NEXT      2  /* ([ int parent_oid: int next_oid ]) */
 # define PDB_CHILDREN  3  /* clone count or OID of first child */
 
-# define DATA_BUCKET_SIZE  1024
+# define MWO_BUCKET_SIZE  1024
