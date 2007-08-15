@@ -2,7 +2,6 @@
 # include <game/description.h>
 # include <game/message.h>
 # include <game/thing.h>
-# include <system/assert.h>
 
 inherit LIB_ACTION;
 inherit UTIL_DESCRIPTION;
@@ -13,8 +12,6 @@ int cont_;
 
 static void create(object LIB_ITEM item, object LIB_CONTAINER cont)
 {
-    ASSERT_ARG_1(item);
-    ASSERT_ARG_2(cont);
     item_ = object_number(item);
     cont_ = object_number(cont);
 }

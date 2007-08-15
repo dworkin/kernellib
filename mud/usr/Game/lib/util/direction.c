@@ -3,7 +3,7 @@
 
 static int is_horizontal_direction(string str)
 {
-    ASSERT_ARG(str);
+    ASSERT_ARGUMENT(str);
     switch (str) {
     case EAST_DIRECTION:
     case NORTH_DIRECTION:
@@ -22,19 +22,19 @@ static int is_horizontal_direction(string str)
 
 static int is_vertical_direction(string str)
 {
-    ASSERT_ARG(str);
+    ASSERT_ARGUMENT(str);
     return str == DOWN_DIRECTION || str == UP_DIRECTION;
 }
 
 static int is_direction(string str)
 {
-    ASSERT_ARG(str);
+    ASSERT_ARGUMENT(str);
     return is_horizontal_direction(str) || is_vertical_direction(str);
 }
 
 static string reverse_direction(string str)
 {
-    ASSERT_ARG(str && is_direction(str));
+    ASSERT_ARGUMENT(str && is_direction(str));
     switch (str) {
     case EAST_DIRECTION:       return WEST_DIRECTION;
     case NORTH_DIRECTION:      return SOUTH_DIRECTION;

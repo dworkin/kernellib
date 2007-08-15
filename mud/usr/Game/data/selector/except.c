@@ -1,6 +1,5 @@
 # include <game/selector.h>
 # include <game/thing.h>
-# include <system/assert.h>
 
 inherit LIB_SELECTOR;
 
@@ -9,8 +8,6 @@ object LIB_SELECTOR excl_;
 
 static void create(object LIB_SELECTOR incl, object LIB_SELECTOR excl)
 {
-    ASSERT_ARG_1(incl);
-    ASSERT_ARG_2(excl);
     incl_ = incl;
     excl_ = excl;
 }

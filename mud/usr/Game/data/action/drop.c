@@ -3,7 +3,6 @@
 # include <game/message.h>
 # include <game/selector.h>
 # include <game/thing.h>
-# include <system/assert.h>
 
 inherit LIB_ACTION;
 inherit UTIL_DESCRIPTION;
@@ -13,7 +12,6 @@ int item_;
 
 static void create(object LIB_ITEM item)
 {
-    ASSERT_ARG(item);
     item_ = object_number(item);
 }
 
@@ -21,8 +19,6 @@ void perform(object LIB_CREATURE actor)
 {
     object LIB_ROOM room;
     object LIB_ITEM item;
-
-    ASSERT_ARG(actor);
 
     room = environment(actor);
     if (!room) {

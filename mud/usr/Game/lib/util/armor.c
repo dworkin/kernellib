@@ -3,7 +3,7 @@
 
 static int is_armor_type(string str)
 {
-    ASSERT_ARG(str);
+    ASSERT_ARGUMENT(str);
     switch (str) {
     case BODY_ARMOR_PIECE:
     case BOOT_PIECE:

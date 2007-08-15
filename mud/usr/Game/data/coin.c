@@ -9,8 +9,8 @@ string material_;
 
 static void create(string material, varargs int count)
 {
-    ASSERT_ARG_1(material);
-    ASSERT_ARG_2(count >= 0);
+    ASSERT_ARGUMENT_1(material);
+    ASSERT_ARGUMENT_2(count >= 0);
     ::create(count ? count : 1);
     material_ = material;
     add_noun(material);

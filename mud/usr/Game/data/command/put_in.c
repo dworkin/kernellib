@@ -4,7 +4,6 @@
 # include <game/message.h>
 # include <game/selector.h>
 # include <game/thing.h>
-# include <system/assert.h>
 
 inherit LIB_COMMAND;
 inherit UTIL_DESCRIPTION;
@@ -15,8 +14,6 @@ object LIB_SELECTOR cont_;
 
 static void create(object LIB_SELECTOR item, object LIB_SELECTOR cont)
 {
-    ASSERT_ARG_1(item);
-    ASSERT_ARG_2(cont);
     item_ = item;
     cont_ = cont;
 }
@@ -29,8 +26,6 @@ void perform(object LIB_CREATURE actor)
     object LIB_CONTAINER   cont;
 
     int i, size;
-
-    ASSERT_ARG(actor);
 
     room = environment(actor);
     conts = cont_->select(room ? inventory(actor) + inventory(room)

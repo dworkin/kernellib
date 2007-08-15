@@ -14,7 +14,7 @@ string armor_type_;
 
 static void set_armor_type(string armor_type)
 {
-    ASSERT_ARG(armor_type && is_armor_type(armor_type));
+    ASSERT_ARGUMENT(armor_type && is_armor_type(armor_type));
     armor_type_ = armor_type;
     add_noun(armor_type);
 }

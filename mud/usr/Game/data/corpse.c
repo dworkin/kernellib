@@ -16,7 +16,7 @@ static void create(object LIB_RACE race)
 {
     string race_name;
 
-    ASSERT_ARG(race);
+    ASSERT_ARGUMENT(race);
     ::create();
     race_ = race;
     race_name = lower_case(race->query_name());

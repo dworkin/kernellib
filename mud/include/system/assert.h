@@ -1,18 +1,24 @@
 # include <config.h>
 
-# define ASSERT_MESSAGE(expr, message) \
-    if (!(expr)) error(__FILE__ + ", " + __LINE__ + ": " + message)
+# define ASSERT_MESSAGE(expression, message) \
+    if (!(expression)) error(__FILE__ + ", " + __LINE__ + ": " + message)
 
-# define ASSERT(expr)  ASSERT_MESSAGE(expr, "Assertion failed: " + #expr)
-# define ASSERT_ACCESS(expr)    ASSERT_MESSAGE(expr, "Access denied")
-# define ASSERT_ARG(expr)       ASSERT_MESSAGE(expr, "Bad argument")
-# define ASSERT_ARG_N(n, expr)  ASSERT_MESSAGE(expr, "Bad argument " + #n)
-# define ASSERT_ARG_1(expr)     ASSERT_ARG_N(1, expr)
-# define ASSERT_ARG_2(expr)     ASSERT_ARG_N(2, expr)
-# define ASSERT_ARG_3(expr)     ASSERT_ARG_N(3, expr)
+# define ASSERT(expression) \
+    ASSERT_MESSAGE(expression, "Assertion failed: " + #expression)
+# define ASSERT_ACCESS(expression) \
+    ASSERT_MESSAGE(expression, "Access denied")
+# define ASSERT_ARGUMENT(expression) \
+    ASSERT_MESSAGE(expression, "Bad argument")
+# define ASSERT_ARGUMENT_N(n, expression) \
+    ASSERT_MESSAGE(expression, "Bad argument " + #n)
+
+# define ASSERT_ARGUMENT_1(expression)  ASSERT_ARGUMENT_N(1, expression)
+# define ASSERT_ARGUMENT_2(expression)  ASSERT_ARGUMENT_N(2, expression)
+# define ASSERT_ARGUMENT_3(expression)  ASSERT_ARGUMENT_N(3, expression)
 
 # ifdef DEBUG
-#   define DEBUG_ASSERT(expr)  ASSERT(expr)
+#   define DEBUG_ASSERT(expression) \
+      ASSERT_MESSAGE(expression, "Debug assertion failed: " + #expression)
 # else
-#   define DEBUG_ASSERT(expr)
+#   define DEBUG_ASSERT(expression)
 # endif

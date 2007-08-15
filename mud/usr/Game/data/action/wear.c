@@ -4,7 +4,6 @@
 # include <game/message.h>
 # include <game/selector.h>
 # include <game/thing.h>
-# include <system/assert.h>
 
 inherit LIB_ACTION;
 inherit UTIL_DESCRIPTION;
@@ -14,15 +13,12 @@ int armor_piece_;
 
 static void create(object LIB_ARMOR_PIECE armor_piece)
 {
-    ASSERT_ARG(armor_piece);
     armor_piece_ = object_number(armor_piece);
 }
 
 void perform(object LIB_CREATURE actor)
 {
     object LIB_ARMOR_PIECE armor_piece;
-
-    ASSERT_ARG(actor);
 
     armor_piece = find_object(armor_piece_);
     if (!armor_piece || (object LIB_THING) environment(armor_piece) != actor) {

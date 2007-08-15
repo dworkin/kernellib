@@ -239,7 +239,7 @@ nomask object _Q_environment()
  */
 static int object_number(object obj)
 {
-    ASSERT_ARG(obj);
+    ASSERT_ARGUMENT(obj);
     return obj <- SYSTEM_AUTO ? obj->_Q_oid() : _object_number(obj);
 }
 
@@ -263,7 +263,7 @@ static object find_object(mixed name)
         break;
 
     default:
-        ASSERT_ARG(FALSE);
+        ASSERT_ARGUMENT(FALSE);
     }
     if (!obj) {
         return nil;
@@ -281,7 +281,7 @@ static object find_object(mixed name)
  */
 static void message(string message)
 {
-    ASSERT_ARG(message);
+    ASSERT_ARGUMENT(message);
     ::find_object(DRIVER)->message(previous_program() + ": " + message + "\n");
 }
 
@@ -291,7 +291,7 @@ static void message(string message)
  */
 static atomic object clone_object(string master, mixed arguments...)
 {
-    ASSERT_ARG_1(master);
+    ASSERT_ARGUMENT_1(master);
 
     /* forward arguments to create() via TLS */
     if (sizeof(arguments)) {
@@ -317,8 +317,8 @@ static atomic object new_object(mixed master, mixed arguments...)
         }
     } else {
         /* copy an existant light-weight object */
-        ASSERT_ARG_1(typeof(master) == T_OBJECT
-                     && sscanf(object_name(master), "%*s#-1") == 1);
+        ASSERT_ARGUMENT_1(typeof(master) == T_OBJECT
+                          && sscanf(object_name(master), "%*s#-1") == 1);
 
         /* cannot pass arguments when copying LWO */
         ASSERT_MESSAGE(!sizeof(arguments), "Cannot pass arguments");
@@ -356,7 +356,7 @@ static mixed *status(varargs mixed obj)
         return status;
 
     default:
-        ASSERT_ARG(FALSE);
+        ASSERT_ARGUMENT(FALSE);
     }
 }
 
@@ -375,7 +375,8 @@ static atomic void move_object(object destination)
     object  this;
     int     promoted;
 
-    ASSERT_ARG(!destination || !sscanf(object_name(destination), "%*s#-1"));
+    ASSERT_ARGUMENT(!destination
+                    || !sscanf(object_name(destination), "%*s#-1"));
     this = this_object();
     if (destination
         && (!destination->allow_move(this) || !destination || !this))
@@ -421,7 +422,7 @@ static atomic void move_object(object destination)
  */
 static object environment(object obj)
 {
-    ASSERT_ARG(obj);
+    ASSERT_ARGUMENT(obj);
     return obj <- SYSTEM_AUTO ? obj->_Q_environment() : nil;
 }
 
@@ -431,7 +432,7 @@ static object environment(object obj)
  */
 static object *inventory(object obj)
 {
-    ASSERT_ARG(obj);
+    ASSERT_ARGUMENT(obj);
     return obj <- SYSTEM_AUTO ? obj->_Q_inventory() : ({ });
 }
 
@@ -444,7 +445,7 @@ static atomic object compile_object(string path, string source...)
     object   obj;
     mapping  undefined;
 
-    ASSERT_ARG_1(path);
+    ASSERT_ARGUMENT_1(path);
     obj = ::compile_object(path, source...);
     if (!obj) {
         return nil;
@@ -470,7 +471,7 @@ static mixed **get_dir(string path)
 {
     mixed **list;
 
-    ASSERT_ARG(path);
+    ASSERT_ARGUMENT(path);
     path = normalize_path(path);
     list = ::get_dir(path);
 
@@ -498,7 +499,7 @@ static mixed *file_info(string path)
 {
     mixed *info;
 
-    ASSERT_ARG(path);
+    ASSERT_ARGUMENT(path);
     info = ::file_info(path);
     if (typeof(info[2]) == T_OBJECT) {
         /* hide clonable and light-weight master objects */
@@ -520,11 +521,11 @@ static int call_out(string function, mixed delay, mixed arguments...)
 {
     string program;
 
-    ASSERT_ARG_1(function);
+    ASSERT_ARGUMENT_1(function);
     program = ::function_object(function, this_object());
-    ASSERT_ARG_1(program
-                 && (creator(program) != "System" || function == "create"));
-    ASSERT_ARG_2(typeof(delay) == T_INT || typeof(delay) == T_FLOAT);
+    ASSERT_ARGUMENT_1(program && (creator(program) != "System"
+                                  || function == "create"));
+    ASSERT_ARGUMENT_2(typeof(delay) == T_INT || typeof(delay) == T_FLOAT);
     normalize_mwo();
     if ((oid_ & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT) {
         return ::find_object(OBJECTD)->add_mwo_callout(oid_, function, delay,

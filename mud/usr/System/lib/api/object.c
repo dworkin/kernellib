@@ -10,6 +10,6 @@ static void create()
 
 static mapping get_program_dir(string path)
 {
-    ASSERT_ARG(path);
+    ASSERT_ARGUMENT(path);
     return objectd_->get_program_dir(path);
 }

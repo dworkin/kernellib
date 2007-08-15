@@ -3,7 +3,7 @@
 
 static int is_gender(string str)
 {
-    ASSERT_ARG(str);
+    ASSERT_ARGUMENT(str);
     switch (str) {
     case FEMALE_GENDER:
     case MALE_GENDER:

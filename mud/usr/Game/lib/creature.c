@@ -3,6 +3,7 @@
 # include <game/armor.h>
 # include <game/attribute.h>
 # include <game/description.h>
+# include <game/gender.h>
 # include <game/guild.h>
 # include <game/language.h>
 # include <game/message.h>
@@ -113,7 +114,7 @@ int has_plural_noun(string str)
 
 void set_gender(string gender)
 {
-    ASSERT_ARG(gender == "male" || gender == "female");
+    ASSERT_ARGUMENT(gender == MALE_GENDER || gender == FEMALE_GENDER);
     gender_ = gender;
 }
 
@@ -124,7 +125,7 @@ string query_gender()
 
 void set_race(object LIB_RACE race)
 {
-    ASSERT_ARG(race);
+    ASSERT_ARGUMENT(race);
     race_ = race;
     update_attributes();
 }
@@ -173,13 +174,13 @@ static int *to_numbers(object *objs)
 
 void add_wielded(object LIB_WEAPON weapon)
 {
-    ASSERT_ARG(weapon);
+    ASSERT_ARGUMENT(weapon);
     wielded_ |= ({ object_number(weapon) });
 }
 
 void remove_wielded(object LIB_WEAPON weapon)
 {
-    ASSERT_ARG(weapon);
+    ASSERT_ARGUMENT(weapon);
     wielded_ -= ({ object_number(weapon) });
 }
 
@@ -196,13 +197,13 @@ object LIB_WEAPON *query_wielded()
 
 void add_worn(object LIB_ARMOR_PIECE armor_piece)
 {
-    ASSERT_ARG(armor_piece);
+    ASSERT_ARGUMENT(armor_piece);
     worn_ |= ({ object_number(armor_piece) });
 }
 
 void remove_worn(object LIB_ARMOR_PIECE armor_piece)
 {
-    ASSERT_ARG(armor_piece);
+    ASSERT_ARGUMENT(armor_piece);
     worn_ -= ({ object_number(armor_piece) });
 }
 
@@ -251,7 +252,7 @@ void observe(string mess)
 
 void add_action(object LIB_ACTION action)
 {
-    ASSERT_ARG(action);
+    ASSERT_ARGUMENT(action);
     call_out("act", 0, action);
 }
 

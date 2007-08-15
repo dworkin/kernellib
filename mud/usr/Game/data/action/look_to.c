@@ -4,7 +4,6 @@
 # include <game/message.h>
 # include <game/selector.h>
 # include <game/thing.h>
-# include <system/assert.h>
 
 inherit LIB_ACTION;
 inherit UTIL_DESCRIPTION;
@@ -15,7 +14,6 @@ string direction_;
 
 static void create(string direction)
 {
-    ASSERT_ARG(direction && is_direction(direction));
     direction_ = direction;
 }
 

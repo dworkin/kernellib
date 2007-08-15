@@ -5,8 +5,8 @@ private inherit UTIL_GENDER;
 
 static string format_human_int(int i)
 {
-    string str;
-    int minus, j;
+    string  str;
+    int     minus, j;
 
     str = (string) i;
     minus = sscanf(str, "-%s", str);
@@ -20,6 +20,7 @@ static mixed parse_human_int(string str)
 {
     int minus, len, i;
 
+    ASSERT_ARGUMENT(str);
     minus = sscanf(str, "-%s", str);
     len = strlen(str);
     if (!len || str[0] == ' ') {
@@ -39,7 +40,7 @@ static mixed parse_human_int(string str)
 
 static string format_count(int count)
 {
-    ASSERT_ARG(count >= 1);
+    ASSERT_ARGUMENT(count >= 1);
     switch (count) {
     case  1: return "one";
     case  2: return "two";
@@ -60,6 +61,7 @@ static string format_count(int count)
 static mixed parse_count(string str) {
     mixed count;
 
+    ASSERT_ARGUMENT(str);
     switch (str) {
     case "one":     return  1;
     case "two":     return  2;
@@ -80,7 +82,7 @@ static mixed parse_count(string str) {
 
 static string ordinal_suffix(int i)
 {
-    ASSERT_ARG(i >= 1);
+    ASSERT_ARGUMENT(i >= 1);
     switch (i % 100) {
     case 11 .. 19:
         return "th";
@@ -97,7 +99,7 @@ static string ordinal_suffix(int i)
 
 static string format_ordinal(int ordinal)
 {
-    ASSERT_ARG(ordinal >= 1);
+    ASSERT_ARGUMENT(ordinal >= 1);
     switch (ordinal) {
     case  1: return "first";
     case  2: return "second";
@@ -121,6 +123,7 @@ static mixed parse_ordinal(string str)
     int    len;
     mixed  ordinal;
 
+    ASSERT_ARGUMENT(str);
     switch (str) {
     case "first":     return  1;
     case "second":    return  2;
@@ -149,6 +152,7 @@ static mixed parse_ordinal(string str)
 
 static string indefinite_article(string str)
 {
+    ASSERT_ARGUMENT(str);
     if (!strlen(str)) {
         return "a";
     }
@@ -166,6 +170,7 @@ static string list_strings(string *arr)
 {
     int size;
 
+    ASSERT_ARGUMENT(arr);
     size = sizeof(arr);
     switch (size) {
     case 0:
@@ -184,7 +189,7 @@ static string list_strings(string *arr)
 
 static string nominative_pronoun(string gender)
 {
-    ASSERT_ARG(gender && is_gender(gender));
+    ASSERT_ARGUMENT(gender && is_gender(gender));
     switch (gender) {
     case FEMALE_GENDER:  return "she";
     case MALE_GENDER:    return "he";
@@ -194,7 +199,7 @@ static string nominative_pronoun(string gender)
 
 static string accusative_pronoun(string gender)
 {
-    ASSERT_ARG(gender && is_gender(gender));
+    ASSERT_ARGUMENT(gender && is_gender(gender));
     switch (gender) {
     case FEMALE_GENDER:  return "her";
     case MALE_GENDER:    return "him";
@@ -204,7 +209,7 @@ static string accusative_pronoun(string gender)
 
 static string reflective_pronoun(string gender)
 {
-    ASSERT_ARG(gender && is_gender(gender));
+    ASSERT_ARGUMENT(gender && is_gender(gender));
     switch (gender) {
     case FEMALE_GENDER:  return "herself";
     case MALE_GENDER:    return "himself";
@@ -214,7 +219,7 @@ static string reflective_pronoun(string gender)
 
 static string possessive_pronoun(string gender)
 {
-    ASSERT_ARG(gender && is_gender(gender));
+    ASSERT_ARGUMENT(gender && is_gender(gender));
     switch (gender) {
     case FEMALE_GENDER:  return "her";
     case MALE_GENDER:    return "his";
@@ -224,5 +229,6 @@ static string possessive_pronoun(string gender)
 
 static string plural_form(string str)
 {
+    ASSERT_ARGUMENT(str);
     return str + "s";
 }

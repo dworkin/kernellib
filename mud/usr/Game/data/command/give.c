@@ -4,7 +4,6 @@
 # include <game/message.h>
 # include <game/selector.h>
 # include <game/thing.h>
-# include <system/assert.h>
 
 inherit LIB_COMMAND;
 inherit UTIL_DESCRIPTION;
@@ -15,8 +14,6 @@ object LIB_SELECTOR creature_;
 
 static void create(object LIB_SELECTOR item, object LIB_SELECTOR creature)
 {
-    ASSERT_ARG_1(item);
-    ASSERT_ARG_2(creature);
     item_ = item;
     creature_ = creature;
 }

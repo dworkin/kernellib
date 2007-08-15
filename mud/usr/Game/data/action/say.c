@@ -5,7 +5,6 @@
 # include <game/selector.h>
 # include <game/string.h>
 # include <game/thing.h>
-# include <system/assert.h>
 
 inherit LIB_ACTION;
 inherit UTIL_DESCRIPTION;
@@ -16,15 +15,12 @@ string message_;
 
 static void create(string message)
 {
-    ASSERT_ARG(message);
     message_ = capitalize(message);
 }
 
 void perform(object LIB_CREATURE actor)
 {
     object LIB_ROOM room;
-
-    ASSERT_ARG(actor);
 
     room = environment(actor);
     if (!room) {

@@ -3,7 +3,6 @@
 # include <game/message.h>
 # include <game/selector.h>
 # include <game/thing.h>
-# include <system/assert.h>
 
 inherit LIB_ACTION;
 inherit UTIL_DESCRIPTION;
@@ -13,7 +12,6 @@ int obj_;
 
 static void create(object LIB_ITEM obj)
 {
-    ASSERT_ARG(obj);
     obj_ = object_number(obj);
 }
 
