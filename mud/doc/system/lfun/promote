@@ -1,0 +1,17 @@
+NAME
+        promote - promote to middle-weight object
+
+SYNOPSIS
+        void promote()
+
+DESCRIPTION
+        This function is called in a light-weight object when it is promoted to
+        a middle-weight object. The promotion occurs when the light-weight
+        object is moved into a persistent environment using the move_object()
+        function.
+
+        Since object movement is atomic, objects can raise an error in
+        promote() to undo their promotion.
+
+SEE ALSO
+        efun/move_object
