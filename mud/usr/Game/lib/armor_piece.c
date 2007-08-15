@@ -23,7 +23,7 @@ static void create()
 {
     item::create();
     aff::create();
-    set_armor_type("armor");
+    set_armor_type(BODY_ARMOR_PIECE);
 }
 
 string query_armor_type()
@@ -42,8 +42,8 @@ string query_look(varargs object LIB_THING observer)
     }
 
     switch (armor_type_) {
-    case "boot":
-    case "glove":
+    case BOOT_PIECE:
+    case GLOVE_PIECE:
         return "a pair of " + armor_type_ + "s";
 
     default:
