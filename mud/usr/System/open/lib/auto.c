@@ -10,6 +10,16 @@ private object   environment_;  /* environment */
 private mapping  inventory_;    /* ([ int oid: object obj ]) */
 
 /*
+ * NAME:        message()
+ * DESCRIPTION: write a message to the console
+ */
+static void message(string message)
+{
+    ASSERT_ARGUMENT(message);
+    ::find_object(DRIVER)->message(previous_program() + ": " + message + "\n");
+}
+
+/*
  * NAME:        creator()
  * DESCRIPTION: get creator of file
  */
@@ -96,23 +106,57 @@ private int _object_number(object obj)
 private void normalize_mwo()
 {
     if ((oid_ & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT
-        && (!environment_ || environment_->_F_find(oid_) != this_object()))
+        && (!environment_
+            || environment_->_F_find_by_number(oid_) != this_object()))
     {
-        /* degrade to light-weight object */
+        /* duplicated middle-weight object: demote to light-weight */
         oid_ = 0;
         environment_ = nil;
     }
 }
 
 /*
+ * NAME:        _move_object()
+ * DESCRIPTION: move object to destination, returning true on promotion
+ */
+private int _move_object(object destination)
+{
+    int promoted;
+
+    if (environment_) {
+        environment_->_F_leave(oid_);
+    }
+    environment_ = destination;
+    promoted = FALSE;
+    if ((oid_ & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT) {
+        if (environment_) {
+            /* move middle-weight object */
+            ::find_object(OBJECTD)->move_mwo(oid_, environment_);
+        } else {
+            /* demote middle-weight object */
+            ::find_object(OBJECTD)->demote_mwo(oid_);
+        }
+    } else if (!oid_ && environment_) {
+        /* promote to middle-weight object */
+        promoted = TRUE;
+        oid_ = ::find_object(OBJECTD)->promote_mwo(query_owner(),
+                                                   environment_);
+    }
+    if (environment_) {
+        environment_->_F_enter(oid_, this_object());
+    }
+    return promoted;
+}
+
+/*
  * NAME:        create()
- * DESCRIPTION: dummy initialization function
+ * DESCRIPTION: initialize object
  */
 static void create(mixed arguments...) { }
 
 /*
  * NAME:        _F_system_create()
- * DESCRIPTION: system creator function
+ * DESCRIPTION: system initialization function
  */
 nomask int _F_system_create(varargs int clone)
 {
@@ -161,8 +205,29 @@ nomask int _F_system_create(varargs int clone)
 }
 
 /*
+ * NAME:        _F_system_destruct()
+ * DESCRIPTION: prepare object for destruction
+ */
+nomask void _F_system_destruct()
+{
+    if (previous_program() == OBJECTD && inventory_) {
+        object  *inventory;
+        int      i, size;
+
+        inventory = map_values(inventory_);
+        size = sizeof(inventory);
+        for (i = 0; i < size; ++i) {
+            if (sscanf(object_name(inventory[i]), "%*s#-1")) {
+                /* demote middle-weight object */
+                inventory[i]->_F_move(nil);
+            }
+        }
+    }
+}
+
+/*
  * NAME:        _Q_oid()
- * DESCRIPTION: return the object number for this object
+ * DESCRIPTION: return object number
  */
 nomask int _Q_oid()
 {
@@ -173,8 +238,19 @@ nomask int _Q_oid()
 }
 
 /*
+ * NAME:        _F_move()
+ * DESCRIPTION: move object to destination
+ */
+nomask void _F_move(object destination)
+{
+    if (previous_program() == SYSTEM_AUTO) {
+        _move_object(destination);
+    }
+}
+
+/*
  * NAME:        _F_enter()
- * DESCRIPTION: add an object to the inventory of this object
+ * DESCRIPTION: add object to inventory
  */
 nomask void _F_enter(int oid, object obj)
 {
@@ -188,7 +264,7 @@ nomask void _F_enter(int oid, object obj)
 
 /*
  * NAME:        _F_leave()
- * DESCRIPTION: remove an object from the inventory of this object
+ * DESCRIPTION: remove object from inventory
  */
 nomask void _F_leave(int oid)
 {
@@ -198,10 +274,10 @@ nomask void _F_leave(int oid)
 }
 
 /*
- * NAME:        _F_find()
+ * NAME:        _F_find_by_number()
  * DESCRIPTION: find an object by number in this environment
  */
-nomask object _F_find(int oid)
+nomask object _F_find_by_number(int oid)
 {
     if (previous_program() == SYSTEM_AUTO
         || previous_program() == OWNER_NODE)
@@ -217,7 +293,7 @@ nomask object _F_find(int oid)
 nomask object *_Q_inventory()
 {
     if (previous_program() == SYSTEM_AUTO) {
-        return inventory_ ? map_values(inventory_) : ({ });
+        return inventory_ ? map_values(inventory_) - ({ nil }) : ({ });
     }
 }
 
@@ -254,7 +330,7 @@ static object find_object(mixed name)
     switch (typeof(name)) {
     case T_INT:
         /* find object by number */
-        obj = ::find_object(OBJECTD)->find(name);
+        obj = ::find_object(OBJECTD)->find_by_number(name);
         break;
 
     case T_STRING:
@@ -273,16 +349,6 @@ static object find_object(mixed name)
     name = object_name(obj);
     return sscanf(name, "%*s#") || !sscanf(name, "%*s" + CLONABLE_SUBDIR)
         && !sscanf(name, "%*s" + LIGHTWEIGHT_SUBDIR) ? obj : nil;
-}
-
-/*
- * NAME:        message()
- * DESCRIPTION: write a message to the console
- */
-static void message(string message)
-{
-    ASSERT_ARGUMENT(message);
-    ::find_object(DRIVER)->message(previous_program() + ": " + message + "\n");
 }
 
 /*
@@ -362,7 +428,7 @@ static mixed *status(varargs mixed obj)
 
 /*
  * NAME:        promote()
- * DESCRIPTION: dummy promotion function for middle-weight objects
+ * DESCRIPTION: called on promotion to middle-weight object
  */
 static void promote() { }
 
@@ -372,8 +438,7 @@ static void promote() { }
  */
 static atomic void move_object(object destination)
 {
-    object  this;
-    int     promoted;
+    object this;
 
     ASSERT_ARGUMENT(!destination
                     || !sscanf(object_name(destination), "%*s#-1"));
@@ -385,7 +450,8 @@ static atomic void move_object(object destination)
     }
 
     normalize_mwo();
-    if (oid_ && (oid_ & OID_CATEGORY_MASK) != OID_MIDDLEWEIGHT) {
+    if (oid_ && (oid_ & OID_CATEGORY_MASK) != OID_MIDDLEWEIGHT)
+    {
         object obj;
 
         for (obj = destination; obj; obj = obj->_Q_environment()) {
@@ -394,24 +460,8 @@ static atomic void move_object(object destination)
             }
         }
     }
-
-    if (environment_) {
-        environment_->_F_leave(oid_);
-    }
-    environment_ = destination;
-    if ((oid_ & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT) {
-        /* move middle-weight object */
-        promoted = FALSE;
-        ::find_object(OBJECTD)->move_mwo(oid_, environment_);
-    } else if (!oid_ && environment_) {
-        /* promote light-weight object */
-        promoted = TRUE;
-        oid_ = ::find_object(OBJECTD)->add_mwo(query_owner(), environment_);
-    }
-    if (environment_) {
-        environment_->_F_enter(oid_, this_object());
-    }
-    if (promoted) {
+    
+    if (_move_object(destination)) {
         promote();
     }
 }

@@ -197,10 +197,10 @@ void destruct(object obj)
 }
 
 /*
- * NAME:        find()
- * DESCRIPTION: find a persistent or middle-weight object by number
+ * NAME:        find_by_number()
+ * DESCRIPTION: find an object by number
  */
-object find(int oid)
+object find_by_number(int oid)
 {
     if (previous_object() == objectd_) {
         if ((oid & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT) {
@@ -215,7 +215,7 @@ object find(int oid)
                 return nil;
             }
             environment = bucket[oid];
-            return environment ? environment->_F_find(oid) : nil;
+            return environment ? environment->_F_find_by_number(oid) : nil;
         } else {
             return persistent_oids_[oid];
         }
@@ -306,10 +306,10 @@ mapping get_program_dir(string path)
 }
 
 /*
- * NAME:        add_mwo()
- * DESCRIPTION: add a middle-weight object
+ * NAME:        promote_mwo()
+ * DESCRIPTION: promote a light-weight object to middle-weight
  */
-int add_mwo(object environment)
+int promote_mwo(object environment)
 {
     if (previous_object() == objectd_) {
         int      oid, index, bucket_index;
@@ -329,6 +329,26 @@ int add_mwo(object environment)
 }
 
 /*
+ * NAME:        demote_mwo()
+ * DESCRIPTION: demote a middle-weight object to light-weight
+ */
+void demote_mwo(int oid)
+{
+    if (previous_object() == objectd_) {
+        int      index, bucket_index;
+        mapping  bucket;
+        
+        index = (oid & OID_INDEX_MASK) >> OID_INDEX_OFFSET;
+        bucket_index = (index - 1) / MWO_BUCKET_SIZE;
+        bucket = middleweight_oids_[bucket_index];
+        bucket[oid] = nil;
+        if (!map_sizeof(bucket)) {
+            middleweight_oids_[bucket_index] = nil;
+        }
+    }
+}
+
+/*
  * NAME:        move_mwo()
  * DESCRIPTION: move a middle-weight object to another environment
  */
@@ -342,9 +362,6 @@ void move_mwo(int oid, object environment)
         bucket_index = (index - 1) / MWO_BUCKET_SIZE;
         bucket = middleweight_oids_[bucket_index];
         bucket[oid] = environment;
-        if (!environment && !map_sizeof(bucket)) {
-            middleweight_oids_[bucket_index] = nil;
-        }
     }
 }
 
@@ -436,7 +453,7 @@ static void mwo_callout(int oid, string function, mixed *arguments)
     if (!environment) {
         return;
     }
-    obj = environment->_F_find(oid);
+    obj = environment->_F_find_by_number(oid);
     if (obj) {
         obj->_F_mwo_callout(function, arguments);
     }

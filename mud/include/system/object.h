@@ -16,4 +16,4 @@
 # define PDB_NEXT      2  /* ([ int parent_oid: int next_oid ]) */
 # define PDB_CHAIN     3  /* object number of first child program */
 
-# define MWO_BUCKET_SIZE  1024
+# define MWO_BUCKET_SIZE  1000

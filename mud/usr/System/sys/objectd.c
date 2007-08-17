@@ -5,6 +5,7 @@
 # include <kernel/tls.h>
 # include <system/object.h>
 # include <system/system.h>
+# include <system/rsrc.h>
 # include <system/tls.h>
 
 private inherit rsrc  API_RSRC;
@@ -51,6 +52,20 @@ private mapping program_dir_map(string *directories)
 }
 
 /*
+ * NAME:        _demote_mwo()
+ * DESCRIPTION: demote a middle-weight object
+ */
+private void _demote_mwo(int oid) {
+    int     uid;
+    object  node;
+
+    uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
+    node = nodes_[uid];
+    node->demote_mwo(oid);
+    rsrc_incr(node->query_owner(), MWO_RESOURCE, nil, -1);
+}
+
+/*
  * NAME:        create()
  * DESCRIPTION: initialize object manager
  */
@@ -60,9 +75,10 @@ static void create()
     tls::create();
     driver_ = find_object(DRIVER);
     initd_ = find_object(INITD);
-    next_uid_ = 1; /* use 1-based UIDs */
+    next_uid_ = 1; /* use 1-based user IDs */
     uids_ = ([ ]);
     nodes_ = ([ ]);
+    set_rsrc(MWO_RESOURCE, -1, 0, 0);
 }
 
 /*
@@ -132,6 +148,9 @@ void destruct(string owner, object obj)
     if (previous_object() == driver_) {
         int uid;
 
+        if (obj <- SYSTEM_AUTO) {
+            obj->_F_system_destruct();
+        }
         uid = query_uid(owner);
         nodes_[uid]->destruct(obj);
     }
@@ -225,7 +244,7 @@ int forbid_inherit(string from, string path, int priv)
 
 /*
  * NAME:        store_create_arguments()
- * DESCRIPTION: TLS write proxy for the system auto object
+ * DESCRIPTION: store create() arguments in thread-local storage
  */
 void store_create_arguments(mixed *arguments)
 {
@@ -236,9 +255,9 @@ void store_create_arguments(mixed *arguments)
 
 /*
  * NAME:        fetch_create_arguments()
- * DESCRIPTION: TLS read proxy for the system auto object
+ * DESCRIPTION: fetch create() arguments from thread-local storage
  */
-mixed fetch_create_arguments()
+mixed *fetch_create_arguments()
 {
     if (previous_program() == SYSTEM_AUTO) {
         mixed *arguments;
@@ -291,24 +310,10 @@ mapping get_program_dir(string path)
 }
 
 /*
- * NAME:        add_mwo()
- * DESCRIPTION: add a middle-weight object
+ * NAME:        find_by_number()
+ * DESCRIPTION: find an object by number
  */
-int add_mwo(string owner, object environment)
-{
-    if (previous_program() == SYSTEM_AUTO) {
-        int uid;
-
-        uid = add_owner(owner);
-        return nodes_[uid]->add_mwo(environment);
-    }
-}
-
-/*
- * NAME:        find()
- * DESCRIPTION: find a persistent or middle-weight object
- */
-object find(int oid)
+object find_by_number(int oid)
 {
     if (previous_program() == SYSTEM_AUTO) {
         int     uid;
@@ -316,13 +321,41 @@ object find(int oid)
 
         uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
         node = nodes_[uid];
-        return node ? node->find(oid) : nil;
+        return node ? node->find_by_number(oid) : nil;
+    }
+}
+
+/*
+ * NAME:        promote_mwo()
+ * DESCRIPTION: promote a light-weight object to middle-weight
+ */
+int promote_mwo(string owner, object environment)
+{
+    if (previous_program() == SYSTEM_AUTO) {
+        int uid;
+
+        if (!rsrc_incr(owner, MWO_RESOURCE, nil, 1)) {
+            error("Too many middle-weight objects");
+        }
+        uid = add_owner(owner);
+        return nodes_[uid]->promote_mwo(environment);
+    }
+}
+
+/*
+ * NAME:        demote_mwo()
+ * DESCRIPTION: demote a middle-weight object to light-weight
+ */
+void demote_mwo(int oid)
+{
+    if (previous_program() == SYSTEM_AUTO) {
+        _demote_mwo(oid);
     }
 }
 
 /*
  * NAME:        move_mwo()
- * DESCRIPTION: move or remove a middle-weight object
+ * DESCRIPTION: move a middle-weight object
  */
 void move_mwo(int oid, object environment)
 {
