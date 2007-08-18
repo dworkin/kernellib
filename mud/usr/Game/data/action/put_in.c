@@ -10,10 +10,10 @@ inherit UTIL_MESSAGE;
 int item_;
 int container_;
 
-static void create(object LIB_ITEM item, object LIB_CONTAINER container)
+static void create(object LIB_ITEM *items, object LIB_CONTAINER *containers)
 {
-    item_ = object_number(item);
-    container_ = object_number(container);
+    item_ = object_number(items[0]);
+    container_ = object_number(containers[0]);
 }
 
 void perform(object LIB_CREATURE actor)

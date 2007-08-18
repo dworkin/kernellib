@@ -240,6 +240,43 @@ static object LIB_ACTION create_look_action(object LIB_CREATURE actor)
     return new_object(LOOK_ACTION);
 }
 
+static object LIB_ACTION
+create_put_in_action(object LIB_CREATURE actor,
+                     object LIB_SELECTOR items_selector,
+                     object LIB_SELECTOR containers_selector)
+{
+    object LIB_ITEM   *items;
+    object LIB_THING  *containers;
+    object LIB_ROOM    room;
+
+    int i, size;
+
+    room = environment(actor);
+    containers = containers_selector->select(room ? inventory(actor)
+                                             + inventory(room)
+                                             : inventory(actor));
+    size = sizeof(containers);
+    if (!size) {
+        tell_object(actor, "That is not here.");
+        return nil;
+    }
+    for (i = 0; i < size; ++i) {
+        if (!(containers[i] <- LIB_CONTAINER)) {
+            tell_object(actor, "You cannot put anything in "
+                        + definite_description(containers[i]));
+            return nil;
+        }
+    }
+
+    items = items_selector->select(inventory(actor));
+    size = sizeof(items);
+    if (!size) {
+        tell_object(actor, "You do not have that.");
+        return nil;
+    }
+    return new_object(PUT_IN_ACTION, items, containers);
+}
+
 static object LIB_ACTION create_say_action(object LIB_CREATURE actor,
                                            string message)
 {

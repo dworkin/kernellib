@@ -3,7 +3,6 @@
 
 # define GIVE_COMMAND       "/usr/Game/data/command/give"
 # define LOOK_AT_COMMAND    "/usr/Game/data/command/look_at"
-# define PUT_IN_COMMAND     "/usr/Game/data/command/put_in"
 # define RELEASE_COMMAND    "/usr/Game/data/command/release"
 # define REMOVE_COMMAND     "/usr/Game/data/command/remove"
 # define TAKE_FROM_COMMAND  "/usr/Game/data/command/take_from"
