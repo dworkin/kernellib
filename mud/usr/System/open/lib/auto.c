@@ -73,7 +73,8 @@ private void undefined_error(string name, mapping undefined)
 
 /*
  * NAME:        _object_number()
- * DESCRIPTION: return the object number of a persistent object
+ * DESCRIPTION: return the object number of a persistent object, or 0 if the
+ *              object is non-persistent
  */
 private int _object_number(object obj)
 {
@@ -101,7 +102,8 @@ private int _object_number(object obj)
 
 /*
  * NAME:        normalize_mwo()
- * DESCRIPTION: normalize middle-weight object
+ * DESCRIPTION: normalize a middle-weight object, silently demoting it to a
+ *              light-weight object if it is a duplicate
  */
 private void normalize_mwo()
 {
@@ -159,7 +161,7 @@ static void create(mixed arguments...) { }
 nomask int _F_system_create(varargs int clone)
 {
     if (previous_program() == AUTO) {
-        /* forbid undefined functions for non-inheritable objects */
+        /* non-inheritable objects cannot have undefined functions */
         if (!clone) {
             mapping undefined;
 
@@ -496,17 +498,18 @@ static atomic object compile_object(string path, string source...)
     ASSERT_ARGUMENT_1(path);
     obj = ::compile_object(path, source...);
     if (!obj) {
+        /* the kernel does not return inheritable objects */
         return nil;
     }
 
-    /* non-inheritable objects are not allowed to have undefined functions */
+    /* non-inheritable objects cannot have undefined functions */
     path = object_name(obj);
     undefined = status(obj)[O_UNDEFINED];
     if (undefined) {
         undefined_error(path, undefined);
     }
 
-    /* hide clonable and light-weight master objects */
+    /* do not return clonable or light-weight master objects */
     return sscanf(path, "%*s" + CLONABLE_SUBDIR)
         || sscanf(path, "%*s" + LIGHTWEIGHT_SUBDIR) ? nil : obj;
 }
@@ -523,7 +526,7 @@ static mixed **get_dir(string path)
     path = normalize_path(path);
     list = ::get_dir(path);
 
-    /* hide clonable and light-weight master objects */
+    /* do not return clonable or light-weight master objects */
     if (sscanf(path, "%*s" + CLONABLE_SUBDIR)
         || sscanf(path, "%*s" + LIGHTWEIGHT_SUBDIR))
     {
@@ -550,7 +553,7 @@ static mixed *file_info(string path)
     ASSERT_ARGUMENT(path);
     info = ::file_info(path);
     if (typeof(info[2]) == T_OBJECT) {
-        /* hide clonable and light-weight master objects */
+        /* do not return clonable or light-weight master objects */
         path = object_name(info[2]);
         if (sscanf(path, "%*s" + CLONABLE_SUBDIR)
             || sscanf(path, "%*s" + LIGHTWEIGHT_SUBDIR))
