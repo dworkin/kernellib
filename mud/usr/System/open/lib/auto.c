@@ -4,10 +4,23 @@
 # include <system/assert.h>
 # include <system/object.h>
 # include <system/system.h>
+# include <system/tls.h>
 
 private int      oid_;          /* object number */
 private object   environment_;  /* environment */
 private mapping  inventory_;    /* ([ int oid: object obj ]) */
+
+/*
+ * NAME:        create()
+ * DESCRIPTION: user initialization function
+ */
+static void create(mixed arguments...) { }
+
+/*
+ * NAME:        promote()
+ * DESCRIPTION: called on promotion to middle-weight object
+ */
+static void promote() { }
 
 /*
  * NAME:        message()
@@ -118,9 +131,9 @@ private void normalize_mwo()
 
 /*
  * NAME:        _move_object()
- * DESCRIPTION: move object to destination, returning true on promotion
+ * DESCRIPTION: move object to destination
  */
-private int _move_object(object destination)
+private void _move_object(object destination)
 {
     int promoted;
 
@@ -145,14 +158,11 @@ private int _move_object(object destination)
     if (environment_) {
         environment_->_F_enter(oid_, this_object());
     }
-    return promoted;
-}
 
-/*
- * NAME:        create()
- * DESCRIPTION: initialize object
- */
-static void create(mixed arguments...) { }
+    if (promoted) {
+        promote();
+    }
+}
 
 /*
  * NAME:        _F_system_create()
@@ -177,7 +187,8 @@ nomask int _F_system_create(varargs int clone)
         if (clone) {
             mixed *arguments;
 
-            arguments = ::find_object(OBJECTD)->fetch_create_arguments();
+            arguments
+                = ::find_object(OBJECTD)->remove_tlvar(TLS_CREATE_ARGUMENTS);
             if (arguments) {
                 /* pass arguments to create() */
                 call_limited("create", arguments...);
@@ -199,7 +210,7 @@ nomask int _F_system_create(varargs int clone)
             }
         }
 
-        /* kernel creator function should not call create() */
+        /* kernel initialization function should not call create() */
         return TRUE;
     }
 }
@@ -219,7 +230,7 @@ nomask void _F_system_destruct()
         for (i = 0; i < size; ++i) {
             if (sscanf(object_name(inventory[i]), "%*s#-1")) {
                 /* demote middle-weight object */
-                inventory[i]->_F_move(nil);
+                inventory[i]->_F_demote();
             }
         }
     }
@@ -238,13 +249,13 @@ nomask int _Q_oid()
 }
 
 /*
- * NAME:        _F_move()
- * DESCRIPTION: move object to destination
+ * NAME:        _F_demote()
+ * DESCRIPTION: demote middle-weight object on destruction of environment
  */
-nomask void _F_move(object destination)
+nomask void _F_demote()
 {
     if (previous_program() == SYSTEM_AUTO) {
-        _move_object(destination);
+        _move_object(nil);
     }
 }
 
@@ -359,9 +370,9 @@ static atomic object clone_object(string master, mixed arguments...)
 {
     ASSERT_ARGUMENT_1(master);
 
-    /* forward arguments to create() via TLS */
+    /* forward arguments to create() via thread-local storage */
     if (sizeof(arguments)) {
-        ::find_object(OBJECTD)->store_create_arguments(arguments);
+        ::find_object(OBJECTD)->set_tlvar(TLS_CREATE_ARGUMENTS, arguments);
     }
 
     return ::clone_object(master);
@@ -379,7 +390,7 @@ static atomic object new_object(mixed master, mixed arguments...)
          * via thread-local storage
          */
         if (sizeof(arguments)) {
-            ::find_object(OBJECTD)->store_create_arguments(arguments);
+            ::find_object(OBJECTD)->set_tlvar(TLS_CREATE_ARGUMENTS, arguments);
         }
     } else {
         /* copy an existant light-weight object */
@@ -427,12 +438,6 @@ static mixed *status(varargs mixed obj)
 }
 
 /*
- * NAME:        promote()
- * DESCRIPTION: called on promotion to middle-weight object
- */
-static void promote() { }
-
-/*
  * NAME:        move_object()
  * DESCRIPTION: move this object to another environment
  */
@@ -443,8 +448,8 @@ static atomic void move_object(object destination)
     ASSERT_ARGUMENT(!destination
                     || !sscanf(object_name(destination), "%*s#-1"));
     this = this_object();
-    if (destination
-        && (!destination->allow_move(this) || !destination || !this))
+    if (!this || destination && (!destination->allow_move(this)
+                                 || !destination || !this))
     {
         error("Cannot move object to destination");
     }
@@ -461,9 +466,7 @@ static atomic void move_object(object destination)
         }
     }
     
-    if (_move_object(destination)) {
-        promote();
-    }
+    _move_object(destination);
 }
 
 /*

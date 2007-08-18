@@ -6,7 +6,6 @@
 # include <system/object.h>
 # include <system/system.h>
 # include <system/rsrc.h>
-# include <system/tls.h>
 
 private inherit rsrc  API_RSRC;
 private inherit tls   API_TLS;
@@ -229,30 +228,30 @@ int forbid_inherit(string from, string path, int priv)
 }
 
 /*
- * NAME:        store_create_arguments()
- * DESCRIPTION: store create() arguments in thread-local storage
+ * NAME:	set_tlvar()
+ * DESCRIPTION:	set value of TLS variable
  */
-void store_create_arguments(mixed *arguments)
+void set_tlvar(int index, mixed value)
 {
     if (previous_program() == SYSTEM_AUTO) {
-        set_tlvar(TLS_CREATE_ARGUMENTS, arguments);
+        ::set_tlvar(index, value);
     }
 }
 
 /*
- * NAME:        fetch_create_arguments()
- * DESCRIPTION: fetch create() arguments from thread-local storage
+ * NAME:	remove_tlvar()
+ * DESCRIPTION:	get value of TLS variable; the variable will be cleared
  */
-mixed *fetch_create_arguments()
+mixed remove_tlvar(int index)
 {
     if (previous_program() == SYSTEM_AUTO) {
-        mixed *arguments;
+        mixed value;
         
-        arguments = get_tlvar(TLS_CREATE_ARGUMENTS);
-        if (arguments) {
-            set_tlvar(TLS_CREATE_ARGUMENTS, nil);
+        value = get_tlvar(index);
+        if (value != nil) {
+            ::set_tlvar(index, nil);
         }
-        return arguments;
+        return value;
     }
 }
 
