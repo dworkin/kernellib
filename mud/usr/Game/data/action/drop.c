@@ -10,9 +10,9 @@ inherit UTIL_MESSAGE;
 
 int item_;
 
-static void create(object LIB_ITEM item)
+static void create(object LIB_ITEM *items)
 {
-    item_ = object_number(item);
+    item_ = object_number(items[0]);
 }
 
 void perform(object LIB_CREATURE actor)
@@ -34,11 +34,11 @@ void perform(object LIB_CREATURE actor)
 
     if (item->move(room)) {
         tell_object(actor, "You drop "
-                    + definite_description(item, actor));
+                    + definite_description(item, actor) + ".");
         tell_audience(actor, definite_description(actor) + " drops "
-                      + indefinite_description(item));
+                      + indefinite_description(item) + ".");
     } else {
         tell_object(actor, "You cannot drop "
-                    + definite_description(item, actor));
+                    + definite_description(item, actor) + ".");
     }
 }

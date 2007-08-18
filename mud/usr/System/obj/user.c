@@ -186,10 +186,8 @@ int receive_message(string str)
                 object action;
 
                 cmd = alias_expand(cmd);
-                action = COMMANDD->parse(cmd);
-                if (!action) {
-                    message("  Bad command: " + cmd + "\n");
-                } else {
+                action = COMMANDD->parse(creature, cmd);
+                if (action) {
                     creature->add_action(action);
                 }
                 str = nil;

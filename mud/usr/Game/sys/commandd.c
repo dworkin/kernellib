@@ -1,13 +1,18 @@
 # include <game/action.h>
 # include <game/command.h>
+# include <game/description.h>
 # include <game/direction.h>
 # include <game/language.h>
+# include <game/message.h>
 # include <game/selector.h>
 # include <game/string.h>
+# include <game/thing.h>
 # include <system/system.h>
 
+inherit UTIL_DESCRIPTION;
 inherit UTIL_DIRECTION;
 inherit UTIL_LANGUAGE;
+inherit UTIL_MESSAGE;
 inherit UTIL_STRING;
 
 string grammar_;
@@ -17,103 +22,101 @@ static void create()
     grammar_ = read_file("command.grammar");
 }
 
-object LIB_ACTION parse(string command)
+object LIB_ACTION parse(object LIB_CREATURE actor, string command)
 {
     mixed *tree;
 
     tree = parse_string(grammar_, command);
-    return tree ? tree[0] : nil;
+    if (!tree) {
+        tell_object(actor, "Invalid command: " + command);
+        return nil;
+    }
+    return call_other(this_object(), "create_" + tree[0] + "_action", actor,
+                      tree[1 ..]...);
 }
 
 static mixed *parse_drop_command(mixed *tree)
 {
-    tree -= ({ "down" });
-    return ({ new_object(DROP_COMMAND, tree[1]) });
+    tree -= ({ "down" }); /* put down */
+    return ({ "drop", tree[1] });
 }
 
 static mixed *parse_give_command(mixed *tree)
 {
-    return ({ new_object(GIVE_COMMAND, tree[1], tree[3]) });
+    return ({ "give", tree[1], tree[3] });
 }
 
 static mixed *parse_go_command(mixed *tree)
 {
-    return ({ new_object(GO_ACTION, tree[sizeof(tree) - 1]) });
+    return ({ "go", tree[sizeof(tree) - 1] });
 }
 
 static mixed *parse_inventory_command(mixed *tree)
 {
-    return ({ new_object(INVENTORY_ACTION) });
+    return ({ "inventory" });
 }
 
 static mixed *parse_look_command(mixed *tree)
 {
-    return ({ new_object(LOOK_ACTION) });
+    return ({ "look" });
 }
 
 static mixed *parse_look_at_command(mixed *tree)
 {
-    return ({ new_object(LOOK_AT_COMMAND, tree[2]) });
+    return ({ "look_at", tree[2] });
 }
 
 static mixed *parse_look_to_command(mixed *tree)
 {
-    return ({ new_object(LOOK_TO_ACTION, tree[1]) });
+    return ({ "look_to", tree[1] });
 }
 
 static mixed *parse_put_in_command(mixed *tree)
 {
-    return ({ new_object(PUT_IN_COMMAND, tree[1], tree[3]) });
+    return ({ "put_in", tree[1], tree[3] });
 }
 
 static mixed *parse_release_command(mixed *tree)
 {
-    return ({ new_object(RELEASE_COMMAND, tree[1]) });
+    return ({ "release", tree[1] });
 }
 
 static mixed *parse_remove_command(mixed *tree)
 {
-    tree -= ({ "off" });
-    return ({ new_object(REMOVE_COMMAND, tree[1]) });
+    tree -= ({ "off" }); /* take off */
+    return ({ "remove", tree[1] });
 }
 
 static mixed *parse_say_command(mixed *tree)
 {
-    return ({ new_object(SAY_ACTION, tree[sizeof(tree) - 1]) });
-}
-
-static mixed *parse_say_to_command(mixed *tree)
-{
-    return ({ new_object(SAY_TO_COMMAND, tree[sizeof(tree) - 3],
-                         tree[sizeof(tree) - 1]) });
+    return ({ "say", tree[0] });
 }
 
 static mixed *parse_score_command(mixed *tree)
 {
-    return ({ new_object(SCORE_ACTION) });
+    return ({ "score" });
 }
 
 static mixed *parse_take_command(mixed *tree)
 {
-    tree -= ({ "up" });
-    return ({ new_object(TAKE_COMMAND, tree[1]) });
+    tree -= ({ "up" }); /* pick up */
+    return ({ "take", tree[1] });
 }
 
 static mixed *parse_take_from_command(mixed *tree)
 {
-    return ({ new_object(TAKE_FROM_COMMAND, tree[1],
-                         tree[sizeof(tree) - 1]) });
+    return ({ "take_from", tree[1], tree[sizeof(tree) - 1] });
 }
 
 static mixed *parse_wear_command(mixed *tree)
 {
-    tree -= ({ "on" });
-    return ({ new_object(WEAR_COMMAND, tree[1]) });
+    tree -= ({ "on" }); /* put on */
+    return ({ "wear", tree[1] });
 }
 
 static mixed *parse_wield_command(mixed *tree)
 {
-    return ({ new_object(WIELD_COMMAND, tree[1]) });
+    return ({ "wield", tree[1] });
 }
 
 static mixed *parse_word(mixed *tree)
@@ -189,12 +192,91 @@ static mixed *parse_direction(mixed *tree)
     return is_direction(tree[0]) ? tree : nil;
 }
 
-static mixed *parse_quote(mixed *tree)
+static mixed *parse_say(mixed *tree)
 {
-    string quote, q;
+    string message;
 
-    quote = tree[0];
-    q = quote[0 .. 0];
-    quote = remove_suffix(quote, q)[1 ..];
-    return ({ quote });
+    message = tree[0];
+    sscanf(message, "say %s", message);
+    return ({ message });
+}
+
+static object LIB_ACTION create_drop_action(object LIB_CREATURE actor,
+                                            object LIB_SELECTOR items_selector)
+{
+    object LIB_ROOM   room;
+    object LIB_ITEM  *items;
+
+    int i, size;
+
+    room = environment(actor);
+    if (!room) {
+        tell_object(actor, "You are in the void.");
+        return nil;
+    }
+
+    items = items_selector->select(inventory(actor));
+    size = sizeof(items);
+    if (!size) {
+        tell_object(actor, "You do not have that.");
+        return nil;
+    }
+    return new_object(DROP_ACTION, items);
+}
+
+static object LIB_ACTION create_go_action(object LIB_CREATURE actor,
+                                          string direction)
+{
+    return new_object(GO_ACTION, direction);
+}
+
+static object LIB_ACTION create_inventory_action(object LIB_CREATURE actor)
+{
+    return new_object(INVENTORY_ACTION);
+}
+
+static object LIB_ACTION create_look_action(object LIB_CREATURE actor)
+{
+    return new_object(LOOK_ACTION);
+}
+
+static object LIB_ACTION create_say_action(object LIB_CREATURE actor,
+                                           string message)
+{
+    return new_object(SAY_ACTION, message);
+}
+
+static object LIB_ACTION create_score_action(object LIB_CREATURE actor)
+{
+    return new_object(SCORE_ACTION);
+}
+
+static object LIB_ACTION create_take_action(object LIB_CREATURE actor,
+                                            object LIB_SELECTOR items_selector)
+{
+    object LIB_ROOM    room;
+    object LIB_THING  *items;
+
+    int i, size;
+
+    room = environment(actor);
+    if (!room) {
+        tell_object(actor, "You are in the void.");
+        return nil;
+    }
+
+    items = items_selector->select(inventory(room));
+    size = sizeof(items);
+    if (!size) {
+        tell_object(actor, "That is not here.");
+        return nil;
+    }
+    for (i = 0; i < size; ++i) {
+        if (!(items[i] <- LIB_ITEM)) {
+            tell_object(actor, "You cannot take "
+                        + definite_description(items[i]));
+            return nil;
+        }
+    }
+    return new_object(TAKE_ACTION, items);
 }

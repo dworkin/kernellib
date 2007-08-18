@@ -15,7 +15,7 @@ string message_;
 
 static void create(string message)
 {
-    message_ = capitalize(message);
+    message_ = message;
 }
 
 void perform(object LIB_CREATURE actor)

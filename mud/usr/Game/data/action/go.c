@@ -43,10 +43,10 @@ void perform(object LIB_CREATURE actor)
 
     if (actor->move(destination)) {
         tell_inventory(room, definite_description(actor) + " leaves "
-                       + direction_);
+                       + direction_ + ".");
         tell_object(actor, verbose_description(destination, actor));
         tell_audience(actor, indefinite_description(actor) + " arrives from "
-                      + arrival_direction(direction_));
+                      + arrival_direction(direction_) + ".");
     } else {
         tell_object(actor, "You cannot go there.");
     }

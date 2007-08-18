@@ -11,11 +11,6 @@ static string normalize_message(string message)
     }
 
     message = normalize_whitespace(message);
-    if (!has_suffix(message, ".") && !has_suffix(message, "!")
-        && !has_suffix(message, "?"))
-    {
-        message += ".";
-    }
     return indent_string(message);
 }
 

@@ -1,5 +1,5 @@
 word = /[0-9a-z]+(-[0-9a-z]+)*/
-quote = /'[^']+'?|"[^"]+"?/
+say = /say .+/
 whitespace = / +/
 dummy = nomatch
 
@@ -49,37 +49,10 @@ CMD: 'drink' SEL ? parse_drink_command
 CMD: 'open' SEL ? parse_open_command
 CMD: 'close' SEL ? parse_close_command
 
-CMD: 'lock' SEL ? parse_lock_command
-CMD: 'lock' SEL 'with' SEL ? parse_lock_command
-CMD: 'unlock' SEL ? parse_unlock_command
-CMD: 'unlock' SEL 'with' SEL ? parse_unlock_command
-
 CMD: 'give' SEL 'to' SEL ? parse_give_command
 CMD: 'attack' SEL ? parse_attack_command
 
-CMD: 'read' SEL ? parse_read_command
-CMD: 'write' QUOTE 'on' SEL ? parse_write_command
-
-CMD: 'push' SEL ? parse_push_command
-CMD: 'pull' SEL ? parse_pull_command
-
-CMD: 'invite' SEL ? parse_invite_command
-CMD: 'join' SEL ? parse_join_command
-CMD: 'appoint' SEL ? parse_appoint_command
-CMD: 'resign' ? parse_resign_command
-CMD: 'dismiss' SEL ? parse_dismiss_command
-CMD: 'disband' ? parse_disband_command
-
-CMD: 'whisper' QUOTE ? parse_whisper_command
-CMD: 'whisper' QUOTE 'to' SEL ? parse_whisper_command
-
-CMD: 'say' QUOTE ? parse_say_command
-CMD: QUOTE ? parse_say_command
-CMD: 'say' QUOTE 'to' SEL ? parse_say_to_command
-CMD: QUOTE 'to' SEL ? parse_say_to_command
-
-CMD: 'shout' QUOTE ? parse_shout_command
-CMD: 'shout' QUOTE 'to' SEL ? parse_shout_command
+CMD: SAY ? parse_say_command
 
 WORD: word ? parse_word
 REC_WORD: WORD
@@ -126,4 +99,4 @@ DIR: word ? parse_direction
 DIR: 'up' ? parse_direction
 DIR: 'down' ? parse_direction
 
-QUOTE: quote ? parse_quote
+SAY: say ? parse_say

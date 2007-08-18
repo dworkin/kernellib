@@ -48,14 +48,11 @@ static void create()
     compile_object(LIST_SELECTOR);
     compile_object(EXCEPT_SELECTOR);
 
-    compile_object(DROP_COMMAND);
     compile_object(GIVE_COMMAND);
     compile_object(LOOK_AT_COMMAND);
     compile_object(PUT_IN_COMMAND);
     compile_object(RELEASE_COMMAND);
     compile_object(REMOVE_COMMAND);
-    compile_object(SAY_TO_COMMAND);
-    compile_object(TAKE_COMMAND);
     compile_object(TAKE_FROM_COMMAND);
     compile_object(WEAR_COMMAND);
     compile_object(WIELD_COMMAND);
