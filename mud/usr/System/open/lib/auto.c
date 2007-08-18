@@ -444,13 +444,11 @@ static mixed *status(varargs mixed obj)
  */
 static atomic void move_object(object destination)
 {
-    object this;
-
     ASSERT_ARGUMENT(!destination
                     || !sscanf(object_name(destination), "%*s#-1"));
-    this = this_object();
-    if (!this || destination && (!destination->allow_move(this)
-                                 || !destination || !this))
+    if (!this_object()
+        || destination && (!destination->allow_move(this_object())
+                           || !destination || !this_object()))
     {
         error("Cannot move object to destination");
     }
@@ -461,7 +459,7 @@ static atomic void move_object(object destination)
         object obj;
 
         for (obj = destination; obj; obj = obj->_Q_environment()) {
-            if (obj == this) {
+            if (obj == this_object()) {
                 error("Cannot move object into itself");
             }
         }
@@ -611,11 +609,9 @@ static mixed remove_call_out(int handle)
 nomask void _F_mwo_callout(string function, mixed *arguments)
 {
     if (previous_program() == OWNER_NODE) {
-        object  this;
-        string  program;
+        string program;
 
-        this = this_object();
-        program = ::function_object(function, this);
+        program = ::function_object(function, this_object());
 
         /*
          * Ensure that it is still safe to call the function. This object may
@@ -623,7 +619,7 @@ nomask void _F_mwo_callout(string function, mixed *arguments)
          */
         if (program && (creator(program) != "System" || function == "create"))
         {
-            call_other(this, function, arguments...);
+            call_other(this_object(), function, arguments...);
         }
     }
 }
