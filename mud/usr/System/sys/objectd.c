@@ -116,7 +116,7 @@ void clone(string owner, object obj)
     if (previous_object() == driver_) {
         int uid;
 
-        if (sscanf(object_name(obj), OWNER_NODE + "#%*s")) {
+        if (sscanf(object_name(obj), OWNER_NODE + "#%*d")) {
             return;
         }
         uid = add_owner(owner);
@@ -206,7 +206,7 @@ int forbid_inherit(string from, string path, int priv)
          * ~System/open
          */
         if (from_creator != "System" && path_creator == "System"
-            && !sscanf(path, "/usr/System/open/%*s"))
+            && !sscanf(path, USR_DIR + "/System/open/%*s"))
         {
             return TRUE;
         }

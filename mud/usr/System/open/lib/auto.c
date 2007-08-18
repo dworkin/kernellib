@@ -250,7 +250,8 @@ nomask int _Q_oid()
 
 /*
  * NAME:        _F_demote()
- * DESCRIPTION: demote middle-weight object on destruction of environment
+ * DESCRIPTION: demote this middle-weight object when its environment is
+ *              destructed
  */
 nomask void _F_demote()
 {
