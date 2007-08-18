@@ -1,0 +1,22 @@
+NAME
+        file_info - get information about a single file
+
+SYNOPSIS
+        mixed *file_info(string file)
+
+DESCRIPTION
+        Get information about a file. The return value is of the form
+
+            ({ file size, file modification time, object })
+
+        If a file is a directory, the file size will be given as -2. The object
+        value is set to 1 if the object exists and has "lib", "obj", or "data"
+        as a path component. This function returns nil if the file does not
+        exist.
+
+ACCESS
+        The current object must have read access to the file.
+
+SEE ALSO
+        efun/get_dir, kfun/read_file, kfun/remove_file, kfun/rename_file,
+        kfun/write_file

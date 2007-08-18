@@ -312,19 +312,27 @@ mapping get_program_dir(string path)
 int promote(object environment)
 {
     if (previous_object() == objectd_) {
-        int      oid, index, bucket_index;
-        mapping  bucket;
-
-        index = next_index_++;
-        oid = OID_MIDDLEWEIGHT | (uid_ << OID_OWNER_OFFSET)
-            | (index << OID_INDEX_OFFSET);
-        bucket_index = (index - 1) / MWO_BUCKET_SIZE;
-        bucket = middleweight_oids_[bucket_index];
-        if (!bucket) {
-            bucket = middleweight_oids_[bucket_index] = ([ ]);
+        for (;;) {
+            int      oid, index, bucket_index;
+            mapping  bucket;
+            
+            index = next_index_++;
+            if (index == MWO_BUCKET_SIZE * MWO_BUCKET_SIZE) {
+                /* wrap around next index */
+                next_index_ = 1;
+            }
+            oid = OID_MIDDLEWEIGHT | (uid_ << OID_OWNER_OFFSET)
+                | (index << OID_INDEX_OFFSET);
+            bucket_index = (index - 1) / MWO_BUCKET_SIZE;
+            bucket = middleweight_oids_[bucket_index];
+            if (!bucket) {
+                bucket = middleweight_oids_[bucket_index] = ([ ]);
+            }
+            if (!bucket[oid]) {
+                bucket[oid] = environment;
+                return oid;
+            }
         }
-        bucket[oid] = environment;
-        return oid;
     }
 }
 
@@ -335,9 +343,20 @@ int promote(object environment)
 void demote(int oid)
 {
     if (previous_object() == objectd_) {
-        int      index, bucket_index;
-        mapping  bucket;
+        mixed    **callouts;
+        int        i, size, index, bucket_index;
+        mapping    bucket;
+
+        /* remove callouts */
+        callouts = status(this_object())[O_CALLOUTS];
+        size = sizeof(callouts);
+        for (i = 0; i < size; ++i) {
+            if (callouts[i][CO_FIRSTXARG] == oid) {
+                remove_call_out(callouts[i][CO_HANDLE]);
+            }
+        }
         
+        /* free object number */
         index = (oid & OID_INDEX_MASK) >> OID_INDEX_OFFSET;
         bucket_index = (index - 1) / MWO_BUCKET_SIZE;
         bucket = middleweight_oids_[bucket_index];

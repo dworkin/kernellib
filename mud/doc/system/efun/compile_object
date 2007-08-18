@@ -1,0 +1,39 @@
+NAME
+        compile_object - compile an object
+
+SYNOPSIS
+        atomic object compile_object(string path, string source...)
+
+DESCRIPTION
+        Compile an object from an LPC source file, as specified by the first
+        argument with ".c" appended. The path is first normalized relative to
+        this object. If the optional source arguments are supplied, the object
+        is instead compiled from the concatenation of those strings. The
+        resulting object will have the normalized path as name.
+
+        If the object to be compiled already exists and is not inherited by
+        any other object, it and all of its clones will be upgraded to the
+        new version. Variables will be preserved only if they also exist in
+        the new version and have the same type. New variables will be
+        initialized to nil. The actual upgrading is done immediately upon
+        completion of the current thread.
+
+        If the new object has "lib", "obj", or "data" as a path component, nil
+        is returned. Objects with "lib" as a path component can only be
+        inherited. Objects with "obj" or "data" as a path component can only be
+        used as arguments to the clone_object() or new_object() functions,
+        respectively.
+
+ACCESS
+        The current object must have write access to the file to be compiled.
+        If the object to be compiled is inheritable and no source arguments are
+        supplied, read access is sufficient.
+
+ERRORS
+        An error will be raised if the object is non-inheritable and it has any
+        undefined functions. Since this function is atomic, the error will undo
+        the creation of the object.
+
+SEE ALSO
+        efun/clone_object, efun/destruct_object, efun/new_object,
+        kfun/object_name
