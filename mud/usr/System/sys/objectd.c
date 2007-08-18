@@ -52,20 +52,6 @@ private mapping program_dir_map(string *directories)
 }
 
 /*
- * NAME:        _demote_mwo()
- * DESCRIPTION: demote a middle-weight object
- */
-private void _demote_mwo(int oid) {
-    int     uid;
-    object  node;
-
-    uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
-    node = nodes_[uid];
-    node->demote_mwo(oid);
-    rsrc_incr(node->query_owner(), MWO_RESOURCE, nil, -1);
-}
-
-/*
  * NAME:        create()
  * DESCRIPTION: initialize object manager
  */
@@ -310,10 +296,10 @@ mapping get_program_dir(string path)
 }
 
 /*
- * NAME:        find_by_number()
+ * NAME:        find()
  * DESCRIPTION: find an object by number
  */
-object find_by_number(int oid)
+object find(int oid)
 {
     if (previous_program() == SYSTEM_AUTO) {
         int     uid;
@@ -321,15 +307,15 @@ object find_by_number(int oid)
 
         uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
         node = nodes_[uid];
-        return node ? node->find_by_number(oid) : nil;
+        return node ? node->find(oid) : nil;
     }
 }
 
 /*
- * NAME:        promote_mwo()
+ * NAME:        promote()
  * DESCRIPTION: promote a light-weight object to middle-weight
  */
-int promote_mwo(string owner, object environment)
+int promote(string owner, object environment)
 {
     if (previous_program() == SYSTEM_AUTO) {
         int uid;
@@ -338,32 +324,38 @@ int promote_mwo(string owner, object environment)
             error("Too many middle-weight objects");
         }
         uid = add_owner(owner);
-        return nodes_[uid]->promote_mwo(environment);
+        return nodes_[uid]->promote(environment);
     }
 }
 
 /*
- * NAME:        demote_mwo()
+ * NAME:        demote()
  * DESCRIPTION: demote a middle-weight object to light-weight
  */
-void demote_mwo(int oid)
+void demote(int oid)
 {
     if (previous_program() == SYSTEM_AUTO) {
-        _demote_mwo(oid);
+        int     uid;
+        object  node;
+        
+        uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
+        node = nodes_[uid];
+        node->demote(oid);
+        rsrc_incr(node->query_owner(), MWO_RESOURCE, nil, -1);
     }
 }
 
 /*
- * NAME:        move_mwo()
+ * NAME:        move()
  * DESCRIPTION: move a middle-weight object
  */
-void move_mwo(int oid, object environment)
+void move(int oid, object environment)
 {
     if (previous_program() == SYSTEM_AUTO) {
         int uid;
 
         uid = (oid & OID_OWNER_MASK) >> OID_OWNER_OFFSET;
-        nodes_[uid]->move_mwo(oid, environment);
+        nodes_[uid]->move(oid, environment);
     }
 }
 

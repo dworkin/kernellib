@@ -197,10 +197,10 @@ void destruct(object obj)
 }
 
 /*
- * NAME:        find_by_number()
+ * NAME:        find()
  * DESCRIPTION: find an object by number
  */
-object find_by_number(int oid)
+object find(int oid)
 {
     if (previous_object() == objectd_) {
         if ((oid & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT) {
@@ -215,7 +215,7 @@ object find_by_number(int oid)
                 return nil;
             }
             environment = bucket[oid];
-            return environment ? environment->_F_find_by_number(oid) : nil;
+            return environment ? environment->_F_find(oid) : nil;
         } else {
             return persistent_oids_[oid];
         }
@@ -306,10 +306,10 @@ mapping get_program_dir(string path)
 }
 
 /*
- * NAME:        promote_mwo()
+ * NAME:        promote()
  * DESCRIPTION: promote a light-weight object to middle-weight
  */
-int promote_mwo(object environment)
+int promote(object environment)
 {
     if (previous_object() == objectd_) {
         int      oid, index, bucket_index;
@@ -329,10 +329,10 @@ int promote_mwo(object environment)
 }
 
 /*
- * NAME:        demote_mwo()
+ * NAME:        demote()
  * DESCRIPTION: demote a middle-weight object to light-weight
  */
-void demote_mwo(int oid)
+void demote(int oid)
 {
     if (previous_object() == objectd_) {
         int      index, bucket_index;
@@ -349,10 +349,10 @@ void demote_mwo(int oid)
 }
 
 /*
- * NAME:        move_mwo()
+ * NAME:        move()
  * DESCRIPTION: move a middle-weight object to another environment
  */
-void move_mwo(int oid, object environment)
+void move(int oid, object environment)
 {
     if (previous_object() == objectd_) {
         int      index, bucket_index;
@@ -453,7 +453,7 @@ static void mwo_callout(int oid, string function, mixed *arguments)
     if (!environment) {
         return;
     }
-    obj = environment->_F_find_by_number(oid);
+    obj = environment->_F_find(oid);
     if (obj) {
         obj->_F_mwo_callout(function, arguments);
     }

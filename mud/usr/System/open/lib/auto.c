@@ -106,8 +106,7 @@ private int _object_number(object obj)
 private void normalize_mwo()
 {
     if ((oid_ & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT
-        && (!environment_
-            || environment_->_F_find_by_number(oid_) != this_object()))
+        && (!environment_ || environment_->_F_find(oid_) != this_object()))
     {
         /* duplicated middle-weight object: demote to light-weight */
         oid_ = 0;
@@ -131,16 +130,15 @@ private int _move_object(object destination)
     if ((oid_ & OID_CATEGORY_MASK) == OID_MIDDLEWEIGHT) {
         if (environment_) {
             /* move middle-weight object */
-            ::find_object(OBJECTD)->move_mwo(oid_, environment_);
+            ::find_object(OBJECTD)->move(oid_, environment_);
         } else {
             /* demote middle-weight object */
-            ::find_object(OBJECTD)->demote_mwo(oid_);
+            ::find_object(OBJECTD)->demote(oid_);
         }
     } else if (!oid_ && environment_) {
         /* promote to middle-weight object */
         promoted = TRUE;
-        oid_ = ::find_object(OBJECTD)->promote_mwo(query_owner(),
-                                                   environment_);
+        oid_ = ::find_object(OBJECTD)->promote(query_owner(), environment_);
     }
     if (environment_) {
         environment_->_F_enter(oid_, this_object());
@@ -274,10 +272,10 @@ nomask void _F_leave(int oid)
 }
 
 /*
- * NAME:        _F_find_by_number()
+ * NAME:        _F_find()
  * DESCRIPTION: find an object by number in this environment
  */
-nomask object _F_find_by_number(int oid)
+nomask object _F_find(int oid)
 {
     if (previous_program() == SYSTEM_AUTO
         || previous_program() == OWNER_NODE)
@@ -330,7 +328,7 @@ static object find_object(mixed name)
     switch (typeof(name)) {
     case T_INT:
         /* find object by number */
-        obj = ::find_object(OBJECTD)->find_by_number(name);
+        obj = ::find_object(OBJECTD)->find(name);
         break;
 
     case T_STRING:
