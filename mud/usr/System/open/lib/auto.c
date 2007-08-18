@@ -611,12 +611,11 @@ nomask void _F_mwo_callout(string function, mixed *arguments)
     if (previous_program() == OWNER_NODE) {
         string program;
 
-        program = ::function_object(function, this_object());
-
         /*
          * Ensure that it is still safe to call the function. This object may
-         * have been recompiled after the delayed call was added.
+         * have been recompiled since the callout was added.
          */
+        program = ::function_object(function, this_object());
         if (program && (creator(program) != "System" || function == "create"))
         {
             call_other(this_object(), function, arguments...);
