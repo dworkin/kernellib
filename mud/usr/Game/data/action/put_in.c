@@ -39,12 +39,12 @@ void perform(object LIB_CREATURE actor)
 
     if (item->move(container)) {
         tell_object(actor, "You put " + definite_description(item)
-                    + " in " + definite_description(container));
+                    + " in " + definite_description(container) + ".");
         tell_audience(actor, definite_description(actor)
                       + " puts " + indefinite_description(item)
-                      + " in " + indefinite_description(container));
+                      + " in " + indefinite_description(container) + ".");
     } else {
         tell_object(actor, "You cannot put " + definite_description(item)
-                    + " in " + definite_description(container));
+                    + " in " + definite_description(container) + ".");
     }
 }
