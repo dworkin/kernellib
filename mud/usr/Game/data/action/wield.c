@@ -11,9 +11,9 @@ inherit UTIL_MESSAGE;
 
 int weapon_;
 
-static void create(object LIB_WEAPON weapon)
+static void create(object LIB_WEAPON *weapons)
 {
-    weapon_ = object_number(weapon);
+    weapon_ = object_number(weapons[0]);
 }
 
 void perform(object LIB_CREATURE actor)
@@ -32,7 +32,8 @@ void perform(object LIB_CREATURE actor)
     }
 
     actor->add_wielded(weapon);
-    tell_object(actor, "You wield " + definite_description(weapon, actor));
+    tell_object(actor, "You wield " + definite_description(weapon, actor)
+                + ".");
     tell_audience(actor, definite_description(actor) + " wields "
-                  + indefinite_description(weapon));
+                  + indefinite_description(weapon) + ".");
 }

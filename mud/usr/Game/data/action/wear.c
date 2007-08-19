@@ -11,9 +11,9 @@ inherit UTIL_MESSAGE;
 
 int armor_piece_;
 
-static void create(object LIB_ARMOR_PIECE armor_piece)
+static void create(object LIB_ARMOR_PIECE *armor_pieces)
 {
-    armor_piece_ = object_number(armor_piece);
+    armor_piece_ = object_number(armor_pieces[0]);
 }
 
 void perform(object LIB_CREATURE actor)
@@ -32,7 +32,8 @@ void perform(object LIB_CREATURE actor)
     }
 
     actor->add_worn(armor_piece);
-    tell_object(actor, "You wear " + definite_description(armor_piece, actor));
+    tell_object(actor, "You wear " + definite_description(armor_piece, actor)
+                + ".");
     tell_audience(actor, definite_description(actor) + " wears "
-                  + indefinite_description(armor_piece));
+                  + indefinite_description(armor_piece) + ".");
 }

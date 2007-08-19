@@ -7,23 +7,23 @@ inherit LIB_ACTION;
 inherit UTIL_DESCRIPTION;
 inherit UTIL_MESSAGE;
 
-int obj_;
-int ind_;
+int item_;
+int creature_;
 
-static void create(object LIB_ITEM obj, object LIB_CREATURE ind)
+static void create(object LIB_ITEM *items, object LIB_CREATURE *creatures)
 {
-    obj_ = object_number(obj);
-    ind_ = object_number(ind);
+    item_ = object_number(items[0]);
+    creature_ = object_number(creatures[0]);
 }
 
 void perform(object LIB_CREATURE actor)
 {
-    object LIB_ITEM      obj;
+    object LIB_ITEM      item;
     object LIB_ROOM      room;
-    object LIB_CREATURE  ind;
+    object LIB_CREATURE  creature;
 
-    obj = find_object(obj_);
-    if (!obj || (object LIB_THING) environment(obj) != actor) {
+    item = find_object(item_);
+    if (!item || (object LIB_THING) environment(item) != actor) {
         tell_object(actor, "You do not have that.");
         return;
     }
@@ -34,22 +34,23 @@ void perform(object LIB_CREATURE actor)
         return;
     }
 
-    ind = find_object(ind_);
-    if (!ind || (object LIB_ROOM) environment(ind) != room) {
+    creature = find_object(creature_);
+    if (!creature || (object LIB_ROOM) environment(creature) != room) {
         tell_object(actor, "They are not here.");
         return;
     }
 
-    if (obj->move(ind)) {
-        tell_object(actor, "You give " + definite_description(obj)
-                    + " to " + definite_description(ind));
-        tell_object(ind, definite_description(actor) + " gives "
-                    + indefinite_description(obj) + " to you.");
-        tell_audience_except(actor, ({ ind }), definite_description(actor)
-                             + " gives " + indefinite_description(obj)
-                             + " to " + indefinite_description(ind));
+    if (item->move(creature)) {
+        tell_object(actor, "You give " + definite_description(item)
+                    + " to " + definite_description(creature) + ".");
+        tell_object(creature, definite_description(actor) + " gives "
+                    + indefinite_description(item) + " to you.");
+        tell_audience_except(actor, ({ creature }), definite_description(actor)
+                             + " gives " + indefinite_description(item)
+                             + " to " + indefinite_description(creature)
+                             + ".");
     } else {
-        tell_object(actor, "You cannot give " + definite_description(obj)
-                    + " to " + definite_description(ind));
+        tell_object(actor, "You cannot give " + definite_description(item)
+                    + " to " + definite_description(creature));
     }
 }

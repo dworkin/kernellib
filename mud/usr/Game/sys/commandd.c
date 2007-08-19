@@ -1,4 +1,5 @@
 # include <game/action.h>
+# include <game/armor.h>
 # include <game/command.h>
 # include <game/description.h>
 # include <game/direction.h>
@@ -202,7 +203,7 @@ static mixed *parse_say(mixed *tree)
 }
 
 static object LIB_ACTION create_drop_action(object LIB_CREATURE actor,
-                                            object LIB_SELECTOR items_selector)
+                                            object LIB_SELECTOR selector)
 {
     object LIB_ROOM   room;
     object LIB_ITEM  *items;
@@ -215,13 +216,56 @@ static object LIB_ACTION create_drop_action(object LIB_CREATURE actor,
         return nil;
     }
 
-    items = items_selector->select(inventory(actor));
+    items = selector->select(inventory(actor));
     size = sizeof(items);
     if (!size) {
         tell_object(actor, "You do not have that.");
         return nil;
     }
     return new_object(DROP_ACTION, items);
+}
+
+static object LIB_ACTION
+create_give_action(object LIB_CREATURE actor,
+                   object LIB_SELECTOR items_selector,
+                   object LIB_SELECTOR creatures_selector)
+{
+    object LIB_ITEM   *items;
+    object LIB_ROOM    room;
+    object LIB_THING  *creatures;
+
+    int i, size;
+
+    items = items_selector->select(inventory(actor));
+    if (!sizeof(items)) {
+        tell_object(actor, "You do not have that.");
+        return nil;
+    }
+
+    room = environment(actor);
+    if (!room) {
+        tell_object(actor, "You are in the void.");
+        return nil;
+    }
+
+    creatures = creatures_selector->select(inventory(room));
+    size = sizeof(creatures);
+    if (!size) {
+        tell_object(actor, "They are not here.");
+        return nil;
+    }
+    if (sizeof(creatures & ({ actor }))) {
+        tell_object(actor, "You cannot give something to yourself.");
+        return nil;
+    }
+    for (i = 0; i < size; ++i) {
+        if (!(creatures[i] <- LIB_CREATURE)) {
+            tell_object(actor, "You cannot give anything to "
+                        + definite_description(creatures[i]) + ".");
+            return nil;
+        }
+    }
+    return new_object(GIVE_ACTION, items, creatures);
 }
 
 static object LIB_ACTION create_go_action(object LIB_CREATURE actor,
@@ -238,6 +282,26 @@ static object LIB_ACTION create_inventory_action(object LIB_CREATURE actor)
 static object LIB_ACTION create_look_action(object LIB_CREATURE actor)
 {
     return new_object(LOOK_ACTION);
+}
+
+static object LIB_ACTION create_look_at_action(object LIB_CREATURE actor,
+                                               object LIB_SELECTOR selector)
+{
+    object LIB_THING  *things;
+    object LIB_ROOM    room;
+
+    things = inventory(actor);
+    room = environment(actor);
+    if (room) {
+        things += inventory(room);
+    }
+    things = selector->select(things);
+    if (!sizeof(things)) {
+        tell_object(actor, "That is not here.");
+        return nil;
+    }
+    tell_object(actor, verbose_description(things[0], actor));
+    return nil;
 }
 
 static object LIB_ACTION
@@ -279,6 +343,53 @@ create_put_in_action(object LIB_CREATURE actor,
     return new_object(PUT_IN_ACTION, items, containers);
 }
 
+static object LIB_ACTION create_release_action(object LIB_CREATURE actor,
+                                               object LIB_SELECTOR selector)
+{
+    object LIB_ITEM    *weapons;
+    object LIB_WEAPON  *wielded;
+
+    int i, size;
+
+    weapons = selector->select(inventory(actor));
+    size = sizeof(weapons);
+    if (!size) {
+        tell_object(actor, "You do not have that.");
+        return nil;
+    }
+
+    wielded = weapons & actor->query_wielded();
+    weapons -= wielded;
+    if (sizeof(weapons)) {
+        tell_object(actor, "You are not wielding "
+                    + definite_description(weapons[0]));
+        return nil;
+    }
+    return new_object(RELEASE_ACTION, wielded);
+}
+
+static object LIB_ACTION create_remove_action(object LIB_CREATURE actor,
+                                              object LIB_SELECTOR selector)
+{
+    object LIB_ITEM         *armor_pieces;
+    object LIB_ARMOR_PIECE  *worn;
+
+    armor_pieces = selector->select(inventory(actor));
+    if (!sizeof(armor_pieces)) {
+        tell_object(actor, "You do not have that.");
+        return nil;
+    }
+
+    worn = armor_pieces & actor->query_worn();
+    armor_pieces -= worn;
+    if (sizeof(armor_pieces)) {
+        tell_object(actor, "You are not wearing "
+                    + definite_description(armor_pieces[0]));
+        return nil;
+    }
+    return new_object(REMOVE_ACTION, worn);
+}
+
 static object LIB_ACTION create_say_action(object LIB_CREATURE actor,
                                            string message)
 {
@@ -291,7 +402,7 @@ static object LIB_ACTION create_score_action(object LIB_CREATURE actor)
 }
 
 static object LIB_ACTION create_take_action(object LIB_CREATURE actor,
-                                            object LIB_SELECTOR items_selector)
+                                            object LIB_SELECTOR selector)
 {
     object LIB_ROOM    room;
     object LIB_THING  *items;
@@ -304,7 +415,7 @@ static object LIB_ACTION create_take_action(object LIB_CREATURE actor,
         return nil;
     }
 
-    items = items_selector->select(inventory(room));
+    items = selector->select(inventory(room));
     size = sizeof(items);
     if (!size) {
         tell_object(actor, "That is not here.");
@@ -359,4 +470,68 @@ create_take_from_action(object LIB_CREATURE actor,
         return nil;
     }
     return new_object(TAKE_FROM_ACTION, items, containers);
+}
+
+static object LIB_ACTION create_wear_action(object LIB_CREATURE actor,
+                                            object LIB_SELECTOR selector)
+{
+    object LIB_ITEM         *armor_pieces;
+    object LIB_ARMOR_PIECE  *worn;
+
+    int i, size;
+
+    armor_pieces = selector->select(inventory(actor));
+    size = sizeof(armor_pieces);
+    if (!size) {
+        tell_object(actor, "You do not have that.");
+        return nil;
+    }
+
+    for (i = 0; i < size; ++i) {
+        if (!(armor_pieces[i] <- LIB_ARMOR_PIECE)) {
+            tell_object(actor, "You cannot wear "
+                        + definite_description(armor_pieces[i]));
+            return nil;
+        }
+    }
+
+    worn = armor_pieces & actor->query_worn();
+    if (sizeof(worn)) {
+        tell_object(actor, "You are already wearing "
+                    + definite_description(armor_pieces[0]));
+        return nil;
+    }
+    return new_object(WEAR_ACTION, armor_pieces);
+}
+
+static object LIB_ACTION create_wield_action(object LIB_CREATURE actor,
+                                             object LIB_SELECTOR selector)
+{
+    object LIB_ITEM    *weapons;
+    object LIB_WEAPON  *wielded;
+
+    int i, size;
+
+    weapons = selector->select(inventory(actor));
+    size = sizeof(weapons);
+    if (!size) {
+        tell_object(actor, "You do not have that.");
+        return nil;
+    }
+
+    for (i = 0; i < size; ++i) {
+        if (!(weapons[i] <- LIB_WEAPON)) {
+            tell_object(actor, "You cannot wield "
+                        + definite_description(weapons[i]));
+            return nil;
+        }
+    }
+
+    wielded = weapons & actor->query_wielded();
+    if (sizeof(wielded)) {
+        tell_object(actor, "You are already wielding "
+                    + definite_description(wielded[0]));
+        return nil;
+    }
+    return new_object(WIELD_ACTION, weapons);
 }
