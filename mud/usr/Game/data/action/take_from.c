@@ -8,42 +8,43 @@ inherit UTIL_DESCRIPTION;
 inherit UTIL_MESSAGE;
 
 int item_;
-int cont_;
+int container_;
 
-static void create(object LIB_ITEM item, object LIB_CONTAINER cont)
+static void create(object LIB_ITEM *items, object LIB_CONTAINER *containers)
 {
-    item_ = object_number(item);
-    cont_ = object_number(cont);
+    item_ = object_number(items[0]);
+    container_ = object_number(containers[0]);
 }
 
 void perform(object LIB_CREATURE actor)
 {
     object LIB_ITEM       item;
-    object LIB_CONTAINER  cont;
-    object LIB_THING      env;
+    object LIB_CONTAINER  container;
+    object LIB_THING      environment;
 
-    cont = find_object(cont_);
-    env = cont ? environment(cont) : nil;
-    if (!env || env != actor && env != (object LIB_ROOM) environment(actor))
+    container = find_object(container_);
+    environment = container ? environment(container) : nil;
+    if (!environment || environment != actor
+        && environment != (object LIB_ROOM) environment(actor))
     {
         tell_object(actor, "That is not here.");
         return;
     }
 
     item = find_object(item_);
-    if (!item || (object LIB_THING) environment(item) != cont) {
+    if (!item || (object LIB_THING) environment(item) != container) {
         tell_object(actor, "You cannot find that.");
         return;
     }
 
     if (item->move(actor)) {
         tell_object(actor, "You take " + definite_description(item)
-                    + " from " + definite_description(cont));
+                    + " from " + definite_description(container));
         tell_audience(actor, definite_description(actor)
                       + " takes " + indefinite_description(item)
-                      + " from " + indefinite_description(cont));
+                      + " from " + indefinite_description(container));
     } else {
         tell_object(actor, "You cannot take " + definite_description(item)
-                    + " from " + definite_description(cont));
+                    + " from " + definite_description(container));
     }
 }

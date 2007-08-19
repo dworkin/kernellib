@@ -245,16 +245,18 @@ create_put_in_action(object LIB_CREATURE actor,
                      object LIB_SELECTOR items_selector,
                      object LIB_SELECTOR containers_selector)
 {
-    object LIB_ITEM   *items;
-    object LIB_THING  *containers;
     object LIB_ROOM    room;
+    object LIB_THING  *containers;
+    object LIB_ITEM   *items;
 
     int i, size;
 
     room = environment(actor);
-    containers = containers_selector->select(room ? inventory(actor)
-                                             + inventory(room)
-                                             : inventory(actor));
+    containers = inventory(actor);
+    if (room) {
+        containers += inventory(room);
+    }
+    containers = containers_selector->select(containers);
     size = sizeof(containers);
     if (!size) {
         tell_object(actor, "That is not here.");
@@ -316,4 +318,45 @@ static object LIB_ACTION create_take_action(object LIB_CREATURE actor,
         }
     }
     return new_object(TAKE_ACTION, items);
+}
+
+static object LIB_ACTION
+create_take_from_action(object LIB_CREATURE actor,
+                        object LIB_SELECTOR items_selector,
+                        object LIB_SELECTOR containers_selector)
+{
+    object LIB_ROOM    room;
+    object LIB_THING  *containers;
+    object LIB_ITEM   *items;
+
+    int i, size;
+
+    room = environment(actor);
+    containers = inventory(actor);
+    if (room) {
+        containers += inventory(room);
+    }
+    containers = containers_selector->select(containers);
+    items = ({ });
+    size = sizeof(containers);
+    if (!size) {
+        tell_object(actor, "That is not here.");
+        return nil;
+    }
+    for (i = 0; i < size; ++i) {
+        if (!(containers[i] <- LIB_CONTAINER)) {
+            tell_object(actor, "You cannot take anything from "
+                        + definite_description(containers[i]));
+            return nil;
+        }
+        items += inventory(containers[i]);
+    }
+
+    items = items_selector->select(items);
+    size = sizeof(items);
+    if (!size) {
+        tell_object(actor, "You cannot find that.");
+        return nil;
+    }
+    return new_object(TAKE_FROM_ACTION, items, containers);
 }

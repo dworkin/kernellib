@@ -52,7 +52,6 @@ static void create()
     compile_object(LOOK_AT_COMMAND);
     compile_object(RELEASE_COMMAND);
     compile_object(REMOVE_COMMAND);
-    compile_object(TAKE_FROM_COMMAND);
     compile_object(WEAR_COMMAND);
     compile_object(WIELD_COMMAND);
 
