@@ -1,0 +1,8 @@
+NAME
+        quit - log out
+
+SYNOPSIS
+        quit
+
+DESCRIPTION
+        Log out of the game. Your character will be saved.
