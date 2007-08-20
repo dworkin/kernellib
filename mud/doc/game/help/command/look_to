@@ -1,0 +1,12 @@
+NAME
+        look_to - look in a direction
+
+SYNOPSIS
+        look <direction>
+
+DESCRIPTION
+        Describe an adjacent location along with the exits, creatures, and
+        items there.
+
+SEE ALSO
+        directions, command/look, command/look_at

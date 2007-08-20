@@ -1,0 +1,15 @@
+NAME
+        release - release weapons
+
+SYNOPSIS
+        release <weapons>
+
+DESCRIPTION
+        Release the specified weapons.
+
+EXAMPLES
+        release spear
+        release all
+
+SEE ALSO
+        weapons, command/wield

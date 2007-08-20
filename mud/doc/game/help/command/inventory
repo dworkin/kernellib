@@ -1,0 +1,13 @@
+NAME
+        inventory - list items in your inventory
+
+SYNOPSIS
+        inventory
+
+DESCRIPTION
+        List all items in your inventory. Wielded weapons and worn armor pieces
+        are listed separately. The total weight that you can carry depends on
+        your capacity, a strength-based attribute.
+
+SEE ALSO
+        armor, weapons, attribute/capacity, command/drop, command/take

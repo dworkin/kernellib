@@ -1,0 +1,14 @@
+NAME
+        drink - drink drinks
+
+SYNOPSIS
+        drink <drinks>
+
+DESCRIPTION
+        Drink the specified drinks.
+
+EXAMPLES
+        drink beer
+
+SEE ALSO
+        drinks, command/eat

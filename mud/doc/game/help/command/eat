@@ -1,0 +1,14 @@
+NAME
+        eat - eat food items
+
+SYNOPSIS
+        eat <food items>
+
+DESCRIPTION
+        Eat the specified food items.
+
+EXAMPLES
+        eat food ration
+
+SEE ALSO
+        food, command/drink

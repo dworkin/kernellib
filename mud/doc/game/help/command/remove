@@ -1,0 +1,17 @@
+NAME
+        remove - remove armor pieces
+
+SYNOPSIS
+        remove <armor pieces>
+        take off <armor pieces>
+        take <armor pieces> off
+
+DESCRIPTION
+        Remove the specified armor pieces.
+
+EXAMPLES
+        remove helmet
+        remove all
+
+SEE ALSO
+        armor, command/wear

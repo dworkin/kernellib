@@ -1,0 +1,12 @@
+NAME
+        look - look around
+
+SYNOPSIS
+        look
+
+DESCRIPTION
+        Describe the current location along with local exits, creatures, and
+        items.
+
+SEE ALSO
+        command/look_at, command/look_to

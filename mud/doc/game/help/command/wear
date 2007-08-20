@@ -1,0 +1,17 @@
+NAME
+        wear - wear armor pieces
+
+SYNOPSIS
+        wear <armor pieces>
+        put on <armor pieces>
+        put <armor pieces> on
+
+DESCRIPTION
+        Wear the specified armor pieces.
+
+EXAMPLES
+        wear shield
+        wear all
+
+SEE ALSO
+        armor, attribute/defense, attribute/protection, command/remove

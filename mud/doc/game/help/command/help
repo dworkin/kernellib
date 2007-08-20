@@ -1,0 +1,9 @@
+NAME
+        help - display help file
+
+SYNOPSIS
+        help [<topic>]
+
+DESCRIPTION
+        Display the help file for the specified topic. If no topic is given,
+        display a helpful overview.

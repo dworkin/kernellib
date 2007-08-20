@@ -1,0 +1,14 @@
+NAME
+        wield - wield weapons
+
+SYNOPSIS
+        wield <weapons>
+
+DESCRIPTION
+        Wield the specified weapons.
+
+EXAMPLES
+        wield sword
+
+SEE ALSO
+        weapons, attribute/attack, attribute/damage, command/release

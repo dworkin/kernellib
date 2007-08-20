@@ -1,0 +1,11 @@
+NAME
+        look_at - look at things
+
+SYNOPSIS
+        look at <things>
+
+DESCRIPTION
+        Describe the specified things.
+
+SEE ALSO
+        command/look, command/look_to
