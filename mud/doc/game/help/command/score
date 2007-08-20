@@ -1,0 +1,11 @@
+NAME
+        score - display attributes
+
+SYNOPSIS
+        score
+
+DESCRIPTION
+        Display your current attributes.
+
+SEE ALSO
+        attributes
