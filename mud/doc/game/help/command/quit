@@ -5,4 +5,5 @@ SYNOPSIS
         quit
 
 DESCRIPTION
-        Log out of the game. Your character will be saved.
+        Log out of the game. Your character will be saved, though perhaps not
+        forever.
