@@ -11,7 +11,7 @@ can be passed to the find_object() function to find the object again.
 2. Inventory system
 
 The system library provides an object inventory system similar to that of
-LPMud. Objects control their own movement, and any movement can be vetoed by
+LPMud. Objects control their own movement, though any movement can be vetoed by
 the environment being moved into.
 
 
