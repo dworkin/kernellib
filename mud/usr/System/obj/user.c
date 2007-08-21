@@ -339,7 +339,7 @@ int receive_message(string str)
 }
 
 /*
- * NAME:        evt_error()
+ * NAME:        evt_observe()
  * DESCRIPTION: handle an observe event from the creature
  */
 static void evt_observe(object sender, string message)
