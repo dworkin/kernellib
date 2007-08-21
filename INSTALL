@@ -1,0 +1,32 @@
+This file desribes how to get the Leprechaun mud library up and running. The
+author assumes that you have already retrieved and unpacked the Leprechaun
+distribution. If you checked Leprechaun out of the Subversion repository, you
+may want to remove all ".svn" directories first so that they cannot be accessed
+from within the mud.
+
+You should be able to locate any additional resources required from DGD's home
+page:
+
+  http://www.dworkin.nl/dgd/
+
+Now, follow these steps:
+
+  1. Get a recent version of DGD's experimental branch.
+
+  2. Copy the directories "mud/kernel" and "mud/include/kernel" from the DGD
+     distribution to the corresponding locations in the Leprechaun "mud"
+     directory.
+
+  3. Edit the base directory in the configuration file "mud.dgd" so that it
+     points to the Leprechaun "mud" directory as installed on your system.
+
+  4. Start DGD using Leprechaun's configuration file. Log in as "admin" on the
+     binary port and grant access to the "Game" user. Restart DGD and log in
+     on the telnet port as a normal user.
+
+Direct bug reports and other feedback to Mikael Lind:
+
+  mikkelin@gmail.com
+
+Questions and discussions about Leprechaun should also be welcome on the DGD
+mailing list.
