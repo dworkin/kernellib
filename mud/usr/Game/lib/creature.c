@@ -250,12 +250,6 @@ void observe(string mess)
     event("observe", mess);
 }
 
-void add_action(object LIB_ACTION action)
-{
-    ASSERT_ARGUMENT(action);
-    call_out("act", 0, action);
-}
-
 static void act(object LIB_ACTION action)
 {
     string error;
@@ -264,6 +258,12 @@ static void act(object LIB_ACTION action)
     if (error) {
         event("error", error);
     }
+}
+
+void add_action(object LIB_ACTION action)
+{
+    ASSERT_ARGUMENT(action);
+    call_out("act", 0, action);
 }
 
 static void drop_all()

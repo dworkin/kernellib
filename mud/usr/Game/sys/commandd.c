@@ -5,7 +5,6 @@
 # include <game/direction.h>
 # include <game/language.h>
 # include <game/message.h>
-# include <game/selector.h>
 # include <game/string.h>
 # include <game/thing.h>
 # include <system/system.h>
@@ -120,56 +119,132 @@ static mixed *parse_wield_command(mixed *tree)
     return ({ "wield", tree[1] });
 }
 
-static mixed *parse_word(mixed *tree)
+static mixed *parse_list_selector(mixed *tree)
 {
-    return tree;
-}
-
-static mixed *parse_words(mixed *tree)
-{
-    return ({ tree });
+    tree -= ({ ",", "and" });
+    return sizeof(tree) == 1 ? tree : ({ ({ "list", tree }) });
 }
 
 static mixed *parse_simple_selector(mixed *tree)
 {
-    return ({ new_object(SIMPLE_SELECTOR, tree[sizeof(tree) - 1]) });
+    return ({ ({ "simple", tree[sizeof(tree) - 1] }) });
 }
 
 static mixed *parse_ordinal_selector(mixed *tree)
 {
-    tree -= ({ "of", "the" });
-    return ({ new_object(ORDINAL_SELECTOR, tree[0], tree[1]) });
+    tree -= ({ "the", "of" });
+    return ({ ({ "ordinal", tree[0], tree[1] }) });
 }
 
 static mixed *parse_a_selector(mixed *tree)
 {
-    return ({ new_object(COUNT_SELECTOR, 1, tree[1]) });
+    return ({ ({ "count", 1, tree[1] }) });
 }
 
 static mixed *parse_count_selector(mixed *tree)
 {
-    return ({ new_object(COUNT_SELECTOR, tree[0], tree[sizeof(tree) - 1]) });
-}
-
-static mixed *parse_all_selector(mixed *tree)
-{
-    return ({ new_object(ALL_SELECTOR) });
+    tree -= ({ "the", "of" });
+    return ({ ({ "count", tree[0], tree[1] }) });
 }
 
 static mixed *parse_all_of_selector(mixed *tree)
 {
-    tree -= ({ "of", "the" });
-    return ({ new_object(ALL_OF_SELECTOR, tree[1]) });
+    return ({ ({ "count", -1, tree[sizeof(tree) - 1] }) });
 }
 
-static mixed *parse_list_selector(mixed *tree)
+static mixed *parse_quote(mixed *tree)
 {
-    return ({ new_object(LIST_SELECTOR, tree - ({ ",", "and", "or" })) });
+    string quote;
+
+    quote = tree[0];
+    sscanf(quote, "%*s %s", quote);
+    return ({ quote });
 }
 
-static mixed *parse_except_selector(mixed *tree)
+static mixed *parse_phrase(mixed *tree)
 {
-    return ({ new_object(EXCEPT_SELECTOR, tree[0], tree[sizeof(tree) - 1]) });
+    return ({ implode(tree, " ") });
+}
+
+static mixed *parse_space(mixed *tree)
+{
+    return ({ });
+}
+
+static object LIB_THING *select(object LIB_CREATURE actor,
+                                object LIB_THING *things, mixed *selector)
+{
+    return call_other(this_object(), "select_" + selector[0], actor, things,
+                      selector[1 ..]...);
+}
+
+static object LIB_THING *select_list(object LIB_CREATURE actor,
+                                     object LIB_THING *things,
+                                     mixed **selectors)
+{
+    object LIB_THING *selected;
+    int i, size;
+
+    selected = ({ });
+    size = sizeof(selectors);
+    for (i = 0; i < size; ++i) {
+        selected |= select(actor, things, selectors[i]);
+    }
+    return selected;
+}
+
+static object LIB_THING *select_simple(object LIB_CREATURE actor,
+                                       object LIB_THING *things, string phrase)
+{
+    int i, j, size;
+    object LIB_THING *selected;
+
+    size = sizeof(things);
+    selected = allocate(size);
+    for (i = j = 0; i < size; ++i) {
+        if (things[i]->identify(phrase, actor)) {
+            return ({ things[i] });
+        } else if (things[i]->identify_plural(phrase, actor)) {
+            selected[j++] = things[i];
+        }
+    }
+    return selected[.. j - 1];
+}
+
+static object LIB_THING *select_ordinal(object LIB_CREATURE actor,
+                                        object LIB_THING *things, int ordinal,
+                                        string phrase)
+{
+    int i, j, size;
+
+    size = sizeof(things);
+    for (i = j = 0; i < size; ++i) {
+        if ((things[i]->identify(phrase, actor)
+             || things[i]->identify_plural(phrase, actor)) && ++j == ordinal)
+        {
+            return ({ things[i] });
+        }
+    }
+    return ({ });
+}
+
+static object LIB_THING *select_count(object LIB_CREATURE actor,
+                                      object LIB_THING *things, int count,
+                                      string phrase)
+{
+    int i, j, size;
+    object LIB_THING *selected;
+
+    size = sizeof(things);
+    selected = allocate(size);
+    for (i = j = 0; (count < 0 || j < count) && i < size; ++i) {
+        if (things[i]->identify(phrase, actor)
+            || things[i]->identify_plural(phrase, actor))
+        {
+            selected[j++] = things[i];
+        }
+    }
+    return selected[.. j - 1];
 }
 
 static mixed *parse_count(mixed *tree)
@@ -177,7 +252,7 @@ static mixed *parse_count(mixed *tree)
     mixed count;
 
     count = ::parse_count(tree[0]);
-    return count == nil ? nil : ({ count });
+    return count ? ({ count }) : nil;
 }
 
 static mixed *parse_ordinal(mixed *tree)
@@ -185,25 +260,11 @@ static mixed *parse_ordinal(mixed *tree)
     mixed ordinal;
 
     ordinal = ::parse_ordinal(tree[0]);
-    return ordinal == nil ? nil : ({ ordinal });
-}
-
-static mixed *parse_direction(mixed *tree)
-{
-    return is_direction(tree[0]) ? tree : nil;
-}
-
-static mixed *parse_say(mixed *tree)
-{
-    string message;
-
-    message = tree[0];
-    sscanf(message, "say %s", message);
-    return ({ message });
+    return ordinal ? ({ ordinal }) : nil;
 }
 
 static object LIB_ACTION create_drop_action(object LIB_CREATURE actor,
-                                            object LIB_SELECTOR selector)
+                                            mixed *selector)
 {
     object LIB_ROOM   room;
     object LIB_ITEM  *items;
@@ -216,7 +277,7 @@ static object LIB_ACTION create_drop_action(object LIB_CREATURE actor,
         return nil;
     }
 
-    items = selector->select(inventory(actor));
+    items = select(actor, inventory(actor), selector);
     size = sizeof(items);
     if (!size) {
         tell_object(actor, "You do not have that.");
@@ -226,9 +287,8 @@ static object LIB_ACTION create_drop_action(object LIB_CREATURE actor,
 }
 
 static object LIB_ACTION
-create_give_action(object LIB_CREATURE actor,
-                   object LIB_SELECTOR items_selector,
-                   object LIB_SELECTOR creatures_selector)
+create_give_action(object LIB_CREATURE actor, mixed *item_selector,
+                   mixed *creature_selector)
 {
     object LIB_ITEM   *items;
     object LIB_ROOM    room;
@@ -236,7 +296,7 @@ create_give_action(object LIB_CREATURE actor,
 
     int i, size;
 
-    items = items_selector->select(inventory(actor));
+    items = select(actor, inventory(actor), item_selector);
     if (!sizeof(items)) {
         tell_object(actor, "You do not have that.");
         return nil;
@@ -248,7 +308,7 @@ create_give_action(object LIB_CREATURE actor,
         return nil;
     }
 
-    creatures = creatures_selector->select(inventory(room));
+    creatures = select(actor, inventory(room), creature_selector);
     size = sizeof(creatures);
     if (!size) {
         tell_object(actor, "They are not here.");
@@ -285,7 +345,7 @@ static object LIB_ACTION create_look_action(object LIB_CREATURE actor)
 }
 
 static object LIB_ACTION create_look_at_action(object LIB_CREATURE actor,
-                                               object LIB_SELECTOR selector)
+                                               mixed *selector)
 {
     object LIB_THING  *things;
     object LIB_ROOM    room;
@@ -295,7 +355,7 @@ static object LIB_ACTION create_look_at_action(object LIB_CREATURE actor,
     if (room) {
         things += inventory(room);
     }
-    things = selector->select(things);
+    things = select(actor, things, selector);
     if (!sizeof(things)) {
         tell_object(actor, "That is not here.");
         return nil;
@@ -305,9 +365,8 @@ static object LIB_ACTION create_look_at_action(object LIB_CREATURE actor,
 }
 
 static object LIB_ACTION
-create_put_in_action(object LIB_CREATURE actor,
-                     object LIB_SELECTOR items_selector,
-                     object LIB_SELECTOR containers_selector)
+create_put_in_action(object LIB_CREATURE actor, mixed *item_selector,
+                     mixed *container_selector)
 {
     object LIB_ROOM    room;
     object LIB_THING  *containers;
@@ -320,7 +379,7 @@ create_put_in_action(object LIB_CREATURE actor,
     if (room) {
         containers += inventory(room);
     }
-    containers = containers_selector->select(containers);
+    containers = select(actor, containers, container_selector);
     size = sizeof(containers);
     if (!size) {
         tell_object(actor, "That is not here.");
@@ -329,12 +388,12 @@ create_put_in_action(object LIB_CREATURE actor,
     for (i = 0; i < size; ++i) {
         if (!(containers[i] <- LIB_CONTAINER)) {
             tell_object(actor, "You cannot put anything in "
-                        + definite_description(containers[i]));
+                        + definite_description(containers[i]) + ".");
             return nil;
         }
     }
 
-    items = items_selector->select(inventory(actor));
+    items = select(actor, inventory(actor), item_selector);
     size = sizeof(items);
     if (!size) {
         tell_object(actor, "You do not have that.");
@@ -344,14 +403,14 @@ create_put_in_action(object LIB_CREATURE actor,
 }
 
 static object LIB_ACTION create_release_action(object LIB_CREATURE actor,
-                                               object LIB_SELECTOR selector)
+                                               mixed *selector)
 {
     object LIB_ITEM    *weapons;
     object LIB_WEAPON  *wielded;
 
     int i, size;
 
-    weapons = selector->select(inventory(actor));
+    weapons = select(actor, inventory(actor), selector);
     size = sizeof(weapons);
     if (!size) {
         tell_object(actor, "You do not have that.");
@@ -362,19 +421,19 @@ static object LIB_ACTION create_release_action(object LIB_CREATURE actor,
     weapons -= wielded;
     if (sizeof(weapons)) {
         tell_object(actor, "You are not wielding "
-                    + definite_description(weapons[0]));
+                    + definite_description(weapons[0]) + ".");
         return nil;
     }
     return new_object(RELEASE_ACTION, wielded);
 }
 
 static object LIB_ACTION create_remove_action(object LIB_CREATURE actor,
-                                              object LIB_SELECTOR selector)
+                                              mixed *selector)
 {
     object LIB_ITEM         *armor_pieces;
     object LIB_ARMOR_PIECE  *worn;
 
-    armor_pieces = selector->select(inventory(actor));
+    armor_pieces = select(actor, inventory(actor), selector);
     if (!sizeof(armor_pieces)) {
         tell_object(actor, "You do not have that.");
         return nil;
@@ -384,7 +443,7 @@ static object LIB_ACTION create_remove_action(object LIB_CREATURE actor,
     armor_pieces -= worn;
     if (sizeof(armor_pieces)) {
         tell_object(actor, "You are not wearing "
-                    + definite_description(armor_pieces[0]));
+                    + definite_description(armor_pieces[0]) + ".");
         return nil;
     }
     return new_object(REMOVE_ACTION, worn);
@@ -402,7 +461,7 @@ static object LIB_ACTION create_score_action(object LIB_CREATURE actor)
 }
 
 static object LIB_ACTION create_take_action(object LIB_CREATURE actor,
-                                            object LIB_SELECTOR selector)
+                                            mixed *selector)
 {
     object LIB_ROOM    room;
     object LIB_THING  *items;
@@ -415,7 +474,7 @@ static object LIB_ACTION create_take_action(object LIB_CREATURE actor,
         return nil;
     }
 
-    items = selector->select(inventory(room));
+    items = select(actor, inventory(room), selector);
     size = sizeof(items);
     if (!size) {
         tell_object(actor, "That is not here.");
@@ -424,7 +483,7 @@ static object LIB_ACTION create_take_action(object LIB_CREATURE actor,
     for (i = 0; i < size; ++i) {
         if (!(items[i] <- LIB_ITEM)) {
             tell_object(actor, "You cannot take "
-                        + definite_description(items[i]));
+                        + definite_description(items[i]) + ".");
             return nil;
         }
     }
@@ -432,9 +491,8 @@ static object LIB_ACTION create_take_action(object LIB_CREATURE actor,
 }
 
 static object LIB_ACTION
-create_take_from_action(object LIB_CREATURE actor,
-                        object LIB_SELECTOR items_selector,
-                        object LIB_SELECTOR containers_selector)
+create_take_from_action(object LIB_CREATURE actor, mixed *item_selector,
+                        mixed *container_selector)
 {
     object LIB_ROOM    room;
     object LIB_THING  *containers;
@@ -447,7 +505,7 @@ create_take_from_action(object LIB_CREATURE actor,
     if (room) {
         containers += inventory(room);
     }
-    containers = containers_selector->select(containers);
+    containers = select(actor, containers, container_selector);
     items = ({ });
     size = sizeof(containers);
     if (!size) {
@@ -457,13 +515,13 @@ create_take_from_action(object LIB_CREATURE actor,
     for (i = 0; i < size; ++i) {
         if (!(containers[i] <- LIB_CONTAINER)) {
             tell_object(actor, "You cannot take anything from "
-                        + definite_description(containers[i]));
+                        + definite_description(containers[i]) + ".");
             return nil;
         }
         items += inventory(containers[i]);
     }
 
-    items = items_selector->select(items);
+    items = select(actor, items, item_selector);
     size = sizeof(items);
     if (!size) {
         tell_object(actor, "You cannot find that.");
@@ -473,14 +531,14 @@ create_take_from_action(object LIB_CREATURE actor,
 }
 
 static object LIB_ACTION create_wear_action(object LIB_CREATURE actor,
-                                            object LIB_SELECTOR selector)
+                                            mixed *selector)
 {
     object LIB_ITEM         *armor_pieces;
     object LIB_ARMOR_PIECE  *worn;
 
     int i, size;
 
-    armor_pieces = selector->select(inventory(actor));
+    armor_pieces = select(actor, inventory(actor), selector);
     size = sizeof(armor_pieces);
     if (!size) {
         tell_object(actor, "You do not have that.");
@@ -490,7 +548,7 @@ static object LIB_ACTION create_wear_action(object LIB_CREATURE actor,
     for (i = 0; i < size; ++i) {
         if (!(armor_pieces[i] <- LIB_ARMOR_PIECE)) {
             tell_object(actor, "You cannot wear "
-                        + definite_description(armor_pieces[i]));
+                        + definite_description(armor_pieces[i]) + ".");
             return nil;
         }
     }
@@ -498,21 +556,21 @@ static object LIB_ACTION create_wear_action(object LIB_CREATURE actor,
     worn = armor_pieces & actor->query_worn();
     if (sizeof(worn)) {
         tell_object(actor, "You are already wearing "
-                    + definite_description(armor_pieces[0]));
+                    + definite_description(armor_pieces[0]) + ".");
         return nil;
     }
     return new_object(WEAR_ACTION, armor_pieces);
 }
 
 static object LIB_ACTION create_wield_action(object LIB_CREATURE actor,
-                                             object LIB_SELECTOR selector)
+                                             mixed *selector)
 {
     object LIB_ITEM    *weapons;
     object LIB_WEAPON  *wielded;
 
     int i, size;
 
-    weapons = selector->select(inventory(actor));
+    weapons = select(actor, inventory(actor), selector);
     size = sizeof(weapons);
     if (!size) {
         tell_object(actor, "You do not have that.");
@@ -522,7 +580,7 @@ static object LIB_ACTION create_wield_action(object LIB_CREATURE actor,
     for (i = 0; i < size; ++i) {
         if (!(weapons[i] <- LIB_WEAPON)) {
             tell_object(actor, "You cannot wield "
-                        + definite_description(weapons[i]));
+                        + definite_description(weapons[i]) + ".");
             return nil;
         }
     }
@@ -530,7 +588,7 @@ static object LIB_ACTION create_wield_action(object LIB_CREATURE actor,
     wielded = weapons & actor->query_wielded();
     if (sizeof(wielded)) {
         tell_object(actor, "You are already wielding "
-                    + definite_description(wielded[0]));
+                    + definite_description(wielded[0]) + ".");
         return nil;
     }
     return new_object(WIELD_ACTION, weapons);

@@ -73,10 +73,12 @@ string query_name()
     return name_;
 }
 
-int singular_identify(string *words, varargs object LIB_CREATURE actor)
+int identify(string phrase, varargs object LIB_CREATURE actor)
 {
+    string *words;
     int size;
 
+    words = explode(phrase, " ");
     size = sizeof(words);
     if (!size || !has_singular_noun(words[size - 1])
         && words[size - 1] != name_)
@@ -87,10 +89,12 @@ int singular_identify(string *words, varargs object LIB_CREATURE actor)
                    - map_indices(singular_nouns_) - ({ name_ }));
 }
 
-int plural_identify(string *words, varargs object LIB_CREATURE actor)
+int identify_plural(string phrase, varargs object LIB_CREATURE actor)
 {
+    string *words;
     int size;
 
+    words = explode(phrase, " ");
     size = sizeof(words);
     if (!size || !has_plural_noun(words[size - 1])
         && words[size - 1] != name_)
@@ -99,9 +103,4 @@ int plural_identify(string *words, varargs object LIB_CREATURE actor)
     }
     return !sizeof(words[.. size - 2] - map_indices(adjectives_)
                    - map_indices(singular_nouns_) - ({ name_ }));
-}
-
-int identify(string *words, varargs object LIB_CREATURE actor)
-{
-    return singular_identify(words, actor) || plural_identify(words, actor);
 }

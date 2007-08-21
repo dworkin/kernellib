@@ -30,10 +30,13 @@ void perform(object LIB_CREATURE actor)
         tell_object(actor, "That is not here.");
         return;
     }
-
     item = find_object(item_);
     if (!item || (object LIB_THING) environment(item) != actor) {
         tell_object(actor, "You do not have that.");
+        return;
+    }
+    if (item == container) {
+        tell_object(actor, "You cannot put something into itself.");
         return;
     }
 

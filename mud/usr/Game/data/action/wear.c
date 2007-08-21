@@ -2,7 +2,6 @@
 # include <game/armor.h>
 # include <game/description.h>
 # include <game/message.h>
-# include <game/selector.h>
 # include <game/thing.h>
 
 inherit LIB_ACTION;

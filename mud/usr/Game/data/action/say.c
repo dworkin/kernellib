@@ -2,7 +2,6 @@
 # include <game/armor.h>
 # include <game/description.h>
 # include <game/message.h>
-# include <game/selector.h>
 # include <game/string.h>
 # include <game/thing.h>
 

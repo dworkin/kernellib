@@ -3,7 +3,6 @@
 # include <game/command.h>
 # include <game/guild.h>
 # include <game/race.h>
-# include <game/selector.h>
 # include <game/word.h>
 # include <game/thing.h>
 # include <system/assert.h>
@@ -39,14 +38,6 @@ static void create()
     compile_object(TAKE_FROM_ACTION);
     compile_object(WEAR_ACTION);
     compile_object(WIELD_ACTION);
-
-    compile_object(SIMPLE_SELECTOR);
-    compile_object(ORDINAL_SELECTOR);
-    compile_object(COUNT_SELECTOR);
-    compile_object(ALL_OF_SELECTOR);
-    compile_object(ALL_SELECTOR);
-    compile_object(LIST_SELECTOR);
-    compile_object(EXCEPT_SELECTOR);
 
     wordd_ = compile_object(WORDD);
     commandd_ = compile_object(COMMANDD);
@@ -85,38 +76,38 @@ static void create()
     new_object(COIN, "silver", 1 + random(20))->move(crypt);
 }
 
-static string select_element(string *array)
+static string pick_element(string *array)
 {
     return array[random(sizeof(array))];
 }
 
-static string select_gender(string *options)
+static string pick_gender(string *options)
 {
     string *genders;
 
     genders = ({ "female", "male" });
     options &= genders;
-    return select_element(sizeof(options) ? options : genders);
+    return pick_element(sizeof(options) ? options : genders);
 }
 
-static object LIB_RACE select_race(string *options)
+static object LIB_RACE pick_race(string *options)
 {
     string *races, race;
 
     races = ({ "dwarf", "elf", "goblin", "human", "leprechaun" });
     options &= races;
-    race = select_element(sizeof(options) ? options : races);
+    race = pick_element(sizeof(options) ? options : races);
     return find_object(RACE_DIR + "/" + race);
 }
 
-static object LIB_GUILD select_guild(string *options)
+static object LIB_GUILD pick_guild(string *options)
 {
     string *guilds, guild;
 
     guilds = ({ "bard", "knight", "monk", "priest", "ranger", "thief",
                 "warrior", "wizard" });
     options &= guilds;
-    guild = select_element(sizeof(options) ? options : guilds);
+    guild = pick_element(sizeof(options) ? options : guilds);
     return find_object(GUILD_DIR + "/" + guild);
 }
 
@@ -131,9 +122,9 @@ object LIB_CREATURE make_creature(varargs string str)
     options = str ? explode(str, " ") - ({ "" }) : ({ });
 
     creature = clone_object(CREATURE);
-    creature->set_gender(select_gender(options));
-    creature->set_race(select_race(options));
-    creature->set_guild(select_guild(options));
+    creature->set_gender(pick_gender(options));
+    creature->set_race(pick_race(options));
+    creature->set_guild(pick_guild(options));
     
     creature->move(temple_);
     return creature;

@@ -1,102 +1,148 @@
-word = /[0-9a-z]+(-[0-9a-z]+)*/
-say = /say .+/
-whitespace = / +/
+ordinal = /[1-9][0-9]*(,[0-9][0-9][0-9])*(st|nd|rd|th)/
+count = /[1-9][0-9]*(,[0-9][0-9][0-9])*/
+
+whisper_quote = /whisper .+/
+say_quote = /say .+/
+shout_quote = /shout .+/
+
+word = /[a-z]+(-[a-z]+)*/
+space = / +/
 dummy = nomatch
 
-CMD: 'inventory' ? parse_inventory_command
-CMD: 'score' ? parse_score_command
+COMMAND: 'inventory' ? parse_inventory_command
+COMMAND: 'score' ? parse_score_command
 
-CMD: 'look' ? parse_look_command
-CMD: 'look' 'at' SEL ? parse_look_at_command
-CMD: 'look' DIR ? parse_look_to_command
-CMD: 'listen' ? parse_listen_command
-CMD: 'listen' 'to' SEL ? parse_listen_to_command
-CMD: 'smell' ? parse_smell_command
-CMD: 'smell' SEL ? parse_smell_command
-CMD: 'touch' SEL ? parse_touch_command
-CMD: 'taste' SEL ? parse_taste_command
+COMMAND: 'go' _ DIRECTION ? parse_go_command
+COMMAND: DIRECTION ? parse_go_command
 
-CMD: 'go' DIR ? parse_go_command
-CMD: DIR ? parse_go_command
+COMMAND: 'look' ? parse_look_command
+COMMAND: 'look' _ 'at' _ SELECTOR ? parse_look_at_command
 
-CMD: 'take' SEL ? parse_take_command
-CMD: 'get' SEL ? parse_take_command
-CMD: 'pick' 'up' SEL ? parse_take_command
-CMD: 'pick' SEL 'up' ? parse_take_command
-CMD: 'drop' SEL ? parse_drop_command
-CMD: 'put' 'down' SEL ? parse_drop_command
-CMD: 'put' SEL 'down' ? parse_drop_command
+COMMAND: 'take' _ SELECTOR ? parse_take_command
+COMMAND: 'pick' _ 'up' _ SELECTOR ? parse_take_command
+COMMAND: 'pick' _ SELECTOR _ 'up' ? parse_take_command
+COMMAND: 'get' _ SELECTOR ? parse_take_command
+
+COMMAND: 'drop' _ SELECTOR ? parse_drop_command
+COMMAND: 'put' _ 'down' _ SELECTOR ? parse_drop_command
+COMMAND: 'put' _ SELECTOR _ 'down' ? parse_drop_command
  
-CMD: 'put' SEL 'in' SEL ? parse_put_in_command
-CMD: 'take' SEL 'from' SEL ? parse_take_from_command
-CMD: 'take' SEL 'out' 'of' SEL ? parse_take_from_command
-CMD: 'get' SEL 'from' SEL ? parse_take_from_command
-CMD: 'get' SEL 'out' 'of' SEL ? parse_take_from_command
+COMMAND: 'put' _ SELECTOR _ 'in' _ SELECTOR ? parse_put_in_command
 
-CMD: 'wear' SEL ? parse_wear_command
-CMD: 'put' 'on' SEL ? parse_wear_command
-CMD: 'put' SEL 'on' ? parse_wear_command
-CMD: 'remove' SEL ? parse_remove_command
-CMD: 'take' 'off' SEL ? parse_remove_command
-CMD: 'take' SEL 'off' ? parse_remove_command
+COMMAND: 'take' _ SELECTOR _ 'out' _ 'of' _ SELECTOR ? parse_take_out_command
+COMMAND: 'take' _ SELECTOR _ 'from' _ SELECTOR ? parse_take_out_command
+COMMAND: 'get' _ SELECTOR _ 'out' _ 'of' _ SELECTOR ? parse_take_out_command
+COMMAND: 'get' _ SELECTOR _ 'from' _ SELECTOR ? parse_take_out_command
 
-CMD: 'wield' SEL ? parse_wield_command
-CMD: 'release' SEL ? parse_release_command
+COMMAND: 'wear' _ SELECTOR ? parse_wear_command
+COMMAND: 'put' _ 'on' _ SELECTOR ? parse_wear_command
+COMMAND: 'put' _ SELECTOR _ 'on' ? parse_wear_command
 
-CMD: 'eat' SEL ? parse_eat_command
-CMD: 'drink' SEL ? parse_drink_command
+COMMAND: 'remove' _ SELECTOR ? parse_remove_command
+COMMAND: 'take' _ 'off' _ SELECTOR ? parse_remove_command
+COMMAND: 'take' _ SELECTOR _ 'off' ? parse_remove_command
 
-CMD: 'open' SEL ? parse_open_command
-CMD: 'close' SEL ? parse_close_command
+COMMAND: 'wield' _ SELECTOR ? parse_wield_command
+COMMAND: 'release' _ SELECTOR ? parse_release_command
+COMMAND: 'attack' _ SELECTOR ? parse_attack_command
 
-CMD: 'give' SEL 'to' SEL ? parse_give_command
-CMD: 'attack' SEL ? parse_attack_command
+COMMAND: 'eat' _ SELECTOR ? parse_eat_command
+COMMAND: 'drink' _ SELECTOR ? parse_drink_command
+COMMAND: 'give' _ SELECTOR _ 'to' _ SELECTOR ? parse_give_command
 
-CMD: SAY ? parse_say_command
+COMMAND: WHISPER_QUOTE ? parse_whisper_command
+COMMAND: SAY_QUOTE ? parse_say_command
+COMMAND: SHOUT_QUOTE ? parse_shout_command
 
-WORD: word ? parse_word
-REC_WORD: WORD
-REC_WORD: REC_WORD WORD
-WORDS: REC_WORD ? parse_words
+SELECTOR: LIST_SELECTOR
 
-OPT_THE:
-OPT_THE: 'the'
+LIST_SELECTOR: _LIST_SELECTOR ? parse_list_selector
+_LIST_SELECTOR: _LIST_SELECTOR ',' _ BASIC_SELECTOR
+_LIST_SELECTOR: _LIST_SELECTOR _ 'and' _ BASIC_SELECTOR
+_LIST_SELECTOR: _LIST_SELECTOR ',' _ 'and' _ BASIC_SELECTOR
+_LIST_SELECTOR: BASIC_SELECTOR
 
-SEL_1: OPT_THE WORDS ? parse_simple_selector
-SEL_1: OPT_THE ORD WORDS ? parse_ordinal_selector
-SEL_1: OPT_THE ORD 'of' OPT_THE WORDS ? parse_ordinal_selector
+BASIC_SELECTOR: SIMPLE_SELECTOR
+BASIC_SELECTOR: ORDINAL_SELECTOR
+BASIC_SELECTOR: COUNT_SELECTOR
+BASIC_SELECTOR: ALL_OF_SELECTOR
 
-SEL_1: 'a' WORDS ? parse_a_selector
-SEL_1: 'an' WORDS ? parse_a_selector
-SEL_1: COUNT WORDS ? parse_count_selector
-SEL_1: COUNT 'of' OPT_THE WORDS ? parse_count_selector
+SIMPLE_SELECTOR: PHRASE ? parse_simple_selector
+SIMPLE_SELECTOR: 'the' _ PHRASE ? parse_simple_selector
 
-SEL_1: 'all' ? parse_all_selector
-SEL_1: 'all' OPT_THE WORDS ? parse_all_of_selector
-SEL_1: 'all' 'of' OPT_THE WORDS ? parse_all_of_selector
-SEL_1: 'each' WORDS ? parse_all_of_selector
-SEL_1: 'each' 'of' OPT_THE WORDS ? parse_all_of_selector
-SEL_1: 'every' WORDS ? parse_all_of_selector
+ORDINAL_SELECTOR: _ORDINAL_SELECTOR ? parse_ordinal_selector
+_ORDINAL_SELECTOR: ORDINAL _ PHRASE
+_ORDINAL_SELECTOR: 'the' _ ORDINAL _ PHRASE
+_ORDINAL_SELECTOR: ORDINAL _ 'of' _ PHRASE
+_ORDINAL_SELECTOR: 'the' _ ORDINAL _ 'of' _ PHRASE
+_ORDINAL_SELECTOR: ORDINAL _ 'of' _ 'the' _ PHRASE
+_ORDINAL_SELECTOR: 'the' _ ORDINAL _ 'of' _ 'the' _ PHRASE
 
-REC_SEL_1: SEL_1
-REC_SEL_1: REC_SEL_1 ',' SEL_1
-REC_SEL_1: REC_SEL_1 'and' SEL_1
-REC_SEL_1: REC_SEL_1 ',' 'and' SEL_1
-REC_SEL_1: REC_SEL_1 'or' SEL_1
-REC_SEL_1: REC_SEL_1 ',' 'or' SEL_1
-SEL_2: REC_SEL_1 ? parse_list_selector
+COUNT_SELECTOR: 'a' _ PHRASE ? parse_a_selector
+COUNT_SELECTOR: 'an' _ PHRASE ? parse_a_selector
+COUNT_SELECTOR: _COUNT_SELECTOR ? parse_count_selector
+_COUNT_SELECTOR: COUNT _ PHRASE
+_COUNT_SELECTOR: 'the' _ COUNT _ PHRASE
+_COUNT_SELECTOR: COUNT _ 'of' _ PHRASE
+_COUNT_SELECTOR: COUNT _ 'of' _ 'the' _ PHRASE
 
-SEL_3: SEL_2
-SEL_3: SEL_2 'except' SEL_2 ? parse_except_selector
-SEL_3: SEL_2 'but' SEL_2 ? parse_except_selector
-SEL_3: SEL_2 'but' 'not' SEL_2 ? parse_except_selector
-SEL: SEL_3
+ALL_OF_SELECTOR: _ALL_OF_SELECTOR ? parse_all_of_selector
+_ALL_OF_SELECTOR: 'all' _ PHRASE
+_ALL_OF_SELECTOR: 'all' _ 'the' _ PHRASE
+_ALL_OF_SELECTOR: 'all' _ 'of' _ PHRASE
+_ALL_OF_SELECTOR: 'all' _ 'of' _ 'the' _ PHRASE
+_ALL_OF_SELECTOR: 'each' _ PHRASE
+_ALL_OF_SELECTOR: 'each' _ 'of' _ PHRASE
+_ALL_OF_SELECTOR: 'each' _ 'of' _ 'the' _ PHRASE
+_ALL_OF_SELECTOR: 'every' _ PHRASE
 
-COUNT: word ? parse_count
-ORD: word ? parse_ordinal
+WHISPER_QUOTE: whisper_quote ? parse_quote
+SAY_QUOTE: say_quote ? parse_quote
+SHOUT_QUOTE: shout_quote ? parse_quote
 
-DIR: word ? parse_direction
-DIR: 'up' ? parse_direction
-DIR: 'down' ? parse_direction
+PHRASE: _PHRASE ? parse_phrase
+_PHRASE: _PHRASE word
+_PHRASE: word
 
-SAY: say ? parse_say
+ORDINAL: _ORDINAL ? parse_ordinal
+_ORDINAL: ordinal
+_ORDINAL: 'first'
+_ORDINAL: 'second'
+_ORDINAL: 'third'
+_ORDINAL: 'fourth'
+_ORDINAL: 'fifth'
+_ORDINAL: 'sixth'
+_ORDINAL: 'seventh'
+_ORDINAL: 'eighth'
+_ORDINAL: 'ninth'
+_ORDINAL: 'tenth'
+_ORDINAL: 'eleventh'
+_ORDINAL: 'twelveth'
+
+COUNT: _COUNT ? parse_count
+_COUNT: count
+_COUNT: 'one'
+_COUNT: 'two'
+_COUNT: 'three'
+_COUNT: 'four'
+_COUNT: 'five'
+_COUNT: 'six'
+_COUNT: 'seven'
+_COUNT: 'eight'
+_COUNT: 'nine'
+_COUNT: 'ten'
+_COUNT: 'eleven'
+_COUNT: 'twelve'
+
+DIRECTION: 'down'
+DIRECTION: 'east'
+DIRECTION: 'north'
+DIRECTION: 'northeast'
+DIRECTION: 'northwest'
+DIRECTION: 'south'
+DIRECTION: 'southeast'
+DIRECTION: 'southwest'
+DIRECTION: 'up'
+DIRECTION: 'west'
+
+_: space ? parse_space
