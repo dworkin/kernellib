@@ -20,7 +20,6 @@ string password;		/* user password */
 static string newpasswd;	/* new password */
 static object wiztool;		/* command handler */
 static int nconn;		/* # of connections */
-static int accinit;		/* access interface initialized */
 
 /*
  * NAME:	create()
@@ -31,7 +30,6 @@ static void create(int clone)
     if (clone) {
 	user::create();
 	access::create();
-	accinit = TRUE;
 	state = ([ ]);
     }
 }
@@ -84,10 +82,6 @@ int login(string str)
 	    /* no password; login immediately */
 	    connection(previous_object());
 	    tell_audience(Name + " logs in.\n");
-	    if (!accinit) {
-		access::create();
-		accinit = TRUE;
-	    }
 	    if (str != "admin" && sizeof(query_users() & ({ str })) == 0) {
 		message("> ");
 		state[previous_object()] = STATE_NORMAL;
@@ -243,10 +237,6 @@ int receive_message(string str)
 	    connection(previous_object());
 	    message("\n");
 	    tell_audience(Name + " logs in.\n");
-	    if (!accinit) {
-		access::create();
-		accinit = TRUE;
-	    }
 	    if (!wiztool &&
 		(name == "admin" || sizeof(query_users() & ({ name })) != 0)) {
 		wiztool = clone_object(DEFAULT_WIZTOOL, name);

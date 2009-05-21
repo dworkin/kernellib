@@ -20,7 +20,6 @@ mixed *first_suspended;		/* first suspended callout */
 mixed *last_suspended;		/* last suspended callout */
 object suspender;		/* object that suspended callouts */
 int suspend;			/* callouts suspended */
-int nocallouts;			/* don't use callouts as a resource */
 
 /*
  * NAME:	create()
@@ -40,42 +39,9 @@ static void create()
       "create stack" :	({ -1,  0,    0 }),
       "create ticks" :	({ -1,  0,    0 }),
     ]);
-    nocallouts = !CALLOUTRSRC;
-    if (!nocallouts) {
-    	resources["callouts"] = ({ -1, 0, 0 });
-    }
 
     owners = ([ ]);		/* no resource owners yet */
     olimits = ([ ]);
-}
-
-/*
- * NAME:	remove_callouts_rsrc()
- * DESCRIPTION:	remove callouts as a resource
- */
-void remove_callouts_rsrc()
-{
-    if (SYSTEM()) {
-	int *rsrc, i;
-	object *objects;
-
-	if (nocallouts) {
-	    error("Callouts resource already removed");
-	}
-	objects = map_values(owners);
-	i = sizeof(objects);
-	rlimits (-1; -1) {
-	    /*
-	     * This will leave a "callouts":num pair in all objects that
-	     * currently have callouts, unfortunately.
-	     */
-	    nocallouts = TRUE;
-	    while (i != 0) {
-		objects[--i]->remove_rsrc("callouts");
-	    }
-	    resources["callouts"] = nil;
-	}
-    }
 }
 
 /*
@@ -274,7 +240,7 @@ int rsrc_incr(string owner, string name, mixed index, int incr,
     if (KERNEL()) {
 	object obj;
 
-	if (previous_program() == AUTO && name == "callouts" && nocallouts) {
+	if (name == "callouts" && previous_program() == AUTO) {
 	    return TRUE;
 	}
 	if (!(obj=owners[owner])) {
@@ -293,22 +259,6 @@ mixed *call_limits(mixed *previous, string owner, int stack, int ticks)
     if (previous_program() == AUTO) {
 	int maxstack, maxticks, time, *limits;
 
-	if (!olimits) {
-	    int i, max, *rsrc;
-	    object *objects;
-
-	    olimits = ([ ]);
-	    rsrc = resources["stack"];
-	    maxstack = rsrc[GRSRC_MAX];
-	    objects = map_values(owners);
-	    for (i = sizeof(objects); --i >= 0; ) {
-		max = objects[i]->rsrc_get("stack", rsrc)[RSRC_MAX];
-		if (max == maxstack) {
-		    max = -1;
-		}
-		objects[i]->rsrc_set_limit("stack", max, 0);
-	    }
-	}
 	limits = olimits[owner];
 
 	/* determine available stack */
@@ -443,20 +393,10 @@ void release_callouts()
 /*
  * NAME:	suspended()
  * DESCRIPTION:	return TRUE if callouts are suspended, otherwise return FALSE
- *		and decrease # of callouts by 1
  */
 int suspended(object obj, string owner)
 {
-    if (previous_program() == AUTO) {
-	if (suspend != 0 && obj != suspender) {
-	    return TRUE;
-	}
-	if (!nocallouts) {
-	    owners[owner]->rsrc_incr("callouts", obj, -1, resources["callouts"],
-				     FALSE);
-	}
-	return FALSE;
-    }
+    return (suspend != 0 && obj != suspender);
 }
 
 /*
@@ -488,22 +428,51 @@ void suspend(object obj, string owner, int handle)
 
 /*
  * NAME:	remove_callout()
- * DESCRIPTION:	decrease amount of callouts, and possibly remove callout from
- *		list of suspended calls
+ * DESCRIPTION:	remove callout from list of suspended calls
  */
 int remove_callout(object obj, string owner, int handle)
 {
-    if (previous_program() == AUTO && obj != this_object()) {
-	mapping callouts;
-	mixed *callout;
+    mapping callouts;
+    mixed *callout;
 
-	if (!nocallouts) {
-	    owners[owner]->rsrc_incr("callouts", obj, -1, resources["callouts"],
-				     FALSE);
+    if (previous_program() == AUTO && obj != this_object() && suspended &&
+	(callouts=suspended[obj]) && (callout=callouts[handle])) {
+	if (callout != first_suspended) {
+	    callout[CO_PREV][CO_NEXT] = callout[CO_NEXT];
+	} else {
+	    first_suspended = callout[CO_NEXT];
 	}
+	if (callout != last_suspended) {
+	    if (callout[CO_RELHANDLE] != 0) {
+		remove_call_out(last_suspended[CO_RELHANDLE]);
+		last_suspended[CO_RELHANDLE] = callout[CO_RELHANDLE];
+	    }
+	    callout[CO_NEXT][CO_PREV] = callout[CO_PREV];
+	} else {
+	    if (callout[CO_RELHANDLE] != 0) {
+		remove_call_out(callout[CO_RELHANDLE]);
+	    }
+	    last_suspended = callout[CO_PREV];
+	}
+	callouts[handle] = nil;
+	return TRUE;	/* delayed call */
+    }
+    return FALSE;
+}
 
-	if (suspended && (callouts=suspended[obj]) &&
-	    (callout=callouts[handle])) {
+/*
+ * NAME:	remove_callouts()
+ * DESCRIPTION:	remove callouts from an object about to be destructed
+ */
+void remove_callouts(object obj)
+{
+    mixed **callouts, *callout;
+    int i;
+
+    if (previous_program() == AUTO && suspended && suspended[obj]) {
+	callouts = map_values(suspended[obj]);
+	for (i = sizeof(callouts); --i >= 0; ) {
+	    callout = callouts[i];
 	    if (callout != first_suspended) {
 		callout[CO_PREV][CO_NEXT] = callout[CO_NEXT];
 	    } else {
@@ -521,52 +490,8 @@ int remove_callout(object obj, string owner, int handle)
 		}
 		last_suspended = callout[CO_PREV];
 	    }
-	    callouts[handle] = nil;
-	    return TRUE;	/* delayed call */
 	}
-    }
-    return FALSE;
-}
-
-/*
- * NAME:	remove_callouts()
- * DESCRIPTION:	remove callouts from an object about to be destructed
- */
-void remove_callouts(object obj, string owner, int n)
-{
-    if (previous_program() == AUTO) {
-	mixed **callouts, *callout;
-	int i;
-
-	if (!nocallouts && n != 0) {
-	    owners[owner]->rsrc_incr("callouts", obj, -n, resources["callouts"],
-				     FALSE);
-	}
-
-	if (suspended && suspended[obj]) {
-	    callouts = map_values(suspended[obj]);
-	    for (i = sizeof(callouts); --i >= 0; ) {
-		callout = callouts[i];
-		if (callout != first_suspended) {
-		    callout[CO_PREV][CO_NEXT] = callout[CO_NEXT];
-		} else {
-		    first_suspended = callout[CO_NEXT];
-		}
-		if (callout != last_suspended) {
-		    if (callout[CO_RELHANDLE] != 0) {
-			remove_call_out(last_suspended[CO_RELHANDLE]);
-			last_suspended[CO_RELHANDLE] = callout[CO_RELHANDLE];
-		    }
-		    callout[CO_NEXT][CO_PREV] = callout[CO_PREV];
-		} else {
-		    if (callout[CO_RELHANDLE] != 0) {
-			remove_call_out(callout[CO_RELHANDLE]);
-		    }
-		    last_suspended = callout[CO_PREV];
-		}
-	    }
-	    suspended[obj] = nil;
-	}
+	suspended[obj] = nil;
     }
 }
 
@@ -590,10 +515,6 @@ static void release()
 	last_suspended = nil;
 	suspended = nil;
 	suspend = 0;
-    }
-    if (!nocallouts) {
-	owners[callout[CO_OWNER]]->rsrc_incr("callouts", obj, -1,
-					     resources["callouts"], FALSE);
     }
     obj->_F_release(handle);
 }

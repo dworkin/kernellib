@@ -17,7 +17,6 @@ object initd;		/* init manager object */
 object objectd;		/* object manager object */
 object errord;		/* error manager object */
 int tls_size;		/* thread local storage size */
-int mp_ready;		/* prepared for MP */
 
 /*
  * NAME:	creator()
@@ -301,7 +300,6 @@ void set_tls_size(int size)
 {
     if (previous_program() == API_TLS) {
 	tls_size = size + 3;
-	mp_ready = TRUE;
     }
 }
 
@@ -311,10 +309,6 @@ void set_tls_size(int size)
  */
 int query_tls_size()
 {
-    if (!mp_ready) {
-	tls_size++;
-	mp_ready = TRUE;
-    }
     return tls_size;
 }
 
@@ -443,7 +437,6 @@ private void _initialize(mixed *tls)
  */
 static void initialize()
 {
-    mp_ready = TRUE;
     _initialize(allocate(tls_size = 3));
 }
 
@@ -487,10 +480,6 @@ private void _restored(mixed *tls)
  */
 static void restored()
 {
-    if (!mp_ready) {
-	tls_size++;
-	mp_ready = TRUE;
-    }
     _restored(allocate(tls_size));
 }
 
@@ -590,10 +579,6 @@ static int touch(object obj, string function)
 
     if (objectd) {
 	if (!previous_object()) {
-	    if (!mp_ready) {
-		tls_size++;
-		mp_ready = TRUE;
-	    }
 	    tls = allocate(tls_size);
 	} else if (KERNEL()) {
 	    prog = function_object(function, obj);
@@ -697,54 +682,6 @@ static mixed include_file(string from, string path)
 }
 
 /*
- * NAME:	path_include()
- * DESCRIPTION:	translate an include path (obsolete)
- */
-static string path_include(string from, string path)
-{
-    string compiled;
-
-    compiled = TLSVAR3[0];
-    if (path == "AUTO" && from == "/include/std.h" && objectd &&
-	creator(compiled) != "System") {
-	/*
-	 * special object-dependent include file
-	 */
-	path = objectd->path_special(compiled);
-	if (!path) {
-	    return nil;
-	}
-    } else if (strlen(path) != 0 && path[0] != '~' &&
-	       (sscanf(path, "/include/%*s") != 0 ||
-		sscanf(path, "%*s/") == 0) && sscanf(path, "%*s/../") == 0) {
-	/*
-	 * safe include: return immediately
-	 */
-	if (path[0] == '/') {
-	    if (objectd) {
-		objectd->include(from, path);
-	    }
-	    return path;
-	} else {
-	    if (objectd) {
-		objectd->include(from, normalize_path(path, from + "/.."));
-	    }
-	    return from + "/../" + path;
-	}
-    } else {
-	path = normalize_path(path, from + "/..", creator(from));
-    }
-
-    if (accessd->access(from, path, READ_ACCESS)) {
-	if (objectd) {
-	    objectd->include(from, path);
-	}
-	return path;
-    }
-    return nil;
-}
-
-/*
  * NAME:	remove_program()
  * DESCRIPTION:	the last reference to a program is removed
  */
@@ -782,10 +719,6 @@ static void recompile(object obj)
  */
 static object telnet_connect(int port)
 {
-    if (!mp_ready) {
-	tls_size++;
-	mp_ready = TRUE;
-    }
     return userd->telnet_connection(allocate(tls_size), port);
 }
 
@@ -795,10 +728,6 @@ static object telnet_connect(int port)
  */
 static object binary_connect(int port)
 {
-    if (!mp_ready) {
-	tls_size++;
-	mp_ready = TRUE;
-    }
     return userd->binary_connection(allocate(tls_size), port);
 }
 
@@ -823,10 +752,6 @@ private void _interrupt(mixed *tls)
  */
 static void interrupt()
 {
-    if (!mp_ready) {
-	tls_size++;
-	mp_ready = TRUE;
-    }
     _interrupt(allocate(tls_size));
 }
 

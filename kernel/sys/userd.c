@@ -64,9 +64,6 @@ object binary_connection(mixed *tls, int port)
 void set_telnet_manager(int port, object manager)
 {
     if (SYSTEM()) {
-	if (!telnet) {
-	    telnet = ([ ]);
-	}
 	telnet[port] = manager;
     }
 }
@@ -79,9 +76,6 @@ void set_telnet_manager(int port, object manager)
 void set_binary_manager(int port, object manager)
 {
     if (SYSTEM()) {
-	if (!binary) {
-	    binary = ([ ]);
-	}
 	binary[port] = manager;
     }
 }
