@@ -4,6 +4,9 @@
 # include <kernel/access.h>
 # include <kernel/user.h>
 # include <kernel/tls.h>
+# ifdef SYS_NETWORKING
+#  include <kernel/net.h>
+# endif
 # include <status.h>
 # include <trace.h>
 
@@ -461,7 +464,7 @@ void prepare_reboot()
  */
 private void _restored(mixed *tls)
 {
-    message(status()[ST_VERSION] + "\n");
+    message("DGD " + status()[ST_VERSION] + "\n");
 
     rsrcd->reboot();
     userd->reboot();
@@ -470,6 +473,21 @@ private void _restored(mixed *tls)
 	    initd->reboot();
 	}
     }
+# ifdef SYS_NETWORKING
+    if (telnet) {
+	telnet->listen("telnet", TELNET_PORT);
+    }
+    if (binary) {
+	binary->listen("tcp", BINARY_PORT);
+    }
+    if (restore_object("/kernel/data/binary_port")) {
+	object emergency;
+
+	emergency = clone_object(port_master);
+	rsrcd->rsrc_incr("System", "objects", nil, 1, 1);
+	emergency->listen("tcp", port);
+    }
+# endif
 
     message("State restored.\n\n");
 }

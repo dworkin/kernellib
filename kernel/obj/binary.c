@@ -1,5 +1,8 @@
 # include <kernel/kernel.h>
 # include <kernel/user.h>
+# if defined(SYS_NETWORKING) && defined(SYS_DATAGRAMS)
+#  include <kernel/net.h>
+# endif
 
 inherit LIB_CONN;	/* basic connection object */
 
@@ -144,6 +147,8 @@ int message(string str)
     return ::message(str);
 }
 
+#  endif /* !SYS_NETWORKING */
+# endif	/* SYS_DATAGRAMS */
 /*
  * NAME:	message_done()
  * DESCRIPTION:	called when output is completed

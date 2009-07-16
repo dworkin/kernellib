@@ -21,6 +21,55 @@ static void create(string type)
 }
 
 
+# ifdef __SKOTOS__
+/*
+ * NAME:	execute_program()
+ * DESCRIPTION:	execute a program on the host
+ */
+void execute_program(string cmdline)
+{
+    if (previous_program() == AUTO) {
+	user = previous_object();
+	::execute_program(cmdline);
+    }
+}
+
+/*
+ * NAME:	_program_terminated()
+ * DESCRIPTION:	internal version of program_terminated()
+ */
+private void _program_terminated(mixed *tls)
+{
+    user->program_terminated();
+    destruct_object(this_object());
+}
+
+/*
+ * NAME:	program_terminated()
+ * DESCRIPTION:	called when the executing program has terminated
+ */
+static void program_terminated()
+{
+    _program_terminated(allocate(DRIVER->query_tls_size()));
+}
+# endif	/* __SKOTOS__ */
+
+
+# ifdef SYS_NETWORKING
+/*
+ * NAME:	connect()
+ * DESCRIPTION:	establish an outbount connection
+ */
+void connect(string destination, int port)
+{
+    if (previous_program() == AUTO) {
+	::connect(destination, port);
+	user = previous_object();
+    }
+}
+# endif
+
+
 /*
  * NAME:	set_mode()
  * DESCRIPTION:	set the current connection mode
@@ -101,6 +150,11 @@ static void close(mixed *tls, int dest)
 	    destruct_object(this_object());
 	}
     }
+# ifdef SYS_NETWORKING
+    else {
+	set_mode(user->login(nil));
+    }
+# endif
 }
 
 /*
