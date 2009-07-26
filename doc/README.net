@@ -1,0 +1,9 @@
+A networking version of DGD's kernel library.
+
+This code is based on kernellib 1.3 and the networking
+code from kernellib 1.2.44.
+
+Original kernel library by Dworkin
+
+Everything in this kernel library distribution is in the
+public domain.
