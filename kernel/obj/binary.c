@@ -147,8 +147,6 @@ int message(string str)
     return ::message(str);
 }
 
-#  endif /* !SYS_NETWORKING */
-# endif	/* SYS_DATAGRAMS */
 /*
  * NAME:	message_done()
  * DESCRIPTION:	called when output is completed
@@ -158,6 +156,7 @@ static void message_done()
     ::message_done(allocate(driver->query_tls_size()));
 }
 
+#ifndef SYS_NETWORKING
 /*
  * NAME:	open_datagram()
  * DESCRIPTION:	open a datagram channel for this connection
@@ -166,6 +165,12 @@ static void open_datagram()
 {
     ::open_datagram(allocate(driver->query_tls_size()));
 }
+#else
+static void open_datagram()
+{
+    error("Not implemented yet");
+}
+#endif
 
 /*
  * NAME:	receive_datagram()

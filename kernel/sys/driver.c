@@ -19,6 +19,12 @@ object userd;		/* user manager object */
 object initd;		/* init manager object */
 object objectd;		/* object manager object */
 object errord;		/* error manager object */
+# ifdef SYS_NETWORKING
+object telnet;
+object binary;
+object port_master;
+int port;
+# endif
 int tls_size;		/* thread local storage size */
 
 /*

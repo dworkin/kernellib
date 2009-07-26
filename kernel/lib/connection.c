@@ -150,11 +150,13 @@ static void close(mixed *tls, int dest)
 	    destruct_object(this_object());
 	}
     }
+/*
 # ifdef SYS_NETWORKING
     else {
 	set_mode(user->login(nil));
     }
 # endif
+*/
 }
 
 /*
@@ -294,6 +296,7 @@ static void message_done(mixed *tls)
     }
 }
 
+# ifndef SYS_NETWORKING
 /*
  * NAME:	datagram_challenge()
  * DESCRIPTION:	set the challenge for the datagram channel
@@ -315,6 +318,7 @@ static void open_datagram(mixed *tls)
 	user->open_datagram();
     }
 }
+# endif
 
 /*
  * NAME:	receive_datagram()
@@ -331,9 +335,17 @@ static void receive_datagram(mixed *tls, string str)
  * NAME:	datagram()
  * DESCRIPTION:	send a datagram across the connection
  */
+# ifndef SYS_NETWORKING
 int datagram(string str)
 {
     if (previous_object() == user) {
 	return (send_datagram(str) == strlen(str));
     }
 }
+# else
+int datagram(string str, string ip, int port) {
+    if (previous_object() == user) {
+        return (send_datagram(str, ip, port) == strlen(str));
+    }
+}
+# endif
