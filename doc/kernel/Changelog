@@ -1,0 +1,5 @@
+1.3.1
+
+ - Pass on the new optional argument to dump_state().
+ - Allow an optional index argument for status(), enabling the status()[index]
+   kfun optimization.
