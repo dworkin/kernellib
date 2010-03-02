@@ -175,7 +175,7 @@ nomask object query_user()
  * NAME:	timeout()
  * DESCRIPTION:	if the connection timed out, disconnect
  */
-static void timeout()
+static void timeout(mixed *tls)
 {
     if (!user || user->query_conn() != this_object()) {
 	destruct_object(this_object());

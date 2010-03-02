@@ -40,6 +40,15 @@ static void close(int dest)
 }
 
 /*
+ * NAME:	timeout()
+ * DESCRIPTION:	connection timed out
+ */
+static void timeout()
+{
+    ::timeout(allocate(driver->query_tls_size()));
+}
+
+/*
  * NAME:	add_to_buffer()
  * DESCRIPTION:	do this where an error is allowed to happen
  */
