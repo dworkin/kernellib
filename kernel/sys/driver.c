@@ -741,7 +741,7 @@ private void _interrupt(mixed *tls)
 
 # ifdef SYS_PERSISTENT
     prepare_reboot();
-    dump_state();
+    dump_state(1);
 # endif
     shutdown();
 }

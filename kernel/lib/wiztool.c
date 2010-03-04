@@ -1902,6 +1902,43 @@ private string swapnum(int num, int div)
 }
 
 /*
+ * NAME:	ntoa()
+ * DESCRIPTION:	convert a positive integer (or float) to a string
+ */
+private string ntoa(mixed num)
+{
+    string str;
+    float mantissa;
+    int exponent;
+
+    num = (float) num;
+    if (num <= 999999999.0) {
+	return ralign((int) num, 9);
+    }
+
+    str = (string) num;
+    sscanf(str, "%*se+%d", exponent);
+    mantissa = num / pow(10.0, (float) exponent);
+    if (strlen(str) > 10) {
+	num = (exponent < 10) ? 100000.0 : 10000.0;
+        mantissa = floor(mantissa * num + 0.5) / num;
+    }
+    return ralign(mantissa + "e" + exponent, 9);
+}
+
+/*
+ * NAME:	percentage()
+ * DESCRIPTION:	show a percentage
+ */
+private string percentage(mixed part, mixed total)
+{
+    if (total == 0) {
+	return "(  0%)";
+    }
+    return "(" + ralign((int) ((float) part * 100.0 / (float) total), 3) + "%)";
+}
+
+/*
  * NAME:	cmd_status()
  * DESCRIPTION:	show driver status
  */
@@ -1919,10 +1956,10 @@ static void cmd_status(object user, string cmd, string str)
 "                                          Server:       " +
   (string) status[ST_VERSION] + "\n" +
 "------------ Swap device -------------\n" +
-"sectors:  " + ralign(status[ST_SWAPUSED], 9) + " / " +
-	       ralign(status[ST_SWAPSIZE], 9) + " (" +
-  ralign((int) status[ST_SWAPUSED] * 100 / (int) status[ST_SWAPSIZE], 3) +
-  "%)    Start time:   " + ctime(status[ST_STARTTIME])[4 ..] + "\n" +
+"sectors:  " + ntoa(status[ST_SWAPUSED]) + " / " +
+	       ntoa(status[ST_SWAPSIZE]) + " " +
+  percentage(status[ST_SWAPUSED], status(ST_SWAPSIZE)) +
+  "    Start time:   " + ctime(status[ST_STARTTIME])[4 ..] + "\n" +
 "sector size:   " + (((float) status[ST_SECTORSIZE] / 1024.0) + "K" +
 		     SPACE16)[..15];
 	if ((int) status[ST_STARTTIME] != (int) status[ST_BOOTTIME]) {
@@ -1949,36 +1986,29 @@ static void cmd_status(object user, string cmd, string str)
   ralign("00" + seconds, 2) + "\n\n" +
 "--------------- Memory ---------------" +
   "    ------------ Callouts ------------\n" +
-"static:   " + ralign(status[ST_SMEMUSED], 9) + " / " +
-	       ralign(status[ST_SMEMSIZE], 9) + " (" +
-  ralign((int) ((float) status[ST_SMEMUSED] * 100.0 /
-		(float) status[ST_SMEMSIZE]), 3) +
-  "%)    short term:   " + ralign(short, 5) + "         (" +
-  ((short + long == 0) ? "  0" : ralign(100 - long * 100 / (short + long), 3)) +
-  "%)\n" +
-"dynamic:  " + ralign(status[ST_DMEMUSED], 9) + " / " +
-	       ralign(status[ST_DMEMSIZE], 9) + " (" +
-  ralign((int) ((float) status[ST_DMEMUSED] * 100.0 /
-	 (float) status[ST_DMEMSIZE]), 3) +
-  "%) +  other:        " + ralign(long, 5) + "         (" +
-  ((short + long == 0) ? "  0" : ralign(long * 100 / (short + long), 3)) +
-  "%) +\n" +
+"static:   " +
+  ntoa(status[ST_SMEMUSED]) + " / " + ntoa(status[ST_SMEMSIZE]) + " " +
+  percentage(status[ST_SMEMUSED], status[ST_SMEMSIZE]) +
+  "    short: " + ntoa(short) + "            " +
+  percentage(short, short + long) + "\n" +
+"dynamic:  " + ntoa(status[ST_DMEMUSED]) + " / " +
+	       ntoa(status[ST_DMEMSIZE]) + " " +
+  percentage(status[ST_DMEMUSED], status[ST_DMEMSIZE]) +
+  " +  other: " + ntoa(long) + "            " +
+  percentage(long, short + long) + " +\n" +
 "          " +
-  ralign((int) status[ST_SMEMUSED] + (int) status[ST_DMEMUSED], 9) + " / " +
-  ralign((int) status[ST_SMEMSIZE] + (int) status[ST_DMEMSIZE], 9) + " (" +
-  ralign((int) (((float) status[ST_SMEMUSED] +
-		 (float) status[ST_DMEMUSED]) * 100.0 /
-		((float) status[ST_SMEMSIZE] +
-		 (float) status[ST_DMEMSIZE])), 3) +
-  "%)                  " + ralign(short + long, 5) + " / " +
-			   ralign(status[ST_COTABSIZE], 5) + " (" +
-  ralign((short + long) * 100 / (int) status[ST_COTABSIZE], 3) + "%)\n\n" +
-"Objects:  " + ralign(status[ST_NOBJECTS], 9) + " / " +
-	       ralign(status[ST_OTABSIZE], 9) + " (" +
-  ralign((int) status[ST_NOBJECTS] * 100 / (int) status[ST_OTABSIZE], 3) +
-  "%)    Connections:  " + ralign(i, 5) + " / " +
-			   ralign(status[ST_UTABSIZE], 5) + " (" +
-  ralign(i * 100 / (int) status[ST_UTABSIZE], 3) + "%)\n\n";
+  ntoa((float) status[ST_SMEMUSED] + (float) status[ST_DMEMUSED]) + " / " +
+  ntoa((float) status[ST_SMEMSIZE] + (float) status[ST_DMEMSIZE]) + " " +
+  percentage((float) status[ST_SMEMUSED] + (float) status[ST_DMEMUSED],
+	     (float) status[ST_SMEMSIZE] + (float) status[ST_DMEMSIZE]) +
+  "           " +
+  ntoa(short + long) + " /" + ntoa(status[ST_COTABSIZE]) + " " +
+  percentage(short + long, status[ST_COTABSIZE]) + "\n\n" +
+"Objects:  " +
+  ntoa(status[ST_NOBJECTS]) + " / " + ntoa(status[ST_OTABSIZE]) + " " +
+  percentage(status[ST_NOBJECTS], status[ST_OTABSIZE]) +
+  "    Users: " + ntoa(i) + " /" + ntoa(status[ST_UTABSIZE]) + " " +
+  percentage(i, status[ST_UTABSIZE]) + "\n\n";
     } else {
 	i = -1;
 	if (!str || (sscanf(str, "$%d%s", i, str) != 0 &&
