@@ -38,6 +38,15 @@ static void close(int dest)
 }
 
 /*
+ * NAME:	timeout()
+ * DESCRIPTION:	connection timed out
+ */
+static void timeout()
+{
+    ::timeout(allocate(driver->query_tls_size()));
+}
+
+/*
  * NAME:	receive_message()
  * DESCRIPTION:	forward a message to listeners
  */
