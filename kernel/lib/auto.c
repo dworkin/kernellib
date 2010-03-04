@@ -548,58 +548,35 @@ static mixed **call_trace()
 }
 
 /*
- * NAME:	status()
- * DESCRIPTION:	get information about an object
+ * NAME:	process_precompiled()
+ * DESCRIPTION:	process precompiled objects in a status() return value
  */
-static mixed *status(varargs mixed obj)
+private void process_precompiled(mixed *precompiled)
 {
-    object driver;
-    string oname;
-    mixed *status, **callouts, *co;
     int i;
 
-    if (!this_object()) {
-	return nil;
-    }
-    if (!obj) {
-	mixed *precompiled;
-
-	status = ::status();
-	if (status[ST_STACKDEPTH] >= 0) {
-	    status[ST_STACKDEPTH]++;
-	}
-	precompiled = status[ST_PRECOMPILED];
-	if (precompiled) {
-	    for (i = sizeof(precompiled); --i >= 0; ) {
-		precompiled[i] = object_name(precompiled[i]);
-	    }
-	}
-	return status;
-    }
-
-    /*
-     * check arguments
-     */
-    driver = ::find_object(DRIVER);
-    if (typeof(obj) == T_STRING) {
-	/* get corresponding object */
-	obj = ::find_object(driver->normalize_path(obj,
-						   object_name(this_object()) +
-						   "/..",
-						   creator));
-	if (!obj) {
-	    return nil;
+    if (precompiled) {
+	for (i = sizeof(precompiled); --i >= 0; ) {
+	    precompiled[i] = object_name(precompiled[i]);
 	}
     }
-    CHECKARG(typeof(obj) == T_OBJECT, 1, "status");
+}
 
-    status = ::status(obj);
-    callouts = status[O_CALLOUTS];
+/*
+ * NAME:	process_callouts()
+ * DESCRIPTION:	process callouts in a status(obj) return value
+ */
+private mixed **process_callouts(object obj, mixed **callouts)
+{
+    int i;
+    string oname;
+    mixed *co;
+
     if (callouts && (i=sizeof(callouts)) != 0) {
 	oname = object_name(obj);
 	if (sscanf(oname, "/kernel/%*s") != 0) {
 	    /* can't see callouts in kernel objects */
-	    status[O_CALLOUTS] = ({ });
+	    return ({ });
 	} else if (obj != this_object() && creator != "System" &&
 		   (!owner || owner != obj->query_owner())) {
 	    /* remove arguments from callouts */
@@ -619,6 +596,74 @@ static mixed *status(varargs mixed obj)
 	    } while (i != 0);
 	}
     }
+
+    return callouts;
+}
+
+/*
+ * NAME:	status()
+ * DESCRIPTION:	get information about an object
+ */
+static mixed status(varargs mixed obj, mixed index)
+{
+    mixed status;
+    object driver;
+
+    if (!this_object()) {
+	return nil;
+    }
+
+    switch (typeof(obj)) {
+    case T_NIL:
+	CHECKARG(index == nil, 1, "status");
+	status = ::status();
+	if (status[ST_STACKDEPTH] >= 0) {
+	    status[ST_STACKDEPTH]++;
+	}
+	process_precompiled(status[ST_PRECOMPILED]);
+	break;
+
+    case T_INT:
+	CHECKARG(index == nil, 1, "status");
+	status = ::status()[obj];
+	if (obj == ST_STACKDEPTH && status >= 0) {
+	    status++;
+	} else if (obj == ST_PRECOMPILED) {
+	    process_precompiled(status);
+	}
+	break;
+
+    case T_STRING:
+	/* get corresponding object */
+	driver = ::find_object(DRIVER);
+	obj = ::find_object(driver->normalize_path(obj,
+						   object_name(this_object()) +
+						   "/..",
+						   creator));
+	if (!obj) {
+	    return nil;
+	}
+	/* fall through */
+    case T_OBJECT:
+	switch (typeof(index)) {
+	case T_NIL:
+	    status = ::status(obj);
+	    status[O_CALLOUTS] = process_callouts(obj, status[O_CALLOUTS]);
+	    break;
+
+	case T_INT:
+	    status = ::status(obj)[index];
+	    if (index == O_CALLOUTS) {
+		status = process_callouts(obj, status);
+	    }
+	    break;
+
+	default:
+	    badarg(2, "status");
+	}
+	break;
+    }
+
     return status;
 }
 
@@ -669,14 +714,14 @@ static void swapout()
  * NAME:	dump_state()
  * DESCRIPTION:	create state dump
  */
-static void dump_state()
+static void dump_state(varargs int incr)
 {
     if (creator != "System" || !this_object()) {
 	error("Permission denied");
     }
     rlimits (-1; -1) {
 	::find_object(DRIVER)->prepare_reboot();
-	::dump_state();
+	::dump_state(incr);
     }
 }
 

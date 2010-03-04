@@ -173,7 +173,7 @@ string query_telnet_banner(int port, object obj)
 	manager = telnet[port];
 	return (manager) ?
 		manager->query_banner(obj) :
-		"\n" + status()[ST_VERSION] + " (telnet)\n\nlogin: ";
+		"\n" + status(ST_VERSION) + " (telnet)\n\nlogin: ";
     }
 }
 
@@ -189,7 +189,7 @@ string query_binary_banner(int port, object obj)
 	manager = binary[port];
 	return (manager) ?
 		manager->query_banner(obj) :
-		"\r\n" + status()[ST_VERSION] + " (binary)\r\n\r\nlogin: ";
+		"\r\n" + status(ST_VERSION) + " (binary)\r\n\r\nlogin: ";
     }
 }
 
