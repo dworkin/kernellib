@@ -4,11 +4,10 @@
 # include <type.h>
 
 # define CO_OBJ		0	/* callout object */
-# define CO_OWNER	1	/* owner */
-# define CO_HANDLE	2	/* handle in object */
-# define CO_RELHANDLE	3	/* release handle */
-# define CO_PREV	4	/* previous callout */
-# define CO_NEXT	5	/* next callout */
+# define CO_HANDLE	1	/* handle in object */
+# define CO_RELHANDLE	2	/* release handle */
+# define CO_PREV	3	/* previous callout */
+# define CO_NEXT	4	/* next callout */
 
 
 mapping resources;		/* registered resources */
@@ -240,9 +239,6 @@ int rsrc_incr(string owner, string name, mixed index, int incr,
     if (KERNEL()) {
 	object obj;
 
-	if (name == "callouts" && previous_program() == AUTO) {
-	    return TRUE;
-	}
 	if (!(obj=owners[owner])) {
 	    error("No such resource owner: " + owner);
 	}
@@ -394,7 +390,7 @@ void release_callouts()
  * NAME:	suspended()
  * DESCRIPTION:	return TRUE if callouts are suspended, otherwise return FALSE
  */
-int suspended(object obj, string owner)
+int suspended(object obj)
 {
     return (suspend != 0 && obj != suspender);
 }
@@ -408,7 +404,7 @@ void suspend(object obj, string owner, int handle)
     if (previous_program() == AUTO) {
 	mixed *callout;
 
-	callout = ({ obj, owner, handle, 0, last_suspended, nil });
+	callout = ({ obj, handle, 0, last_suspended, nil });
 	if (suspend > 0) {
 	    callout[CO_RELHANDLE] = call_out("release", 0);
 	}
@@ -430,7 +426,7 @@ void suspend(object obj, string owner, int handle)
  * NAME:	remove_callout()
  * DESCRIPTION:	remove callout from list of suspended calls
  */
-int remove_callout(object obj, string owner, int handle)
+int remove_callout(object obj, int handle)
 {
     mapping callouts;
     mixed *callout;

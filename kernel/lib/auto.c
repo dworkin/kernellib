@@ -852,8 +852,7 @@ static mixed remove_call_out(int handle)
 	    error("No callouts in non-persistent object");
 	}
 	if ((delay=::remove_call_out(handle)) != -1 &&
-	    ::find_object(RSRCD)->remove_callout(this_object(), owner, handle))
-	{
+	    ::find_object(RSRCD)->remove_callout(this_object(), handle)) {
 	    return 0;
 	}
 	return delay;
@@ -868,7 +867,7 @@ nomask void _F_callout(string function, int suspended, mixed *args)
 {
     if (!previous_program()) {
 	if (!suspended &&
-	    !::find_object(RSRCD)->suspended(this_object(), owner)) {
+	    !::find_object(RSRCD)->suspended(this_object())) {
 	    _F_call_limited(function, args);
 	} else {
 	    int handle;
