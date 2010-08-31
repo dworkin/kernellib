@@ -8,3 +8,33 @@ void resume_callouts()	[System only]
 
     Resume previously suspended callouts.  All delayed callouts will run at
     the earliest opportunity.
+
+void set_suspension_manager(object obj)	[System only]
+
+    Install a suspended callout manager, in which the following functions will
+    be called afterwards:
+
+    * void suspend_callouts()
+
+	Begin suspending callouts.  Any previously suspended callouts that
+	were scheduled to be released are now again suspended.
+
+    * void release_callouts()
+
+	Begin releasing suspended callouts.  The suspension manager should
+	call rsrcd->release_callout(object obj, int handle) for each callout
+	to be released.  Once all suspended callouts have been released, this
+	function should be called once more: rsrcd->release_callout(nil, 0).
+
+    * void suspend(object obj, int handle)
+
+	Suspend a callout for an object.
+
+    * int remove_callout(object obj, int handle)
+
+	Remove a suspended callout for an object.  This function should return
+	TRUE if the callout was indeed suspended, or FALSE otherwise.
+
+    * void remove_callouts(object obj)
+
+	Remove all suspended callouts for an object.

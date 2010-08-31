@@ -19,6 +19,7 @@ mixed *first_suspended;		/* first suspended callout */
 mixed *last_suspended;		/* last suspended callout */
 object suspender;		/* object that suspended callouts */
 int suspend;			/* callouts suspended */
+object manager;			/* suspension manager */
 
 /*
  * NAME:	create()
@@ -330,26 +331,44 @@ int update_ticks(mixed *limits, int ticks)
 
 
 /*
+ * NAME:	set_suspension_manager()
+ * DESCRIPTION:	set an external manager to handle suspended callouts
+ */
+void set_suspension_manager(object obj)
+{
+    if (SYSTEM()) {
+	if (suspend != 0) {
+	    error("Cannot change suspension manager with suspended callouts");
+	}
+	manager = obj;
+    }
+}
+
+/*
  * NAME:	suspend_callouts()
  * DESCRIPTION:	suspend all callouts
  */
 void suspend_callouts()
 {
     if (SYSTEM() && suspend >= 0) {
-	mixed *callout;
-
 	rlimits (-1; -1) {
-	    if (suspend > 0) {
-		callout = first_suspended;
-		do {
-		    if (callout[CO_RELHANDLE] != 0) {
-			remove_call_out(callout[CO_RELHANDLE]);
-			callout[CO_RELHANDLE] = 0;
-		    }
-		    callout = callout[CO_NEXT];
-		} while (callout);
+	    if (manager) {
+		manager->suspend_callouts();
 	    } else {
-		suspended = ([ ]);
+		mixed *callout;
+
+		if (suspend > 0) {
+		    callout = first_suspended;
+		    do {
+			if (callout[CO_RELHANDLE] != 0) {
+			    remove_call_out(callout[CO_RELHANDLE]);
+			    callout[CO_RELHANDLE] = 0;
+			}
+			callout = callout[CO_NEXT];
+		    } while (callout);
+		} else {
+		    suspended = ([ ]);
+		}
 	    }
 	    suspender = previous_object();
 	    suspend = -1;
@@ -366,7 +385,10 @@ void release_callouts()
     if (SYSTEM() && suspend < 0) {
 	rlimits (-1; -1) {
 	    suspender = nil;
-	    if (first_suspended) {
+	    suspend = 1;
+	    if (manager) {
+		manager->release_callouts();
+	    } else if (first_suspended) {
 		mixed *callout;
 
 		callout = first_suspended;
@@ -376,7 +398,6 @@ void release_callouts()
 		    }
 		    callout = callout[CO_NEXT];
 		} while (callout);
-		suspend = 1;
 	    } else {
 		suspended = nil;
 		suspend = 0;
@@ -399,25 +420,29 @@ int suspended(object obj)
  * NAME:	suspend()
  * DESCRIPTION:	suspend a callout
  */
-void suspend(object obj, string owner, int handle)
+void suspend(object obj, int handle)
 {
     if (previous_program() == AUTO) {
-	mixed *callout;
+	if (manager) {
+	    manager->suspend(obj, handle);
+	} else {
+	    mixed *callout;
 
-	callout = ({ obj, handle, 0, last_suspended, nil });
-	if (suspend > 0) {
-	    callout[CO_RELHANDLE] = call_out("release", 0);
-	}
-	if (last_suspended) {
-	    last_suspended[CO_NEXT] = callout;
-	} else {
-	    first_suspended = callout;
-	}
-	last_suspended = callout;
-	if (suspended[obj]) {
-	    suspended[obj][handle] = callout;
-	} else {
-	    suspended[obj] = ([ handle : callout ]);
+	    callout = ({ obj, handle, 0, last_suspended, nil });
+	    if (suspend > 0) {
+		callout[CO_RELHANDLE] = call_out("release", 0);
+	    }
+	    if (last_suspended) {
+		last_suspended[CO_NEXT] = callout;
+	    } else {
+		first_suspended = callout;
+	    }
+	    last_suspended = callout;
+	    if (suspended[obj]) {
+		suspended[obj][handle] = callout;
+	    } else {
+		suspended[obj] = ([ handle : callout ]);
+	    }
 	}
     }
 }
@@ -431,44 +456,10 @@ int remove_callout(object obj, int handle)
     mapping callouts;
     mixed *callout;
 
-    if (previous_program() == AUTO && obj != this_object() && suspended &&
-	(callouts=suspended[obj]) && (callout=callouts[handle])) {
-	if (callout != first_suspended) {
-	    callout[CO_PREV][CO_NEXT] = callout[CO_NEXT];
-	} else {
-	    first_suspended = callout[CO_NEXT];
-	}
-	if (callout != last_suspended) {
-	    if (callout[CO_RELHANDLE] != 0) {
-		remove_call_out(last_suspended[CO_RELHANDLE]);
-		last_suspended[CO_RELHANDLE] = callout[CO_RELHANDLE];
-	    }
-	    callout[CO_NEXT][CO_PREV] = callout[CO_PREV];
-	} else {
-	    if (callout[CO_RELHANDLE] != 0) {
-		remove_call_out(callout[CO_RELHANDLE]);
-	    }
-	    last_suspended = callout[CO_PREV];
-	}
-	callouts[handle] = nil;
-	return TRUE;	/* delayed call */
-    }
-    return FALSE;
-}
-
-/*
- * NAME:	remove_callouts()
- * DESCRIPTION:	remove callouts from an object about to be destructed
- */
-void remove_callouts(object obj)
-{
-    mixed **callouts, *callout;
-    int i;
-
-    if (previous_program() == AUTO && suspended && suspended[obj]) {
-	callouts = map_values(suspended[obj]);
-	for (i = sizeof(callouts); --i >= 0; ) {
-	    callout = callouts[i];
+    if (previous_program() == AUTO && obj != this_object() && suspend != 0) {
+	if (manager) {
+	    return manager->remove_callout(obj, handle);
+	} else if ((callouts=suspended[obj]) && (callout=callouts[handle])) {
 	    if (callout != first_suspended) {
 		callout[CO_PREV][CO_NEXT] = callout[CO_NEXT];
 	    } else {
@@ -486,8 +477,66 @@ void remove_callouts(object obj)
 		}
 		last_suspended = callout[CO_PREV];
 	    }
+	    callouts[handle] = nil;
+	    return TRUE;	/* delayed call */
 	}
-	suspended[obj] = nil;
+    }
+    return FALSE;
+}
+
+/*
+ * NAME:	remove_callouts()
+ * DESCRIPTION:	remove callouts from an object about to be destructed
+ */
+void remove_callouts(object obj)
+{
+    if (previous_program() == AUTO && suspend != 0) {
+	if (manager) {
+	    manager->remove_callouts(obj);
+	} else if (suspended[obj]) {
+	    mixed **callouts, *callout;
+	    int i;
+
+	    callouts = map_values(suspended[obj]);
+	    for (i = sizeof(callouts); --i >= 0; ) {
+		callout = callouts[i];
+		if (callout != first_suspended) {
+		    callout[CO_PREV][CO_NEXT] = callout[CO_NEXT];
+		} else {
+		    first_suspended = callout[CO_NEXT];
+		}
+		if (callout != last_suspended) {
+		    if (callout[CO_RELHANDLE] != 0) {
+			remove_call_out(last_suspended[CO_RELHANDLE]);
+			last_suspended[CO_RELHANDLE] = callout[CO_RELHANDLE];
+		    }
+		    callout[CO_NEXT][CO_PREV] = callout[CO_PREV];
+		} else {
+		    if (callout[CO_RELHANDLE] != 0) {
+			remove_call_out(callout[CO_RELHANDLE]);
+		    }
+		    last_suspended = callout[CO_PREV];
+		}
+	    }
+	    suspended[obj] = nil;
+	}
+    }
+}
+
+/*
+ * NAME:	release_callout()
+ * DESCRIPTION:	let the suspension manager release a callout
+ */
+void release_callout(object obj, int handle)
+{
+    if (previous_object() == manager) {
+	if (obj) {
+	    rlimits(-1; -1) {
+		obj->_F_release(handle);
+	    }
+	} else {
+	    suspend = 0;
+	}
     }
 }
 

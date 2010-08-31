@@ -874,7 +874,7 @@ nomask void _F_callout(string function, int suspended, mixed *args)
 
 	    handle = ::call_out("_F_callout", LONG_TIME, function, TRUE, args);
 	    if (!suspended) {
-		::find_object(RSRCD)->suspend(this_object(), owner, handle);
+		::find_object(RSRCD)->suspend(this_object(), handle);
 	    }
 	}
     }
