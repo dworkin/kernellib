@@ -836,7 +836,7 @@ static int call_out(string function, mixed delay, mixed args...)
 	/* direct callouts for kernel objects */
 	return ::call_out(function, delay, args...);
     }
-    return ::call_out("_F_callout", delay, function, FALSE, args);
+    return ::call_out("_F_callout", delay, function, 0, args);
 }
 
 /*
@@ -852,7 +852,7 @@ static mixed remove_call_out(int handle)
 	    error("No callouts in non-persistent object");
 	}
 	if ((delay=::remove_call_out(handle)) != -1 &&
-	    ::find_object(RSRCD)->remove_callout(this_object(), handle)) {
+	    ::find_object(RSRCD)->remove_callout(nil, this_object(), handle)) {
 	    return 0;
 	}
 	return delay;
@@ -863,19 +863,26 @@ static mixed remove_call_out(int handle)
  * NAME:	_F_callout()
  * DESCRIPTION:	callout gate
  */
-nomask void _F_callout(string function, int suspended, mixed *args)
+nomask void _F_callout(string function, int handle, mixed *args)
 {
     if (!previous_program()) {
-	if (!suspended &&
-	    !::find_object(RSRCD)->suspended(this_object())) {
+	if (handle == 0 && !::find_object(RSRCD)->suspended(this_object())) {
 	    _F_call_limited(function, args);
 	} else {
-	    int handle;
+	    mixed *tls;
+	    mixed **callouts;
+	    int i;
 
-	    handle = ::call_out("_F_callout", LONG_TIME, function, TRUE, args);
-	    if (!suspended) {
-		::find_object(RSRCD)->suspend(this_object(), handle);
+	    tls = allocate(::find_object(DRIVER)->query_tls_size());
+	    if (handle != 0) {
+		::find_object(RSRCD)->remove_callout(tls, this_object(),
+						     handle);
 	    }
+	    handle = ::call_out("_F_callout", LONG_TIME, function, 0, args);
+	    callouts = ::status(this_object())[O_CALLOUTS];
+	    for (i = sizeof(callouts); callouts[--i][CO_HANDLE] != handle; ) ;
+	    callouts[i][CO_FIRSTXARG + 1] = handle;
+	    ::find_object(RSRCD)->suspend(tls, this_object(), handle);
 	}
     }
 }
@@ -887,8 +894,8 @@ nomask void _F_callout(string function, int suspended, mixed *args)
 nomask void _F_release(mixed handle)
 {
     if (previous_program() == RSRCD) {
-	int i;
 	mixed **callouts;
+	int i;
 
 	callouts = ::status(this_object())[O_CALLOUTS];
 	::remove_call_out(handle);

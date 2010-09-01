@@ -420,7 +420,7 @@ int suspended(object obj)
  * NAME:	suspend()
  * DESCRIPTION:	suspend a callout
  */
-void suspend(object obj, int handle)
+void suspend(mixed tls, object obj, int handle)
 {
     if (previous_program() == AUTO) {
 	if (manager) {
@@ -451,7 +451,7 @@ void suspend(object obj, int handle)
  * NAME:	remove_callout()
  * DESCRIPTION:	remove callout from list of suspended calls
  */
-int remove_callout(object obj, int handle)
+int remove_callout(mixed tls, object obj, int handle)
 {
     mapping callouts;
     mixed *callout;
