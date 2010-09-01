@@ -12,3 +12,8 @@
 
  - Show large numbers as floats in the status command.
  - Create an incremental statedump (if possible) on interrupt.
+
+1.3.4
+
+ - Add hooks for a suspended callout manager object, which can replace and
+   improve upon rsrcd's own.
