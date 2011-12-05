@@ -115,6 +115,26 @@ void disconnect()
 }
 
 /*
+ * NAME:	_unconnected()
+ * DESCRIPTION:	an outbound connection could not be established
+ */
+private void _unconnected(mixed *tls, int refused)
+{
+    this_object()->connect_failed(refused);
+}
+
+/*
+ * NAME:	unconnected()
+ * DESCRIPTION:	an outbound connection could not be established
+ */
+static nomask void unconnected(int refused)
+{
+    if (!previous_program()) {
+	_unconnected(allocate(DRIVER->query_tls_size()), refused);
+    }
+}
+
+/*
  * NAME:	reboot()
  * DESCRIPTION:	destruct connection object after a reboot
  */
