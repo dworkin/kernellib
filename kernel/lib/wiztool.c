@@ -537,12 +537,12 @@ static void dump_state()
  * NAME:	shutdown()
  * DESCRIPTION:	shut down the system
  */
-static void shutdown()
+static void shutdown(varargs int hotboot)
 {
     if (!access(owner, "/", FULL_ACCESS)) {
 	message("Permission denied.\n");
     } else {
-	::shutdown();
+	::shutdown(hotboot);
     }
 }
 
