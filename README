@@ -1,12 +1,6 @@
 This is the github release of the Kernel Library, for Hydra and DGD.  The
 kernellib is and has always been in the public domain (even though it was
-distributed with DGD), so this repository includes the full history.  Add
-the following empty directories to get started:
-
-    /kernel/data
-    /usr
-    /usr/System
-    /usr/admin
+distributed with DGD), so this repository includes the full history.
 
 A sample config file is here:
 
