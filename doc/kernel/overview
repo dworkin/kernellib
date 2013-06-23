@@ -147,7 +147,7 @@ contain hooks that allow routing of some calls to different objects.
 When you begin building, start with making a new user object.  This object
 should reside in /usr/System/obj.  The user object must inherit
 /kernel/lib/user.  Next, create a telnet connection manager which can be
-installed using "/kernel/sys/userd"->set_telnet_manager(obj).  Finally,
+installed using "/kernel/sys/userd"->set_telnet_manager(port, obj).  Finally,
 create /usr/System/initd.c which handles system-specific initialization
 (for instance, the telnet connection manager must be installed from its
 create() function).
