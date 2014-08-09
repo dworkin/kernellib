@@ -571,16 +571,16 @@ static string object_type(string file, string type)
  * NAME:	_touch()
  * DESCRIPTION:	touch an object that has been flagged with call_touch()
  */
-private int _touch(mixed *tls, object obj, string function)
+private int _touch(mixed *tls, object obj, string func)
 {
-    return objectd->touch(obj, function);
+    return objectd->touch(obj, func);
 }
 
 /*
  * NAME:	touch()
  * DESCRIPTION:	wrapper for _touch()
  */
-static int touch(object obj, string function)
+static int touch(object obj, string func)
 {
     mixed *tls;
     string prog;
@@ -589,7 +589,7 @@ static int touch(object obj, string function)
 	if (!previous_object()) {
 	    tls = allocate(tls_size);
 	} else if (KERNEL()) {
-	    prog = function_object(function, obj);
+	    prog = function_object(func, obj);
 	    if (prog && sscanf(prog, "/kernel/%*s") != 0 &&
 		status()[ST_STACKDEPTH] < 0) {
 		/*
@@ -600,7 +600,7 @@ static int touch(object obj, string function)
 	    }
 	}
 
-	return _touch(tls, obj, function);
+	return _touch(tls, obj, func);
     }
     return FALSE;
 }
@@ -770,7 +770,7 @@ static void interrupt()
 private void _runtime_error(mixed tls, string str, int caught, int ticks,
 			    mixed **trace)
 {
-    string line, function, progname, objname;
+    string line, func, progname, objname;
     int i, sz, len;
     object user;
 
@@ -811,10 +811,10 @@ private void _runtime_error(mixed tls, string str, int caught, int ticks,
 		line = line[strlen(line) - 4 ..];
 	    }
 
-	    function = trace[i][TRACE_FUNCTION];
-	    len = strlen(function);
+	    func = trace[i][TRACE_FUNCTION];
+	    len = strlen(func);
 	    if (progname == AUTO && i != sz - 1 && len > 3) {
-		switch (function[.. 2]) {
+		switch (func[.. 2]) {
 		case "bad":
 		case "_F_":
 		case "_Q_":
@@ -822,7 +822,7 @@ private void _runtime_error(mixed tls, string str, int caught, int ticks,
 		}
 	    }
 	    if (len < 17) {
-		function += "                 "[len ..];
+		func += "                 "[len ..];
 	    }
 
 	    objname = trace[i][TRACE_OBJNAME];
@@ -832,10 +832,11 @@ private void _runtime_error(mixed tls, string str, int caught, int ticks,
 		    objname[len] == '#') {
 		    objname = objname[len ..];
 		}
-		str += line + " " + function + " " + progname + " (" + objname +
-		       ")\n";
+		str += line + " " + func + " " + progname 
+			+ " (" + objname +
+			")\n";
 	    } else {
-		str += line + " " + function + " " + progname + "\n";
+		str += line + " " + func + " " + progname + "\n";
 	    }
 	}
 
@@ -889,7 +890,7 @@ static void runtime_error(string str, int caught, int ticks)
 static void atomic_error(string str, int atom, int ticks)
 {
     mixed **trace;
-    string line, function, progname, objname;
+    string line, func, progname, objname;
     int i, sz, len;
     object obj;
 
@@ -911,10 +912,10 @@ static void atomic_error(string str, int atom, int ticks)
 		line = line[strlen(line) - 4 ..];
 	    }
 
-	    function = trace[i][TRACE_FUNCTION];
-	    len = strlen(function);
+	    func = trace[i][TRACE_FUNCTION];
+	    len = strlen(func);
 	    if (progname == AUTO && i != sz - 1 && len > 3) {
-		switch (function[.. 2]) {
+		switch (func[.. 2]) {
 		case "bad":
 		case "_F_":
 		case "_Q_":
@@ -922,7 +923,7 @@ static void atomic_error(string str, int atom, int ticks)
 		}
 	    }
 	    if (len < 17) {
-		function += "                 "[len ..];
+		func += "                 "[len ..];
 	    }
 
 	    objname = trace[i][TRACE_OBJNAME];
@@ -932,10 +933,10 @@ static void atomic_error(string str, int atom, int ticks)
 		    objname[len] == '#') {
 		    objname = objname[len ..];
 		}
-		str += line + " " + function + " " + progname + " (" + objname +
+		str += line + " " + func + " " + progname + " (" + objname +
 		       ")\n";
 	    } else {
-		str += line + " " + function + " " + progname + "\n";
+		str += line + " " + func + " " + progname + "\n";
 	    }
 	}
 

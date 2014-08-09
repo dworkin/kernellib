@@ -773,11 +773,11 @@ private mixed _F_call_limited(mixed arg1, mixed *args)
 {
     object rsrcd;
     int stack, ticks;
-    string function;
+    string func;
     mixed tls, *limits, result;
 
     rsrcd = ::find_object(RSRCD);
-    function = arg1;
+    func = arg1;
     stack = ::status()[ST_STACKDEPTH];
     ticks = ::status()[ST_TICKS];
     rlimits (-1; -1) {
@@ -789,7 +789,7 @@ private mixed _F_call_limited(mixed arg1, mixed *args)
     }
 
     rlimits (limits[LIM_MAXSTACK]; limits[LIM_MAXTICKS]) {
-	result = call_other(this_object(), function, args...);
+	result = call_other(this_object(), func, args...);
 
 	ticks = ::status()[ST_TICKS];
 	rlimits (-1; -1) {
@@ -805,36 +805,36 @@ private mixed _F_call_limited(mixed arg1, mixed *args)
  * NAME:	call_limited()
  * DESCRIPTION:	call a function with the current object owner's resource limits
  */
-static mixed call_limited(string function, mixed args...)
+static mixed call_limited(string func, mixed args...)
 {
-    CHECKARG(function, 1, "call_limited");
+    CHECKARG(func, 1, "call_limited");
     if (!this_object()) {
 	return nil;
     }
-    CHECKARG(function_object(function, this_object()) != AUTO ||
-							 function == "create",
+    CHECKARG(function_object(func, this_object()) != AUTO ||
+							 func == "create",
 	     1, "call_limited");
 
-    return _F_call_limited(function, args);
+    return _F_call_limited(func, args);
 }
 
 /*
  * NAME:	call_out()
  * DESCRIPTION:	start a callout
  */
-static int call_out(string function, mixed delay, mixed args...)
+static int call_out(string func, mixed delay, mixed args...)
 {
     int type;
     string oname;
 
-    CHECKARG(function, 1, "call_out");
+    CHECKARG(func, 1, "call_out");
     type = typeof(delay);
     CHECKARG(type == T_INT || type == T_FLOAT, 2, "call_out");
     if (!this_object()) {
 	return 0;
     }
-    CHECKARG(function_object(function, this_object()) != AUTO ||
-							 function == "create",
+    CHECKARG(function_object(func, this_object()) != AUTO ||
+							 func == "create",
 	     1, "call_out");
     oname = object_name(this_object());
     if (sscanf(oname, "%*s#-1") != 0) {
@@ -846,9 +846,9 @@ static int call_out(string function, mixed delay, mixed args...)
      */
     if (sscanf(oname, "/kernel/%*s") != 0) {
 	/* direct callouts for kernel objects */
-	return ::call_out(function, delay, args...);
+	return ::call_out(func, delay, args...);
     }
-    return ::call_out("_F_callout", delay, function, 0, args);
+    return ::call_out("_F_callout", delay, func, 0, args);
 }
 
 /*
@@ -875,11 +875,11 @@ static mixed remove_call_out(int handle)
  * NAME:	_F_callout()
  * DESCRIPTION:	callout gate
  */
-nomask void _F_callout(string function, int handle, mixed *args)
+nomask void _F_callout(string func, int handle, mixed *args)
 {
     if (!previous_program()) {
 	if (handle == 0 && !::find_object(RSRCD)->suspended(this_object())) {
-	    _F_call_limited(function, args);
+	    _F_call_limited(func, args);
 	} else {
 	    mixed *tls;
 	    mixed **callouts;
@@ -890,7 +890,7 @@ nomask void _F_callout(string function, int handle, mixed *args)
 		::find_object(RSRCD)->remove_callout(tls, this_object(),
 						     handle);
 	    }
-	    handle = ::call_out("_F_callout", LONG_TIME, function, 0, args);
+	    handle = ::call_out("_F_callout", LONG_TIME, func, 0, args);
 	    callouts = ::status(this_object())[O_CALLOUTS];
 	    for (i = sizeof(callouts); callouts[--i][CO_HANDLE] != handle; ) ;
 	    callouts[i][CO_FIRSTXARG + 1] = handle;
