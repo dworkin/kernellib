@@ -833,8 +833,7 @@ private void _runtime_error(mixed tls, string str, int caught, int ticks,
 		    objname = objname[len ..];
 		}
 		str += line + " " + func + " " + progname 
-			+ " (" + objname +
-			")\n";
+			+ " (" + objname + ")\n";
 	    } else {
 		str += line + " " + func + " " + progname + "\n";
 	    }
