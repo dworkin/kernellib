@@ -1,9 +1,8 @@
 # include <kernel/kernel.h>
 # include <kernel/user.h>
 
-private object connection;	/* associated connection object */
-private string name;		/* name of user */
 
+private object connection;	/* associated connection object */
 
 /*
  * NAME:	query_conn()
@@ -57,29 +56,29 @@ static void redirect(object LIB_USER user, string str)
  * NAME:	login()
  * DESCRIPTION:	log this user in
  */
-static void login(string str)
+static void login(string name)
 {
-    if (!name || name == str) {
-	USERD->login(this_object(), name = str);
-    }
+    USERD->login(this_object(), name);
 }
 
 /*
  * NAME:	logout()
  * DESCRIPTION:	logout this user
  */
-static void logout()
+static void logout(string name)
 {
     USERD->logout(this_object(), name);
 }
 
 /*
- * NAME:	query_name()
- * DESCRIPTION:	return this user's name (if any)
+ * NAME:	set_message_length()
+ * DESCRIPTION:	set receive buffer length
  */
-string query_name()
+static void set_message_length(int len)
 {
-    return name;
+    if (connection) {
+	connection->set_message_length(len);
+    }
 }
 
 /*

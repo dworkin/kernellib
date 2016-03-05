@@ -34,9 +34,9 @@ static void create(int size)
 
     history = allocate(hsize = size);
     hindex = hmax = 0;
-    directory = USR_DIR + "/" + owner;
+    directory = "/usr/" + owner;
 
-    driver = find_object(DRIVER);
+    driver = ::find_object(DRIVER);
 }
 
 /*
@@ -175,21 +175,6 @@ static void remove_rsrc(string name)
 }
 
 /*
- * NAME:	query_rsrc()
- * DESCRIPTION:	query a resource
- */
-static mixed *query_rsrc(string name)
-{
-    mixed *rsrc;
-
-    rsrc = ::query_rsrc(name);
-    if (name == "objects") {
-	rsrc[RSRC_USAGE] += sizeof(query_connections());
-    }
-    return rsrc;
-}
-
-/*
  * NAME:	rsrc_set_limit()
  * DESCRIPTION:	set individual resource limit
  */
@@ -222,17 +207,24 @@ static mixed *rsrc_get(string owner, string name)
  * DESCRIPTION:	increment or decrement a resource, returning TRUE if succeeded,
  *		FALSE if failed
  */
-static int rsrc_incr(string rowner, string name, mixed index, int incr,
-		     varargs int force)
+static void rsrc_incr(string rowner, string name, int incr, varargs int force)
 {
     if (!access(owner, "/", FULL_ACCESS)) {
 	message("Permission denied.\n");
-	return FALSE;
     } else {
-	return ::rsrc_incr(rowner, name, index, incr, force);
+	::rsrc_incr(rowner, name, incr, force);
     }
 }
 
+
+/*
+ * NAME:	find_object()
+ * DESCRIPTION:	find object, maskable
+ */
+static object find_object(string path)
+{
+    return ::find_object(path);
+}
 
 /*
  * NAME:	compile_object()
@@ -246,7 +238,7 @@ static object compile_object(string path, string source...)
     kernel = sscanf(path, "/kernel/%*s");
     if ((sizeof(source) != 0 && kernel) ||
 	!access(owner, path,
-		((sscanf(path, "%*s" + INHERITABLE_SUBDIR) != 0 ||
+		((sscanf(path, "%*s/lib/") != 0 ||
 		  !driver->creator(path)) && sizeof(source) == 0 && !kernel) ?
 		 READ_ACCESS : WRITE_ACCESS)) {
 	message(path + ": Permission denied.\n");
@@ -282,11 +274,11 @@ static int destruct_object(mixed obj)
     switch (typeof(obj)) {
     case T_STRING:
 	path = obj = driver->normalize_path(obj, directory, owner);
-	lib = sscanf(path, "%*s" + INHERITABLE_SUBDIR);
+	lib = sscanf(path, "%*s/lib/");
 	if (lib) {
 	    oowner = driver->creator(path);
 	} else {
-	    obj = find_object(path);
+	    obj = ::find_object(path);
 	    if (!obj) {
 		return FALSE;
 	    }
@@ -296,7 +288,6 @@ static int destruct_object(mixed obj)
 
     case T_OBJECT:
 	path = object_name(obj);
-	lib = sscanf(path, "%*s" + INHERITABLE_SUBDIR);
 	oowner = obj->query_owner();
 	break;
     }
@@ -314,14 +305,25 @@ static int destruct_object(mixed obj)
  * NAME:	new_object()
  * DESCRIPTION:	new_object wrapper
  */
-static object new_object(string path)
+static object new_object(mixed obj)
 {
-    path = driver->normalize_path(path, directory, owner);
-    if (sscanf(path, "/kernel/%*s") != 0 || !access(owner, path, READ_ACCESS)) {
+    string path;
+
+    switch (typeof(obj)) {
+    case T_STRING:
+	path = obj = driver->normalize_path(obj, directory, owner);
+	break;
+
+    case T_OBJECT:
+	path = object_name(obj);
+	break;
+    }
+
+    if (!access(owner, path, READ_ACCESS)) {
 	message(path + ": Permission denied.\n");
 	return nil;
     }
-    return ::new_object(path);
+    return ::new_object(obj);
 }
 
 /*
@@ -522,14 +524,14 @@ static void swapout()
 
 /*
  * NAME:	dump_state()
- * DESCRIPTION:	create a state dump
+ * DESCRIPTION:	create a snapshot
  */
-static void dump_state()
+static void dump_state(varargs int incr)
 {
     if (!access(owner, "/", FULL_ACCESS)) {
 	message("Permission denied.\n");
     } else {
-	::dump_state();
+	::dump_state(incr);
     }
 }
 
@@ -561,7 +563,7 @@ static string dump_value(mixed value, mapping seen)
     case T_FLOAT:
 	str = (string) value;
 	if (sscanf(str, "%*s.") == 0 && sscanf(str, "%*se") == 0) {
-	    str += ".0";
+	    str += "." + (int) (fabs(value) * 10.0) % 10;
 	}
 	return str;
 
@@ -892,8 +894,8 @@ static void cmd_code(object user, string cmd, string str)
     }
 
     parsed = parse_code(str);
-    name = USR_DIR + "/" + owner + "/_code";
-    obj = find_object(name);
+    name = "/usr/" + owner + "/_code";
+    obj = ::find_object(name);
     if (obj) {
 	destruct_object(obj);
     }
@@ -901,7 +903,7 @@ static void cmd_code(object user, string cmd, string str)
 	return;
     }
 
-    str = USR_DIR + "/" + owner + "/include/code.h";
+    str = "/usr/" + owner + "/include/code.h";
     if (file_info(str)) {
 	str = "# include \"~/include/code.h\"\n";
     } else {
@@ -974,7 +976,6 @@ static void cmd_clear(object user, string cmd, string str)
  */
 static void cmd_compile(object user, string cmd, string str)
 {
-    mixed *files;
     string *names;
     int num, i, len;
     object obj;
@@ -984,8 +985,7 @@ static void cmd_compile(object user, string cmd, string str)
 	return;
     }
 
-    files = expand(str, 1, TRUE);	/* must exist, full filenames */
-    names = files[0];
+    names = expand(str, 1, TRUE)[0];	/* must exist, full filenames */
     num = sizeof(names);
 
     for (i = 0; i < num; i++) {
@@ -1019,17 +1019,16 @@ static void cmd_clone(object user, string cmd, string str)
 
     case T_STRING:
 	str = obj;
-	obj = find_object(str);
 	break;
 
     case T_OBJECT:
 	str = object_name(obj);
 	break;
     }
-	
-    if (sscanf(str, "%*s" + CLONABLE_SUBDIR + "%*s#") != 1) {
+
+    if (sscanf(str, "%*s#") != 0 || sscanf(str, "%*s/lib/") != 0) {
 	message("Not a master object.\n");
-    } else if (!obj) {
+    } else if (status(str, O_INDEX) == nil) {
 	message("No such object.\n");
     } else {
 	str = catch(obj = clone_object(str));
@@ -1063,6 +1062,50 @@ static void cmd_destruct(object user, string cmd, string str)
 	message(str + ".\n");
     } else if (flag == 0) {
 	message("No such object.\n");
+    }
+}
+
+/*
+ * NAME:	cmd_new()
+ * DESCRIPTION:	create a new object instance
+ */
+static void cmd_new(object user, string cmd, string str)
+{
+    mixed obj;
+    int num;
+
+    obj = parse_obj(str);
+    switch (typeof(obj)) {
+    case T_INT:
+	message("Usage: " + cmd + " <obj> | $<ident>\n");
+    case T_NIL:
+	return;
+
+    case T_STRING:
+	str = obj;
+	obj = find_object(str);
+	break;
+
+    case T_OBJECT:
+	str = object_name(obj);
+	break;
+    }
+
+    if ((sscanf(str, "%*s#%d", num) != 0 && num != -1) ||
+	sscanf(str, "%*s/lib/") != 0) {
+	message("Not a lightweight master object.\n");
+    } else if (!obj) {
+	message("No such object.\n");
+    } else {
+	if (num != -1) {
+	    obj = str;
+	}
+	str = catch(obj = new_object(obj));
+	if (str) {
+	    message(str + ".\n");
+	} else if (obj) {
+	    store(obj);
+	}
     }
 }
 
@@ -1486,9 +1529,9 @@ static void cmd_access(object user, string cmd, string str)
     }
 
     if (str == "global") {
-	str = implode(query_global_access(), "\n " + USR_DIR + "/");
+	str = implode(query_global_access(), "\n " + "/usr/");
 	if (strlen(str) != 0) {
-	    message("Global read access:\n " + USR_DIR + "/" + str + "\n");
+	    message("Global read access:\n " + "/usr/" + str + "\n");
 	}
     } else if (sizeof(query_users() & ({ str })) != 0) {
 	access = query_user_access(str);
@@ -1575,10 +1618,8 @@ static void cmd_grant(object user, string cmd, string str)
 	/*
 	 * global access
 	 */
-	if (sscanf(str, USR_DIR + "/%s", str) == 0 || sscanf(str, "%*s/") != 0)
-	{
-	    message("Global read access is for directories under " + USR_DIR +
-		    " only.\n");
+	if (sscanf(str, "/usr/%s", str) == 0 || sscanf(str, "%*s/") != 0) {
+	    message("Global read access is for directories under /usr only.\n");
 	} else if (sizeof(query_global_access() & ({ str })) != 0) {
 	    message("That global access already exists.\n");
 	} else {
@@ -1597,7 +1638,7 @@ static void cmd_grant(object user, string cmd, string str)
 	} else {
 	    ::add_user(who);
 	    ::add_owner(who);
-	    ::make_dir(USR_DIR + "/" + who);
+	    ::make_dir("/usr/" + who);
 	}
     } else {
 	/*
@@ -1637,10 +1678,8 @@ static void cmd_ungrant(object user, string cmd, string str)
 	/*
 	 * global access
 	 */
-	if (sscanf(str, USR_DIR + "/%s", str) == 0 || sscanf(str, "%*s/") != 0)
-	{
-	    message("Global read access is for directories under " + USR_DIR +
-		    " only.\n");
+	if (sscanf(str, "/usr/%s", str) == 0 || sscanf(str, "%*s/") != 0) {
+	    message("Global read access is for directories under /usr only.\n");
 	} else if (sizeof(query_global_access() & ({ str })) == 0) {
 	    message("That global access does not exist.\n");
 	} else {
@@ -1886,10 +1925,10 @@ static void cmd_people(object user, string cmd, string str)
 }
 
 /*
- * NAME:	swapnum()
+ * NAME:	swapavg()
  * DESCRIPTION:	return a swap average in X.XX format
  */
-private string swapnum(int num, int div)
+private string swapavg(int num, int div)
 {
     string str;
 
@@ -1978,8 +2017,8 @@ static void cmd_status(object user, string cmd, string str)
 	long = status[ST_NCOLONG];
 	i = sizeof(query_connections());
 	str += "\n" +
-"swap average:  " + (swapnum(status[ST_SWAPRATE1], 60) + ", " +
-		     swapnum(status[ST_SWAPRATE5], 300) + SPACE16)[.. 15] +
+"swap average:  " + (swapavg(status[ST_SWAPRATE1], 60) + ", " +
+		     swapavg(status[ST_SWAPRATE5], 300) + SPACE16)[.. 15] +
   "           Uptime:       " +
   ((uptime == 0) ? "" : uptime + ((uptime == 1) ? " day, " : " days, ")) +
   ralign("00" + hours, 2) + ":" + ralign("00" + minutes, 2) + ":" +
@@ -2078,17 +2117,17 @@ static void cmd_swapout(object user, string cmd, string str)
 }
 
 /*
- * NAME:	cmd_statedump()
- * DESCRIPTION:	create a state dump
+ * NAME:	cmd_snapshot()
+ * DESCRIPTION:	create a snapshot
  */
-static void cmd_statedump(object user, string cmd, string str)
+static void cmd_snapshot(object user, string cmd, string str)
 {
     if (str) {
 	message("Usage: " + cmd + "\n");
 	return;
     }
 
-    dump_state();
+    dump_state(TRUE);
 }
 
 /*
@@ -2119,7 +2158,7 @@ static void cmd_reboot(object user, string cmd, string str)
     if (!access(owner, "/", FULL_ACCESS)) {
 	message("Permission denied.\n");
     } else {
-	::dump_state();
+	::dump_state(TRUE);
 	::shutdown();
     }
 }

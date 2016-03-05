@@ -1,0 +1,13 @@
+NAME
+	tls_set - set TLS value
+
+SYNOPSIS
+	void tls_set(mixed index, mixed value)
+
+
+DESCRIPTION
+	Set the TLS value described by the index.  Negative integer indices
+	are reserved for use by the kernel.
+
+SEE ALSO
+	efun/tls_get

@@ -3,22 +3,22 @@
 
 inherit LIB_CONN;	/* basic connection object */
 
+# define TLS(tls, n)	tls[-1 - n]
 
 object driver;		/* driver object */
 string buffer;		/* buffered input */
-int flushing;		/* pending input flush? */
+int length;		/* length of message to receive */
+int raw;		/* pending raw input? */
 
 /*
  * NAME:	create()
  * DESCRIPTION:	initialize
  */
-static void create(int clone)
+static void create()
 {
-    if (clone) {
-	::create("binary");
-	driver = find_object(DRIVER);
-	buffer = "";
-    }
+    ::create("binary");
+    driver = find_object(DRIVER);
+    buffer = "";
 }
 
 /*
@@ -27,7 +27,7 @@ static void create(int clone)
  */
 static void open()
 {
-    ::open(allocate(driver->query_tls_size()));
+    ::open(([ ]));
 }
 
 /*
@@ -36,7 +36,7 @@ static void open()
  */
 static void close(int dest)
 {
-    ::close(allocate(driver->query_tls_size()), dest);
+    ::close(([ ]), dest);
 }
 
 /*
@@ -45,14 +45,25 @@ static void close(int dest)
  */
 static void timeout()
 {
-    ::timeout(allocate(driver->query_tls_size()));
+    ::timeout(([ ]));
+}
+
+/*
+ * NAME:	set_message_length()
+ * DESCRIPTION:	set the size of the receive buffer
+ */
+void set_message_length(int len)
+{
+    if (previous_program() == LIB_USER) {
+	length = len;
+    }
 }
 
 /*
  * NAME:	add_to_buffer()
  * DESCRIPTION:	do this where an error is allowed to happen
  */
-private void add_to_buffer(mixed *tls, string str)
+private void add_to_buffer(mapping tls, string str)
 {
     catch {
 	buffer += str;
@@ -67,9 +78,9 @@ static void receive_message(string str)
 {
     int mode, len;
     string head, pre;
-    mixed *tls;
+    mapping tls;
 
-    add_to_buffer(tls = allocate(driver->query_tls_size()), str);
+    add_to_buffer(tls = ([ ]), str);
 
     while (this_object() &&
 	   (mode=query_mode()) != MODE_BLOCK && mode != MODE_DISCONNECT) {
@@ -101,8 +112,20 @@ static void receive_message(string str)
 	    }
 	} else {
 	    if (strlen(buffer) != 0) {
-		str = buffer;
-		buffer = "";
+		if (length > 0) {
+		    if (length < strlen(buffer)) {
+			str = buffer[.. length - 1];
+			buffer = buffer[length ..];
+			length = 0;
+		    } else {
+			length -= strlen(buffer);
+			str = buffer;
+			buffer = "";
+		    }
+		} else {
+		    str = buffer;
+		    buffer = "";
+		}
 		::receive_message(tls, str);
 	    }
 	    break;
@@ -116,28 +139,43 @@ static void receive_message(string str)
  */
 void set_mode(int mode)
 {
-    if (KERNEL() || SYSTEM()) {
+    if (previous_program() == LIB_CONN || SYSTEM()) {
 	::set_mode(mode);
-	if (!flushing && mode == MODE_RAW && strlen(buffer) != 0) {
-	    call_out("flush", 0);
-	    flushing = TRUE;
+	if (!raw && mode == MODE_RAW && strlen(buffer) != 0) {
+	    call_out("raw_message", 0);
+	    raw = TRUE;
 	}
     }
 }
 
 /*
- * NAME:	flush()
- * DESCRIPTION:	flush the input buffer after a switch to binary mode
+ * NAME:	raw_message()
+ * DESCRIPTION:	process the whole input buffer after switching to raw mode
  */
-static void flush()
+static void raw_message()
 {
     string str;
+    mapping tls;
 
-    flushing = FALSE;
+    raw = FALSE;
     if (query_mode() == MODE_RAW && strlen(buffer) != 0) {
-	str = buffer;
-	buffer = "";
-	::receive_message(allocate(driver->query_tls_size()), str);
+	if (length > 0) {
+	    if (length < strlen(buffer)) {
+		str = buffer[.. length - 1];
+		buffer = buffer[length ..];
+		length = 0;
+	    } else {
+		length -= strlen(buffer);
+		str = buffer;
+		buffer = "";
+	    }
+	} else {
+	    str = buffer;
+	    buffer = "";
+	}
+	tls = ([ ]);
+	TLS(tls, 3) = this_object();
+	::receive_message(tls, str);
     }
 }
 
@@ -159,7 +197,7 @@ int message(string str)
  */
 static void message_done()
 {
-    ::message_done(allocate(driver->query_tls_size()));
+    ::message_done(([ ]));
 }
 
 /*
@@ -168,7 +206,7 @@ static void message_done()
  */
 static void open_datagram()
 {
-    ::open_datagram(allocate(driver->query_tls_size()));
+    ::open_datagram(([ ]));
 }
 
 /*
@@ -177,5 +215,5 @@ static void open_datagram()
  */
 static void receive_datagram(string str)
 {
-    ::receive_datagram(allocate(driver->query_tls_size()), str);
+    ::receive_datagram(([ ]), str);
 }

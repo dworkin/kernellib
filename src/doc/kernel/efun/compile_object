@@ -2,7 +2,7 @@ NAME
 	compile_object - compile an object
 
 SYNOPSIS
-	object compile_object(string file, varargs string source)
+	object compile_object(string file, string source...)
 
 
 DESCRIPTION
@@ -15,7 +15,7 @@ DESCRIPTION
 	new version.  Variables will be preserved only if they also exist in
 	the new version and have the same type; new variables will be
 	initialized to nil.  The actual upgrading is done immediately upon
-	completion of the current thread.
+	completion of the current task.
 	If the new object has "lib" as a path component, it can only be
 	inherited and nil is returned.  Otherwise, if the object has "obj" as a
 	path component, it can be cloned.

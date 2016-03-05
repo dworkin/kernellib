@@ -1,0 +1,13 @@
+NAME
+	retrieve_atomic_messages - get messages sent from rolled-back function
+
+SYNOPSIS
+	string *retrieve_atomic_messages()
+
+
+DESCRIPTION
+	Retrieve any messages sent from within atomically executed code that
+	was rolled back due to an error.
+
+SEE ALSO
+	efun/send_atomic_message

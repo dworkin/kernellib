@@ -25,13 +25,11 @@ static int nconn;		/* # of connections */
  * NAME:	create()
  * DESCRIPTION:	initialize user object
  */
-static void create(int clone)
+static void create()
 {
-    if (clone) {
-	user::create();
-	access::create();
-	state = ([ ]);
-    }
+    user::create();
+    access::create();
+    state = ([ ]);
 }
 
 /*
@@ -111,12 +109,21 @@ void logout(int quit)
 		tell_audience(Name + " disconnected.\n");
 	    }
 	}
-	::logout();
+	::logout(name);
 	if (wiztool) {
 	    destruct_object(wiztool);
 	}
 	destruct_object(this_object());
     }
+}
+
+/*
+ * NAME:	query_name()
+ * DESCRIPTION:	return this user's name
+ */
+string query_name()
+{
+    return name;
 }
 
 /*

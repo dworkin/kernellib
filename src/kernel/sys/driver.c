@@ -1,14 +1,14 @@
 # include <kernel/kernel.h>
-# include <kernel/objreg.h>
 # include <kernel/rsrc.h>
 # include <kernel/access.h>
 # include <kernel/user.h>
-# include <kernel/tls.h>
 # include <status.h>
 # include <trace.h>
+# include <type.h>
 
-# define TLSVAR2	call_trace()[1][TRACE_FIRSTARG][1]
-# define TLSVAR3	call_trace()[1][TRACE_FIRSTARG][2]
+# define TLS()		call_trace()[1][TRACE_FIRSTARG]
+# define TLSVAR(tls, n)	tls[-1 - n]
+
 
 object rsrcd;		/* resource manager object */
 object accessd;		/* access manager object */
@@ -16,7 +16,6 @@ object userd;		/* user manager object */
 object initd;		/* init manager object */
 object objectd;		/* object manager object */
 object errord;		/* error manager object */
-int tls_size;		/* thread local storage size */
 
 /*
  * NAME:	creator()
@@ -25,28 +24,34 @@ int tls_size;		/* thread local storage size */
 string creator(string file)
 {
     return (sscanf(file, "/kernel/%*s") != 0) ? "System" :
-	    (sscanf(file, USR_DIR + "/%s/", file) != 0) ? file : nil;
+	    (sscanf(file, "/usr/%s/", file) != 0) ? file : nil;
 }
 
 /*
  * NAME:	normalize_path()
  * DESCRIPTION:	reduce a path to its minimal absolute form
  */
-string normalize_path(string file, string dir, varargs string creator)
+string normalize_path(string file, varargs string dir, string creator)
 {
     string *path;
     int i, j, sz;
 
     if (strlen(file) == 0) {
+	if (!dir) {
+	    dir = object_name(previous_object()) + "/..";
+	}
 	file = dir;
     }
     switch (file[0]) {
     case '~':
 	/* ~path */
+	if (!creator) {
+	    creator = creator(object_name(previous_object()));
+	}
 	if (creator && (strlen(file) == 1 || file[1] == '/')) {
-	    file = USR_DIR + "/" + creator + file[1 ..];
+	    file = "/usr/" + creator + file[1 ..];
 	} else {
-	    file = USR_DIR + "/" + file[1 ..];
+	    file = "/usr/" + file[1 ..];
 	}
 	/* fall through */
     case '/':
@@ -59,7 +64,7 @@ string normalize_path(string file, string dir, varargs string creator)
 
     default:
 	/* relative path */
-	if (sscanf(file, "%*s//") == 0 && sscanf(file, "%*s/.") == 0 &&
+	if (sscanf(file, "%*s//") == 0 && sscanf(file, "%*s/.") == 0 && dir &&
 	    sscanf(dir, "%*s/..") == 0) {
 	    /*
 	     * simple relative path
@@ -71,6 +76,9 @@ string normalize_path(string file, string dir, varargs string creator)
 	/*
 	 * complex relative path
 	 */
+	if (!dir) {
+	    dir = object_name(previous_object()) + "/..";
+	}
 	path = explode(dir + "/" + file, "/");
 	break;
     }
@@ -185,29 +193,33 @@ void set_error_manager(object obj)
 void compiling(string path)
 {
     if (previous_program() == AUTO) {
-	if (path != AUTO && path != DRIVER && !find_object(AUTO)) {
-	    string err;
+	mapping tls;
+	string err, *mesg, *messages;
 
-	    if (objectd) {
-		objectd->compiling(AUTO);
-	    }
-	    TLSVAR3 = ({ AUTO });
+	tls = TLS();
+	if (path != AUTO && path != DRIVER && !find_object(AUTO)) {
+	    TLSVAR(tls, TLS_SOURCE) = ([ AUTO + ".c": AUTO + ".c" ]);
+	    TLSVAR(tls, TLS_INHERIT) = ({ AUTO });
 	    err = catch(compile_object(AUTO));
 	    if (err) {
-		if (objectd) {
-		    objectd->compile_failed("System", AUTO);
+		mesg = ({ "c" + AUTO });
+		messages = TLSVAR(tls, TLS_PUT_ATOMIC);
+		if (messages) {
+		    messages += mesg;
+		} else {
+		    messages = mesg;
 		}
+		TLSVAR(tls, TLS_PUT_ATOMIC) = messages;
 		error(err);
 	    }
-	    rsrcd->rsrc_incr("System", "objects", nil, 1, TRUE);
+	    rsrcd->rsrc_incr("System", "objects", 1);
 	    if (objectd) {
-		objectd->compile_lib("System", AUTO, ({ }));
+		objectd->compile("System", AUTO, TLSVAR(tls, TLS_SOURCE),
+				 TLSVAR(tls, TLS_INHERIT)[1 ..]...);
 	    }
 	}
-	if (objectd) {
-	    objectd->compiling(path);
-	}
-	TLSVAR3 = ({ path });
+	TLSVAR(tls, TLS_SOURCE) = ([ ]);
+	TLSVAR(tls, TLS_INHERIT) = ({ path });
     }
 }
 
@@ -215,25 +227,16 @@ void compiling(string path)
  * NAME:	compile()
  * DESCRIPTION:	object compiled
  */
-void compile(object obj, string owner, string source...)
+void compile(string path, string owner, string *source)
 {
-    if (previous_program() == AUTO) {
-	if (objectd) {
-	    objectd->compile(owner, obj, source, TLSVAR3[1 ..]...);
-	}
-    }
-}
+    if (objectd && previous_program() == AUTO) {
+	mapping tls;
 
-/*
- * NAME:	compile_lib()
- * DESCRIPTION:	inherited object compiled
- */
-void compile_lib(string path, string owner, string source...)
-{
-    if (previous_program() == AUTO) {
-	if (objectd) {
-	    objectd->compile_lib(owner, path, source, TLSVAR3[1 ..]...);
-	}
+	tls = TLS();
+	TLSVAR(tls, TLS_SOURCE)[path + ".c"] = (sizeof(source) != 0) ?
+						source : path + ".c";
+	objectd->compile(owner, path, TLSVAR(tls, TLS_SOURCE),
+			 TLSVAR(tls, TLS_INHERIT)[1 ..]...);
     }
 }
 
@@ -243,10 +246,8 @@ void compile_lib(string path, string owner, string source...)
  */
 void compile_failed(string path, string owner)
 {
-    if (previous_program() == AUTO) {
-	if (objectd) {
-	    objectd->compile_failed(owner, path);
-	}
+    if (objectd && previous_program() == AUTO) {
+	objectd->compile_failed(owner, path);
     }
 }
 
@@ -265,21 +266,10 @@ void clone(object obj, string owner)
  * NAME:	destruct()
  * DESCRIPTION:	object about to be destructed
  */
-void destruct(object obj, string owner)
+void destruct(string path, string owner)
 {
     if (objectd && previous_program() == AUTO) {
-	objectd->destruct(owner, obj);
-    }
-}
-
-/*
- * NAME:	destruct_lib()
- * DESCRIPTION:	inherited object about to be destructed
- */
-void destruct_lib(string path, string owner)
-{
-    if (objectd && previous_program() == AUTO) {
-	objectd->destruct_lib(owner, path);
+	objectd->destruct(owner, path);
     }
 }
 
@@ -290,48 +280,6 @@ void destruct_lib(string path, string owner)
 string query_owner()
 {
     return "System";
-}
-
-/*
- * NAME:	set_tls_size()
- * DESCRIPTION:	set the thread local storage size
- */
-void set_tls_size(int size)
-{
-    if (previous_program() == API_TLS) {
-	tls_size = size + 3;
-    }
-}
-
-/*
- * NAME:	query_tls_size()
- * DESCRIPTION:	return the thread local storage size
- */
-int query_tls_size()
-{
-    return tls_size;
-}
-
-/*
- * NAME:	get_tlvar()
- * DESCRIPTION:	return value of thread local variable
- */
-mixed get_tlvar(int index)
-{
-    if (previous_program() == API_TLS) {
-	return call_trace()[1][TRACE_FIRSTARG][index + 3];
-    }
-}
-
-/*
- * NAME:	set_tlvar()
- * DESCRIPTION:	set value of thread local variable
- */
-void set_tlvar(int index, mixed value)
-{
-    if (previous_program() == API_TLS) {
-	call_trace()[1][TRACE_FIRSTARG][index + 3] = value;
-    }
 }
 
 
@@ -353,12 +301,15 @@ void message(string str)
 private object load(string path)
 {
     object obj;
+    mapping tls;
 
     obj = find_object(path);
     if (obj) {
 	return obj;
     }
-    TLSVAR3 = ({ path });
+    tls = TLS();
+    TLSVAR(tls, TLS_INHERIT) = ({ path });
+    TLSVAR(tls, TLS_SOURCE) = ([ path + ".c" : path + ".c" ]);
     return compile_object(path);
 }
 
@@ -366,9 +317,8 @@ private object load(string path)
  * NAME:	_initialize()
  * DESCRIPTION:	initialize system, with proper TLS on the stack
  */
-private void _initialize(mixed *tls)
+private void _initialize(mapping tls)
 {
-    object rsrcobj;
     string *users;
     int i;
 
@@ -377,58 +327,43 @@ private void _initialize(mixed *tls)
 
     /* load initial objects */
     load(AUTO);
-    call_other(load(OBJREGD), "???");
     call_other(rsrcd = load(RSRCD), "???");
+    load(RSRCOBJ);
 
     /* initialize some resources */
     rsrcd->set_rsrc("stack",	        50, 0, 0);
     rsrcd->set_rsrc("ticks",	    250000, 0, 0);
-    rsrcd->set_rsrc("create stack",      5, 0, 0);
-    rsrcd->set_rsrc("create ticks",  10000, 0, 0);
-
-    rsrcobj = load(RSRCOBJ);
 
     /* create initial resource owners */
     rsrcd->add_owner("System");
-    rsrcd->rsrc_incr("System", "filequota", nil,
-		     dir_size("/kernel") + file_size(USR_DIR + "/System",
-		     TRUE));
+    rsrcd->rsrc_incr("System", "fileblocks",
+		     dir_size("/kernel") +
+		     file_size("/usr/System", TRUE));
     rsrcd->add_owner(nil);	/* Ecru */
-    rsrcd->rsrc_incr(nil, "filequota", nil,
+    rsrcd->rsrc_incr(nil, "fileblocks",
 		     file_size("/doc", TRUE) + file_size("/include", TRUE));
 
     /* load remainder of manager objects */
-    call_other(rsrcobj, "???");
     call_other(accessd = load(ACCESSD), "???");
     call_other(userd = load(USERD), "???");
     call_other(load(DEFAULT_WIZTOOL), "???");
+
+    /* correct object count */
+    rsrcd->rsrc_incr("System", "objects", 7);
 
     /* initialize other users as resource owners */
     users = (accessd->query_users() - ({ "System" })) | ({ "admin" });
     for (i = sizeof(users); --i >= 0; ) {
 	rsrcd->add_owner(users[i]);
-	rsrcd->rsrc_incr(users[i], "filequota", nil,
-			 file_size(USR_DIR + "/" + users[i], TRUE));
+	rsrcd->rsrc_incr(users[i], "fileblocks",
+			 file_size("/usr/" + users[i], TRUE));
     }
-
-    /* correct object count */
-    rsrcd->rsrc_incr("System", "objects", nil,
-		     status()[ST_NOBJECTS] -
-			     rsrcd->rsrc_get("System", "objects")[RSRC_USAGE],
-		     1);
 
     /* system-specific initialization */
-    if (file_size(USR_DIR + "/System/initd.c") != 0) {
-	catch {
-	    initd = rsrcd->initd();
-	} : {
-	    message("Initialization failed.\n");
-	    shutdown();
-	    return;
-	}
+    if (file_size("/usr/System/initd.c") != 0) {
+	initd = rsrcd->initd();
+	call_other(initd, "???");
     }
-
-    message("Initialization complete.\n\n");
 }
 
 /*
@@ -437,12 +372,18 @@ private void _initialize(mixed *tls)
  */
 static void initialize()
 {
-    _initialize(allocate(tls_size = 3));
+    catch {
+	_initialize(([ ]));
+	message("Initialization complete.\n\n");
+    } : {
+	message("Initialization failed.\n");
+	shutdown();
+    }
 }
 
 /*
  * NAME:	prepare_reboot()
- * DESCRIPTION:	prepare for a state dump
+ * DESCRIPTION:	prepare for a snapshot
  */
 void prepare_reboot()
 {
@@ -459,27 +400,19 @@ void prepare_reboot()
  * NAME:	_restored()
  * DESCRIPTION:	re-initialize the system, with proper TLS on the stack
  */
-private void _restored(mixed *tls, int hotboot)
+private void _restored(mapping tls, int hotboot)
 {
-    message(status()[ST_VERSION] + "\n");
-
     if (hotboot) {
-	catch {
-	    if (initd) {
-		initd->hotboot();
-	    }
+	if (initd) {
+	    initd->hotboot();
 	}
     } else {
 	rsrcd->reboot();
 	userd->reboot();
 	if (initd) {
-	    catch {
-		initd->reboot();
-	    }
+	    initd->reboot();
 	}
     }
-
-    message("State restored.\n\n");
 }
 
 /*
@@ -488,7 +421,13 @@ private void _restored(mixed *tls, int hotboot)
  */
 static void restored(varargs int hotboot)
 {
-    _restored(allocate(tls_size), hotboot);
+    message(status()[ST_VERSION] + "\n");
+
+    catch {
+	_restored(([ ]), hotboot);
+    }
+
+    message("State restored.\n\n");
 }
 
 /*
@@ -504,7 +443,7 @@ static string path_read(string path)
     }
     if (path) {
 	creator = creator(oname = object_name(previous_object()));
-	path = normalize_path(path, oname, creator);
+	path = normalize_path(path, oname + "/..", creator);
 	return ((creator == "System" ||
 		 accessd->access(oname, path, READ_ACCESS)) ? path : nil);
     }
@@ -525,14 +464,14 @@ static string path_write(string path)
     }
     if (path) {
 	creator = creator(oname = object_name(previous_object()));
-	path = normalize_path(path, oname, creator);
-	rsrc = rsrcd->rsrc_get(creator, "filequota");
+	path = normalize_path(path, oname + "/..", creator);
+	rsrc = rsrcd->rsrc_get(creator, "fileblocks");
 	if (sscanf(path, "/kernel/%*s") == 0 &&
 	    sscanf(path, "/include/kernel/%*s") == 0 &&
 	    (creator == "System" ||
 	     (accessd->access(oname, path, WRITE_ACCESS) &&
 	      (rsrc[RSRC_USAGE] < rsrc[RSRC_MAX] || rsrc[RSRC_MAX] < 0)))) {
-	    TLSVAR2 = ({ path, file_size(path) });
+	    TLSVAR(TLS(), TLS_ARGUMENT) = ({ path, file_size(path) });
 	    return path;
 	}
     }
@@ -546,12 +485,9 @@ static string path_write(string path)
 static object call_object(string path)
 {
     if (path[0] != '/') {
-	string oname;
-
-	oname = object_name(previous_object());
-	path = normalize_path(path, oname + "/..", creator(oname));
+	path = normalize_path(path);
     }
-    if (sscanf(path, "%*s" + INHERITABLE_SUBDIR) != 0 ||
+    if (sscanf(path, "%*s/lib/") != 0 ||
 	(objectd && objectd->forbid_call(path))) {
 	error("Illegal use of call_other");
     }
@@ -571,7 +507,7 @@ static string object_type(string file, string type)
  * NAME:	_touch()
  * DESCRIPTION:	touch an object that has been flagged with call_touch()
  */
-private int _touch(mixed *tls, object obj, string func)
+private int _touch(mapping tls, object obj, string func)
 {
     return objectd->touch(obj, func);
 }
@@ -582,12 +518,12 @@ private int _touch(mixed *tls, object obj, string func)
  */
 static int touch(object obj, string func)
 {
-    mixed *tls;
+    mapping tls;
     string prog;
 
     if (objectd) {
 	if (!previous_object()) {
-	    tls = allocate(tls_size);
+	    tls = ([ ]);
 	} else if (KERNEL()) {
 	    prog = function_object(func, obj);
 	    if (prog && sscanf(prog, "/kernel/%*s") != 0 &&
@@ -612,20 +548,42 @@ static int touch(object obj, string func)
 static object inherit_program(string from, string path, int priv)
 {
     string creator;
+    mixed str;
+    mapping tls;
     object obj;
 
     path = normalize_path(path, from + "/..", creator = creator(from));
-    if (sscanf(path, "%*s" + INHERITABLE_SUBDIR) == 0 ||
+    if (sscanf(path, "%*s/lib/") == 0 ||
 	(sscanf(path, "/kernel/%*s") != 0 && creator != "System") ||
-	!accessd->access(from, path, READ_ACCESS) ||
-	(objectd && objectd->forbid_inherit(from, path, priv))) {
+	!accessd->access(from, path, READ_ACCESS)) {
 	return nil;
     }
 
+    if (objectd) {
+	str = objectd->inherit_program(from, path, priv);
+	if (sscanf(from, "/kernel/%*s") != 0) {
+	    str = nil;
+	} else {
+	    switch (typeof(str)) {
+	    case T_STRING:
+		path = str;
+		str = nil;
+		break;
+
+	    case T_ARRAY:
+		break;
+
+	    default:
+		return nil;
+	    }
+	}
+    }
+
+    tls = TLS();
     obj = find_object(path);
     if (!obj) {
 	int *rsrc;
-	string err;
+	string err, *mesg, *messages;
 
 	creator = creator(path);
 	rsrc = rsrcd->rsrc_get(creator, "objects");
@@ -633,26 +591,31 @@ static object inherit_program(string from, string path, int priv)
 	    error("Too many objects");
 	}
 
-	if (objectd) {
-	    objectd->compiling(path);
-	}
-	TLSVAR3 = ({ path });
-	err = catch(obj = compile_object(path));
+	TLSVAR(tls, TLS_SOURCE) = ([ ]);
+	TLSVAR(tls, TLS_INHERIT) = ({ path });
+	err = catch(obj = (str) ?
+			   compile_object(path, str...) : compile_object(path));
 	if (err) {
-	    if (objectd) {
-		objectd->compile_failed(creator, path);
+	    mesg = ({ "c" + path });
+	    messages = TLSVAR(tls, TLS_PUT_ATOMIC);
+	    if (messages) {
+		messages += mesg;
+	    } else {
+		messages = mesg;
 	    }
+	    TLSVAR(tls, TLS_PUT_ATOMIC) = messages;
 	    error(err);
 	}
-	rsrcd->rsrc_incr(creator, "objects", nil, 1, TRUE);
+	rsrcd->rsrc_incr(creator, "objects", 1);
 	if (objectd) {
-	    objectd->compile_lib(creator, path, ({ }), TLSVAR3[1 ..]...);
-
-	    objectd->compiling(from);
+	    TLSVAR(tls, TLS_SOURCE)[path + ".c"] = (str) ? str : path + ".c";
+	    objectd->compile(creator, path, TLSVAR(tls, TLS_SOURCE),
+			     TLSVAR(tls, TLS_INHERIT)[1 ..]...);
 	}
-	TLSVAR3 = ({ from });
+	TLSVAR(tls, TLS_SOURCE) = ([ ]);;
+	TLSVAR(tls, TLS_INHERIT) = ({ from });
     } else {
-	TLSVAR3 += ({ path });
+	TLSVAR(tls, TLS_INHERIT) += ({ path });
     }
     return obj;
 }
@@ -664,6 +627,9 @@ static object inherit_program(string from, string path, int priv)
  */
 static mixed include_file(string from, string path)
 {
+    mapping source;
+    mixed result;
+
     if (strlen(path) != 0 && path[0] != '~' && sscanf(path, "%*s/../") == 0 &&
 	(sscanf(path, "/include/%*s") != 0 || sscanf(path, "%*s/") == 0)) {
 	/*
@@ -678,15 +644,24 @@ static mixed include_file(string from, string path)
 	    return nil;
 	}
     }
-    if (objectd) {
-	mixed result;
 
-	result = objectd->include_file(TLSVAR3[0], from, path);
+    source = TLSVAR(TLS(), TLS_SOURCE);
+    result = source[path];
+    if (result) {
+	return result;
+    }
+    result = explode(path, "/");
+    if (sizeof(get_dir(path)[0] & result[sizeof(result) - 1 ..]) != 1) {
+	return nil;
+    }
+    if (objectd) {
+	result = objectd->include_file(TLSVAR(TLS(), TLS_INHERIT)[0], from,
+				       path);
 	if (sscanf(from, "/kernel/%*s") == 0) {
-	    return result;
+	    return source[path] = result;
 	}
     }
-    return path;
+    return source[path] = path;
 }
 
 /*
@@ -699,7 +674,7 @@ static void remove_program(string path, int timestamp, int index)
 
     creator = creator(path);
     if (path != RSRCOBJ) {
-	rsrcd->rsrc_incr(creator, "objects", nil, -1);
+	rsrcd->rsrc_incr(creator, "objects", -1);
     }
     if (objectd) {
 	objectd->remove_program(creator, path, timestamp, index);
@@ -716,7 +691,7 @@ static void recompile(object obj)
 	string name;
 
 	name = object_name(obj);
-	objectd->destruct_lib(creator(name), name);
+	objectd->destruct(creator(name), name);
     }
     destruct_object(obj);
 }
@@ -727,7 +702,7 @@ static void recompile(object obj)
  */
 static object telnet_connect(int port)
 {
-    return userd->telnet_connection(allocate(tls_size), port);
+    return userd->telnet_connection(([ ]), port);
 }
 
 /*
@@ -736,14 +711,14 @@ static object telnet_connect(int port)
  */
 static object binary_connect(int port)
 {
-    return userd->binary_connection(allocate(tls_size), port);
+    return userd->binary_connection(([ ]), port);
 }
 
 /*
  * NAME:	_interrupt()
  * DESCRIPTION:	handle interrupt signal, with proper TLS on the stack
  */
-private void _interrupt(mixed *tls)
+private void _interrupt(mapping tls)
 {
     message("Interrupt.\n");
 
@@ -760,26 +735,25 @@ private void _interrupt(mixed *tls)
  */
 static void interrupt()
 {
-    _interrupt(allocate(tls_size));
+    _interrupt(([ ]));
 }
 
 /*
  * NAME:	_runtime_error()
  * DESCRIPTION:	handle runtime error, with proper TLS on the stack
  */
-private void _runtime_error(mixed tls, string str, int caught, int ticks,
-			    mixed **trace)
+private void _runtime_error(mapping tls, string str, int caught, int ticks,
+			    mixed **trace, object user)
 {
     string line, func, progname, objname;
     int i, sz, len;
-    object user;
 
     i = sz = sizeof(trace) - 1;
 
     if (ticks >= 0) {
 	mixed *limits;
 
-	limits = tls[0];
+	limits = TLSVAR(tls, TLS_LIMIT);
 	while (--i >= caught) {
 	    if (trace[i][TRACE_FUNCTION] == "_F_call_limited" &&
 		trace[i][TRACE_PROGNAME] == AUTO) {
@@ -790,7 +764,7 @@ private void _runtime_error(mixed tls, string str, int caught, int ticks,
 		limits = limits[LIM_NEXT];
 	    }
 	}
-	tls[0] = limits;
+	TLSVAR(tls, TLS_LIMIT) = limits;
     }
 
     if (errord) {
@@ -813,111 +787,10 @@ private void _runtime_error(mixed tls, string str, int caught, int ticks,
 
 	    func = trace[i][TRACE_FUNCTION];
 	    len = strlen(func);
-	    if (progname == AUTO && i != sz - 1 && len > 3) {
+	    if (progname == AUTO && i != sz - 1) {
 		switch (func[.. 2]) {
 		case "bad":
 		case "_F_":
-		case "_Q_":
-		    continue;
-		}
-	    }
-	    if (len < 17) {
-		func += "                 "[len ..];
-	    }
-
-	    objname = trace[i][TRACE_OBJNAME];
-	    if (progname != objname) {
-		len = strlen(progname);
-		if (len < strlen(objname) && progname == objname[.. len - 1] &&
-		    objname[len] == '#') {
-		    objname = objname[len ..];
-		}
-		str += line + " " + func + " " + progname 
-			+ " (" + objname + ")\n";
-	    } else {
-		str += line + " " + func + " " + progname + "\n";
-	    }
-	}
-
-	message(str);
-	if (caught == 0) {
-	    user = this_user();
-	    while (user && function_object("query_user", user) == LIB_CONN) {
-		user = user->query_user();
-	    }
-	    if (user) {
-		user->message(str);
-	    }
-	}
-    }
-}
-
-/*
- * NAME:	runtime_error()
- * DESCRIPTION:	log a runtime error
- */
-static void runtime_error(string str, int caught, int ticks)
-{
-    mixed **trace, tls;
-
-    trace = call_trace();
-
-    if (sizeof(trace) == 1) {
-	/* top-level error */
-	tls = allocate(tls_size);
-    } else {
-	tls = trace[1][TRACE_FIRSTARG];
-	trace[1][TRACE_FIRSTARG] = nil;
-	if (caught == 2 && trace[1][TRACE_PROGNAME] == DRIVER) {
-	    /* top-level catch in driver object: ignore */
-	    caught = 0;
-	} else if (caught != 0 && ticks < 0 &&
-		   sscanf(trace[caught - 1][TRACE_PROGNAME],
-			  "/kernel/%*s") != 0) {
-	    tls[1] = str;
-	    return;
-	}
-    }
-
-    _runtime_error(tls, str, caught, ticks, trace);
-}
-
-/*
- * NAME:	atomic_error()
- * DESCRIPTION:	log a runtime error in atomic code
- */
-static void atomic_error(string str, int atom, int ticks)
-{
-    mixed **trace;
-    string line, func, progname, objname;
-    int i, sz, len;
-    object obj;
-
-    trace = call_trace();
-    sz = sizeof(trace) - 1;
-
-    if (errord) {
-	errord->atomic_error(str, atom, trace);
-    } else {
-	str += " [atomic]\n";
-
-	for (i = atom; i < sz; i++) {
-	    progname = trace[i][TRACE_PROGNAME];
-	    len = trace[i][TRACE_LINE];
-	    if (len == 0) {
-		line = "    ";
-	    } else {
-		line = "    " + len;
-		line = line[strlen(line) - 4 ..];
-	    }
-
-	    func = trace[i][TRACE_FUNCTION];
-	    len = strlen(func);
-	    if (progname == AUTO && i != sz - 1 && len > 3) {
-		switch (func[.. 2]) {
-		case "bad":
-		case "_F_":
-		case "_Q_":
 		    continue;
 		}
 	    }
@@ -940,7 +813,156 @@ static void atomic_error(string str, int atom, int ticks)
 	}
 
 	message(str);
+	if (caught == 0 && user) {
+	    user->message(str);
+	}
     }
+}
+
+/*
+ * NAME:	runtime_error()
+ * DESCRIPTION:	log a runtime error
+ */
+static string runtime_error(string str, int caught, int ticks)
+{
+    mixed **trace;
+    mapping tls;
+    object user;
+    string *messages;
+    int i, sz;
+
+    trace = call_trace();
+    if (sizeof(trace) == 1) {
+	/* top-level error */
+	tls = ([ ]);
+    } else {
+	tls = trace[1][TRACE_FIRSTARG];
+	trace[1][TRACE_FIRSTARG] = nil;
+    }
+    user = this_user();
+    if (user) {
+	user = user->query_user();
+    }
+
+    messages = TLSVAR(tls, TLS_PUT_ATOMIC);
+    messages = explode(str, "\0")[(messages) ? sizeof(messages) : 0 ..];
+    for (i = 0, sz = sizeof(messages) - 1; i < sz; i++) {
+	string file;
+	int line;
+
+	str = messages[i][1 ..];
+	switch (messages[i][0]) {
+	case 'e':
+	    sscanf(str, "%s#%d#%s", file, line, str);
+	    if (errord) {
+		errord->compile_error(file, line, str);
+	    } else {
+		send_message(file += ", " + line + ": " + str + "\n");
+		if (user) {
+		    user->message(file);
+		}
+	    }
+	    messages[i] = nil;
+	    break;
+
+	case 'c':
+	    if (objectd) {
+		objectd->compile_failed(creator(str), str);
+	    }
+	    messages[i] = nil;
+	    break;
+
+	default:
+	    messages[i] = str;
+	    break;
+	}
+    }
+    str = messages[sz];
+    messages[sz] = nil;
+
+    TLSVAR(tls, TLS_GET_ATOMIC) = messages - ({ nil });
+    if (caught <= 1) {
+	caught = 0;		/* ignore top-level catch */
+    } else if (ticks < 0 && sscanf(trace[caught - 1][TRACE_PROGNAME],
+				   "/kernel/%*s") != 0 &&
+	       trace[caught - 1][TRACE_FUNCTION] != "cmd_code") {
+	return TLSVAR(tls, TLS_ARGUMENT) = str;
+    }
+
+    _runtime_error(tls, str, caught, ticks, trace, user);
+
+    return str;
+}
+
+/*
+ * NAME:	atomic_error()
+ * DESCRIPTION:	log a runtime error in atomic code
+ */
+static string atomic_error(string str, int atom, int ticks)
+{
+    mixed **trace;
+    string *messages, mesg, line, func, progname, objname;
+    int i, sz, len;
+    object obj;
+
+    trace = call_trace();
+    messages = TLSVAR(trace[1][TRACE_FIRSTARG], TLS_PUT_ATOMIC);
+    if (messages) {
+	mesg = implode(messages, "\0") + "\0" + str;
+    } else {
+	mesg = str;
+    }
+
+    if (trace[atom][TRACE_FUNCTION] != "_compile" ||
+	trace[atom][TRACE_PROGNAME] != AUTO) {
+	if (errord) {
+	    errord->atomic_error(str, atom, trace);
+	} else {
+	    str += " [atomic]\n";
+
+	    for (i = atom, sz = sizeof(trace) - 1; i < sz; i++) {
+		progname = trace[i][TRACE_PROGNAME];
+		len = trace[i][TRACE_LINE];
+		if (len == 0) {
+		    line = "    ";
+		} else {
+		    line = "    " + len;
+		    line = line[strlen(line) - 4 ..];
+		}
+
+		func = trace[i][TRACE_FUNCTION];
+		len = strlen(func);
+		if (progname == AUTO && i != sz - 1) {
+		    switch (func[.. 2]) {
+		    case "bad":
+		    case "_F_":
+			continue;
+		    }
+		}
+		if (len < 17) {
+		    func += "                 "[len ..];
+		}
+
+		objname = trace[i][TRACE_OBJNAME];
+		if (progname != objname) {
+		    len = strlen(progname);
+		    if (len < strlen(objname) &&
+			progname == objname[.. len - 1] && objname[len] == '#')
+		    {
+			objname = objname[len ..];
+		    }
+		    str += line + " " + func + " " + progname + " (" + objname +
+			   ")\n";
+		} else {
+		    str += line + " " + func + " " + progname + "\n";
+		}
+	    }
+
+	    message(str);
+	}
+    }
+
+    return mesg;
 }
 
 /*
@@ -949,16 +971,18 @@ static void atomic_error(string str, int atom, int ticks)
  */
 static void compile_error(string file, int line, string err)
 {
-    object obj;
+    string *mesg, *messages;
+    mapping tls;
 
-    if (errord) {
-	errord->compile_error(file, line, err);
+    mesg = ({ "e" + file + "#" + line + "#" + err });
+    tls = TLS();
+    messages = TLSVAR(tls, TLS_PUT_ATOMIC);
+    if (messages) {
+	messages += mesg;
     } else {
-	send_message(file += ", " + line + ": " + err + "\n");
-	if (this_user() && (obj=this_user()->query_user())) {
-	    obj->message(file);
-	}
+	messages = mesg;
     }
+    TLSVAR(tls, TLS_PUT_ATOMIC) = messages;
 }
 
 /*

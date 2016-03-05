@@ -2,27 +2,30 @@
 # include <kernel/rsrc.h>
 # include <type.h>
 # include <status.h>
+# include <trace.h>
+
+# define TLS()		call_trace(1)[TRACE_FIRSTARG]
+# define TLSVAR(tls, n)	tls[-1 - n]
+
 
 object rsrcd;		/* resource manager */
 mapping resources;	/* registered resources */
 string owner;		/* owner of these resources */
-int maxticks;		/* maximum amount of ticks currently allowed */
+int maxticks;		/* maximum number of ticks currently allowed */
 
 /*
  * NAME:	create()
  * DESCRIPTION:	initialize resource mapping
  */
-static void create(int clone)
+static void create()
 {
-    if (clone) {
-	resources = ([
-			"stack" :	({   0, -1, 0 }),
-			"ticks" :	({   0, -1, 0 }),
-			"tick usage" :	({ 0.0, -1, 0 })
-		    ]);
-	maxticks = -1;
-	rsrcd = find_object(RSRCD);
-    }
+    resources = ([
+      "stack" :		({   0, -1, 0 }),
+      "ticks" :		({   0, -1, 0 }),
+      "tick usage" :	({ 0.0, -1, 0 })
+    ]);
+    maxticks = -1;
+    rsrcd = find_object(RSRCD);
 }
 
 /*
@@ -51,13 +54,13 @@ void remove_rsrc(string name)
  * NAME:	decay_rsrc()
  * DESCRIPTION:	decay a resource
  */
-private void decay_rsrc(mixed *rsrc, mixed *grsrc, int time)
+private void decay_rsrc(mixed *rsrc, int *grsrc, int time)
 {
     float usage, decay;
     int period, t;
 
     usage = rsrc[RSRC_USAGE];
-    decay = (float) (100 - (int) grsrc[GRSRC_DECAY]) / 100.0;
+    decay = (float) (100 - grsrc[GRSRC_DECAY]) / 100.0;
     period = grsrc[GRSRC_PERIOD];
     time -= period;
     t = rsrc[RSRC_DECAYTIME];
@@ -123,7 +126,7 @@ void rsrc_set_limit(string name, int max, int decay)
  * NAME:	rsrc_get()
  * DESCRIPTION:	get individual resource usage
  */
-int *rsrc_get(string name, mixed *grsrc)
+mixed *rsrc_get(string name, int *grsrc)
 {
     if (previous_object() == rsrcd) {
 	mixed *rsrc;
@@ -131,13 +134,13 @@ int *rsrc_get(string name, mixed *grsrc)
 
 	rsrc = resources[name];
 	if (!rsrc) {
-	    return ({ ((int) grsrc[GRSRC_DECAY] == 0) ? 0 : 0.0,
+	    return ({ (grsrc[GRSRC_DECAY] == 0) ? 0 : 0.0,
 		      grsrc[GRSRC_MAX], 0 }) +
 		   grsrc[GRSRC_DECAY .. GRSRC_PERIOD];
 	} else {
 	    if ((int) grsrc[GRSRC_DECAY] != 0 &&
 		(time=time()) - (int) rsrc[RSRC_DECAYTIME] >=
-						    (int) grsrc[GRSRC_PERIOD]) {
+							grsrc[GRSRC_PERIOD]) {
 		rlimits (-1; -1) {
 		    /* decay resource */
 		    decay_rsrc(rsrc, grsrc, time);
@@ -150,9 +153,6 @@ int *rsrc_get(string name, mixed *grsrc)
 	    if ((int) rsrc[RSRC_MAX] < 0) {
 		rsrc[RSRC_MAX] = grsrc[GRSRC_MAX];
 	    }
-	    if (typeof(rsrc[RSRC_INDEXED]) == T_MAPPING) {
-		rsrc[RSRC_INDEXED] = rsrc[RSRC_INDEXED][..];
-	    }
 	    return rsrc;
 	}
     }
@@ -160,90 +160,77 @@ int *rsrc_get(string name, mixed *grsrc)
 
 /*
  * NAME:	rsrc_incr()
- * DESCRIPTION:	increment or decrement a resource, return 1 if successful,
- *		0 if the maximum would be exceeded
+ * DESCRIPTION:	increment or decrement a resource
  */
-int rsrc_incr(string name, mixed index, int incr, mixed *grsrc, int force)
+void rsrc_incr(string name, int incr, int *grsrc, int force)
 {
-    if (previous_program() == RSRCD) {
-	if ((int) grsrc[GRSRC_DECAY] != 0) {
-	    if (incr != 0) {
-		call_out("decayed_incr", 0, name, incr, grsrc);
-	    }
+    if (previous_program() == RSRCD && incr != 0) {
+	mapping tls, map, pending;
+	mixed *arr;
+
+	tls = TLS();
+	map = TLSVAR(tls, TLS_RESOURCE);
+	if (!map) {
+	    map = TLSVAR(tls, TLS_RESOURCE) = ([ ]);
+	}
+	pending = map[this_object()];
+	if (!pending) {
+	    pending = map[this_object()] =
+		      ([ name : ({ (float) incr, grsrc }) ]);
+	    call_out("delayed_incr", 0, pending);
 	} else {
-	    mixed *rsrc;
-	    int max;
-
-	    rsrc = resources[name];
-	    if (!rsrc) {
-		/* new resource */
-		rsrc = resources[name] = ({ 0, -1, 0 });
-		max = grsrc[GRSRC_MAX];
+	    arr = pending[name];
+	    if (!arr) {
+		pending[name] = ({ (float) incr, grsrc });
 	    } else {
-		/* existing resource */
-		max = ((int) rsrc[RSRC_MAX] >= 0) ?
-		       rsrc[RSRC_MAX] : grsrc[GRSRC_MAX];
-	    }
-
-	    if (incr != 0) {
-		if (!force && incr > 0 && max >= 0 &&
-		    (incr > max || (int) rsrc[RSRC_USAGE] > max - incr)) {
-		    return FALSE;	/* would exceed limit */
-		}
-
-		rlimits (-1; -1) {
-		    if (index) {
-			/*
-			 * indexed resource
-			 */
-			catch {
-			    if (typeof(index) == T_OBJECT) {
-				/* let object keep track */
-				index->_F_rsrc_incr(name, incr);
-			    } else if (typeof(rsrc[RSRC_INDEXED]) != T_MAPPING)
-			    {
-				rsrc[RSRC_INDEXED] = ([ index : incr ]);
-			    } else if (!rsrc[RSRC_INDEXED][index]) {
-				rsrc[RSRC_INDEXED][index] = incr;
-			    } else if (!(rsrc[RSRC_INDEXED][index] += incr)) {
-				rsrc[RSRC_INDEXED][index] = nil;
-			    }
-			} : {
-			    return FALSE;	/* error: increment failed */
-			}
-		    }
-		    rsrc[RSRC_USAGE] += incr;
-		}
+		arr[0] += (float) incr;
 	    }
 	}
-
-	return TRUE;
     }
 }
 
 /*
- * NAME:	decayed_incr()
- * DESCRIPTION:	increment or decrement a decaying resource
+ * NAME:	delayed_incr()
+ * DESCRIPTION:	delayed increment or decrement of a resource
  */
-static void decayed_incr(string name, int incr, mixed *grsrc)
+static void delayed_incr(mapping map)
 {
-    mixed *rsrc;
-    int time;
+    string *names, name;
+    mixed *values, *grsrc, *rsrc;
+    int i, sz, time;
+    float incr;
 
-    rsrc = resources[name];
-    time = time();
-    if (!rsrc) {
-	/* new resource */
-	rsrc = resources[name] = ({ 0.0, -1, time });
-    } else if (time - (int) rsrc[RSRC_DECAYTIME] >= (int) grsrc[GRSRC_PERIOD]) {
-	/* decay resource */
-	decay_rsrc(rsrc, grsrc, time);
-	time = 0;
-    }
-    rsrc[RSRC_USAGE] += (float) incr;
+    names = map_indices(map);
+    values = map_values(map);
+    for (i = 0, sz = sizeof(names); i < sz; i++) {
+	name = names[i];
+	incr = values[i][0];
+	grsrc = values[i][1];
+	rsrc = resources[name];
 
-    if (name == "tick usage") {
-	set_rlimits(rsrc, time == 0);
+	if (grsrc[GRSRC_DECAY] != 0) {
+	    time = time();
+	    if (!rsrc) {
+		/* new resource */
+		rsrc = resources[name] = ({ 0.0, -1, time });
+	    } else if (time - (int) rsrc[RSRC_DECAYTIME] >= grsrc[GRSRC_PERIOD])
+	    {
+		/* decay resource */
+		decay_rsrc(rsrc, grsrc, time);
+		time = 0;
+	    }
+	    rsrc[RSRC_USAGE] += incr;
+
+	    if (name == "tick usage") {
+		set_rlimits(rsrc, time == 0);
+	    }
+	} else {
+	    if (!rsrc) {
+		/* new resource */
+		rsrc = resources[name] = ({ 0, -1, 0 });
+	    }
+	    rsrc[RSRC_USAGE] += (int) incr;
+	}
     }
 }
 
@@ -283,14 +270,14 @@ void update_ticks(int ticks, mixed *grsrc)
  * NAME:	incr_ticks()
  * DESCRIPTION:	increase ticks
  */
-static void incr_ticks(int ticks, mixed *grsrc)
+static void incr_ticks(int ticks, int *grsrc)
 {
     mixed *rsrc;
     int time, max;
 
     rsrc = resources["tick usage"];
     time = time();
-    if (time - (int) rsrc[RSRC_DECAYTIME] >= (int) grsrc[GRSRC_PERIOD]) {
+    if (time - (int) rsrc[RSRC_DECAYTIME] >= grsrc[GRSRC_PERIOD]) {
 	/* decay resource */
 	decay_rsrc(rsrc, grsrc, time);
 	time = 0;

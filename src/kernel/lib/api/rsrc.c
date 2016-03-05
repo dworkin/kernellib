@@ -115,15 +115,12 @@ static mixed *rsrc_get(string owner, string name)
 
 /*
  * NAME:	rsrc_incr()
- * DESCRIPTION:	increment or decrement a resource, returning 1 if succeeded,
- *		0 if failed
+ * DESCRIPTION:	increment or decrement a resource
  */
-static int rsrc_incr(string owner, string name, mixed index, int incr,
-		     varargs int force)
+static void rsrc_incr(string owner, string name, int incr, varargs int force)
 {
-    if (!name || (typeof(index) == T_OBJECT &&
-		  sscanf(object_name(index), "%*s#-1") != 0)) {
+    if (!name) {
 	error("Bad arguments for rsrc_incr");
     }
-    return rsrcd->rsrc_incr(owner, name, index, incr, force);
+    rsrcd->rsrc_incr(owner, name, incr, force);
 }

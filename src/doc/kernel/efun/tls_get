@@ -1,0 +1,13 @@
+NAME
+	tls_get - get TLS value
+
+SYNOPSIS
+	mixed tls_get(mixed index)
+
+
+DESCRIPTION
+	Get the TLS value described by the index.  Negative integer indices
+	are reserved for use by the kernel.
+
+SEE ALSO
+	efun/tls_set

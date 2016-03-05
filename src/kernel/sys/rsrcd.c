@@ -1,25 +1,12 @@
 # include <kernel/kernel.h>
 # include <kernel/rsrc.h>
-# include <kernel/objreg.h>
 # include <type.h>
 
-# define CO_OBJ		0	/* callout object */
-# define CO_HANDLE	1	/* handle in object */
-# define CO_RELHANDLE	2	/* release handle */
-# define CO_PREV	3	/* previous callout */
-# define CO_NEXT	4	/* next callout */
 
-
-mapping resources;		/* registered resources */
-mapping owners;			/* resource owners */
-mapping olimits;		/* resource limit per owner */
-int downtime;			/* shutdown time */
-mapping suspended;		/* suspended callouts */
-mixed *first_suspended;		/* first suspended callout */
-mixed *last_suspended;		/* last suspended callout */
-object suspender;		/* object that suspended callouts */
-int suspend;			/* callouts suspended */
-object manager;			/* suspension manager */
+mapping resources;	/* registered resources */
+mapping owners;		/* resource owners */
+mapping olimits;	/* resource limit per owner */
+int downtime;		/* shutdown time */
 
 /*
  * NAME:	create()
@@ -30,14 +17,10 @@ static void create()
     /* initial resources */
     resources = ([
       "objects" :	({ -1,  0,    0 }),
-      "events" :	({ -1,  0,    0 }),
       "stack" :		({ -1,  0,    0 }),
       "ticks" :		({ -1,  0,    0 }),
       "tick usage" :	({ -1, 10, 3600 }),
-      "filequota" :	({ -1,  0,    0 }),
-      "editors" :	({ -1,  0,    0 }),
-      "create stack" :	({ -1,  0,    0 }),
-      "create ticks" :	({ -1,  0,    0 }),
+      "fileblocks" :	({ -1,  0,    0 }),
     ]);
 
     owners = ([ ]);		/* no resource owners yet */
@@ -58,15 +41,13 @@ void add_owner(string owner)
 	    catch {
 		owners[owner] = obj;
 		obj->set_owner(owner);
-		owners["System"]->rsrc_incr("objects", nil, 1,
-					    resources["objects"], TRUE);
+		owners["System"]->rsrc_incr("objects", 1, resources["objects"],
+					    FALSE);
 		olimits[owner] = ({ -1, -1, 0 });
 	    } : {
 		destruct_object(obj);
+		error("Too many resource owners");
 	    }
-	}
-	if (!obj) {
-	    error("Too many resource owners");
 	}
     }
 }
@@ -147,10 +128,13 @@ void set_rsrc(string name, int max, int decay, int period)
  */
 void remove_rsrc(string name)
 {
-    int *rsrc, i;
     object *objects;
+    int i;
 
-    if (previous_program() == API_RSRC && (rsrc=resources[name])) {
+    if (previous_program() == API_RSRC) {
+	if (!resources[name]) {
+	    error("No such resource: " + name);
+	}
 	objects = map_values(owners);
 	i = sizeof(objects);
 	rlimits (-1; -1) {
@@ -173,11 +157,13 @@ mixed *query_rsrc(string name)
 	object *objects;
 	int i;
 
-	rsrc = resources[name][..];
+	if (!(rsrc=resources[name])) {
+	    error("No such resource: " + name);
+	}
 	objects = map_values(owners);
 	usage = (rsrc[GRSRC_DECAY] == 0) ? 0 : 0.0;
 	for (i = sizeof(objects); --i >= 0; ) {
-	    usage += objects[i]->rsrc_get(name, resources[name])[RSRC_USAGE];
+	    usage += objects[i]->rsrc_get(name, rsrc)[RSRC_USAGE];
 	}
 
 	return ({ usage, rsrc[GRSRC_MAX], 0 }) +
@@ -205,11 +191,15 @@ void rsrc_set_limit(string owner, string name, int max)
 {
     if (previous_program() == API_RSRC) {
 	object obj;
+	mixed *rsrc;
 
 	if (!(obj=owners[owner])) {
 	    error("No such resource owner: " + owner);
 	}
-	obj->rsrc_set_limit(name, max, resources[name][GRSRC_DECAY]);
+	if (!(rsrc=resources[name])) {
+	    error("No such resource: " + name);
+	}
+	obj->rsrc_set_limit(name, max, rsrc[GRSRC_DECAY]);
     }
 }
 
@@ -221,29 +211,35 @@ mixed *rsrc_get(string owner, string name)
 {
     if (KERNEL()) {
 	object obj;
+	mixed *rsrc;
 
 	if (!(obj=owners[owner])) {
 	    error("No such resource owner: " + owner);
 	}
-	return obj->rsrc_get(name, resources[name]);
+	if (!(rsrc=resources[name])) {
+	    error("No such resource: " + name);
+	}
+	return obj->rsrc_get(name, rsrc);
     }
 }
 
 /*
  * NAME:	rsrc_incr()
- * DESCRIPTION:	increment or decrement a resource, returning TRUE if succeeded,
- *		FALSE if failed
+ * DESCRIPTION:	increment or decrement a resource
  */
-int rsrc_incr(string owner, string name, mixed index, int incr,
-	      varargs int force)
+void rsrc_incr(string owner, string name, int incr, varargs int force)
 {
     if (KERNEL()) {
 	object obj;
+	mixed *rsrc;
 
 	if (!(obj=owners[owner])) {
 	    error("No such resource owner: " + owner);
 	}
-	return obj->rsrc_incr(name, index, incr, resources[name], force);
+	if (!(rsrc=resources[name])) {
+	    error("No such resource: " + name);
+	}
+	obj->rsrc_incr(name, incr, rsrc, force);
     }
 }
 
@@ -331,248 +327,13 @@ int update_ticks(mixed *limits, int ticks)
 
 
 /*
- * NAME:	set_suspension_manager()
- * DESCRIPTION:	set an external manager to handle suspended callouts
- */
-void set_suspension_manager(object obj)
-{
-    if (SYSTEM()) {
-	if (suspend != 0) {
-	    error("Cannot change suspension manager with suspended callouts");
-	}
-	manager = obj;
-    }
-}
-
-/*
- * NAME:	suspend_callouts()
- * DESCRIPTION:	suspend all callouts
- */
-void suspend_callouts()
-{
-    if (SYSTEM() && suspend >= 0) {
-	rlimits (-1; -1) {
-	    if (manager) {
-		manager->suspend_callouts();
-	    } else {
-		mixed *callout;
-
-		if (suspend > 0) {
-		    callout = first_suspended;
-		    do {
-			if (callout[CO_RELHANDLE] != 0) {
-			    remove_call_out(callout[CO_RELHANDLE]);
-			    callout[CO_RELHANDLE] = 0;
-			}
-			callout = callout[CO_NEXT];
-		    } while (callout);
-		} else {
-		    suspended = ([ ]);
-		}
-	    }
-	    suspender = previous_object();
-	    suspend = -1;
-	}
-    }
-}
-
-/*
- * NAME:	release_callouts()
- * DESCRIPTION:	release suspended callouts
- */
-void release_callouts()
-{
-    if (SYSTEM() && suspend < 0) {
-	rlimits (-1; -1) {
-	    suspender = nil;
-	    suspend = 1;
-	    if (manager) {
-		manager->release_callouts();
-	    } else if (first_suspended) {
-		mixed *callout;
-
-		callout = first_suspended;
-		do {
-		    if (callout[CO_RELHANDLE] == 0) {
-			callout[CO_RELHANDLE] = call_out("release", 0);
-		    }
-		    callout = callout[CO_NEXT];
-		} while (callout);
-	    } else {
-		suspended = nil;
-		suspend = 0;
-	    }
-	}
-    }
-}
-
-
-/*
- * NAME:	suspended()
- * DESCRIPTION:	return TRUE if callouts are suspended, otherwise return FALSE
- */
-int suspended(object obj)
-{
-    return (suspend != 0 && obj != suspender);
-}
-
-/*
- * NAME:	suspend()
- * DESCRIPTION:	suspend a callout
- */
-void suspend(mixed tls, object obj, int handle)
-{
-    if (previous_program() == AUTO) {
-	if (manager) {
-	    manager->suspend(obj, handle);
-	} else {
-	    mixed *callout;
-
-	    callout = ({ obj, handle, 0, last_suspended, nil });
-	    if (suspend > 0) {
-		callout[CO_RELHANDLE] = call_out("release", 0);
-	    }
-	    if (last_suspended) {
-		last_suspended[CO_NEXT] = callout;
-	    } else {
-		first_suspended = callout;
-	    }
-	    last_suspended = callout;
-	    if (suspended[obj]) {
-		suspended[obj][handle] = callout;
-	    } else {
-		suspended[obj] = ([ handle : callout ]);
-	    }
-	}
-    }
-}
-
-/*
- * NAME:	remove_callout()
- * DESCRIPTION:	remove callout from list of suspended calls
- */
-int remove_callout(mixed tls, object obj, int handle)
-{
-    mapping callouts;
-    mixed *callout;
-
-    if (previous_program() == AUTO && obj != this_object() && suspend != 0) {
-	if (manager) {
-	    return manager->remove_callout(obj, handle);
-	} else if ((callouts=suspended[obj]) && (callout=callouts[handle])) {
-	    if (callout != first_suspended) {
-		callout[CO_PREV][CO_NEXT] = callout[CO_NEXT];
-	    } else {
-		first_suspended = callout[CO_NEXT];
-	    }
-	    if (callout != last_suspended) {
-		if (callout[CO_RELHANDLE] != 0) {
-		    remove_call_out(last_suspended[CO_RELHANDLE]);
-		    last_suspended[CO_RELHANDLE] = callout[CO_RELHANDLE];
-		}
-		callout[CO_NEXT][CO_PREV] = callout[CO_PREV];
-	    } else {
-		if (callout[CO_RELHANDLE] != 0) {
-		    remove_call_out(callout[CO_RELHANDLE]);
-		}
-		last_suspended = callout[CO_PREV];
-	    }
-	    callouts[handle] = nil;
-	    return TRUE;	/* delayed call */
-	}
-    }
-    return FALSE;
-}
-
-/*
- * NAME:	remove_callouts()
- * DESCRIPTION:	remove callouts from an object about to be destructed
- */
-void remove_callouts(object obj)
-{
-    if (previous_program() == AUTO && suspend != 0) {
-	if (manager) {
-	    manager->remove_callouts(obj);
-	} else if (suspended[obj]) {
-	    mixed **callouts, *callout;
-	    int i;
-
-	    callouts = map_values(suspended[obj]);
-	    for (i = sizeof(callouts); --i >= 0; ) {
-		callout = callouts[i];
-		if (callout != first_suspended) {
-		    callout[CO_PREV][CO_NEXT] = callout[CO_NEXT];
-		} else {
-		    first_suspended = callout[CO_NEXT];
-		}
-		if (callout != last_suspended) {
-		    if (callout[CO_RELHANDLE] != 0) {
-			remove_call_out(last_suspended[CO_RELHANDLE]);
-			last_suspended[CO_RELHANDLE] = callout[CO_RELHANDLE];
-		    }
-		    callout[CO_NEXT][CO_PREV] = callout[CO_PREV];
-		} else {
-		    if (callout[CO_RELHANDLE] != 0) {
-			remove_call_out(callout[CO_RELHANDLE]);
-		    }
-		    last_suspended = callout[CO_PREV];
-		}
-	    }
-	    suspended[obj] = nil;
-	}
-    }
-}
-
-/*
- * NAME:	release_callout()
- * DESCRIPTION:	let the suspension manager release a callout
- */
-void release_callout(object obj, int handle)
-{
-    if (previous_object() == manager) {
-	if (obj) {
-	    rlimits(-1; -1) {
-		obj->_F_release(handle);
-	    }
-	} else {
-	    suspend = 0;
-	}
-    }
-}
-
-/*
- * NAME:	release()
- * DESCRIPTION:	release a callout
- */
-static void release()
-{
-    mixed *callout;
-    object obj;
-    int handle;
-
-    callout = first_suspended;
-    obj = callout[CO_OBJ];
-    handle = callout[CO_HANDLE];
-    if ((first_suspended=callout[CO_NEXT])) {
-	first_suspended[CO_PREV] = nil;
-	suspended[obj][handle] = nil;
-    } else {
-	last_suspended = nil;
-	suspended = nil;
-	suspend = 0;
-    }
-    obj->_F_release(handle);
-}
-
-
-/*
  * NAME:	initd()
  * DESCRIPTION:	perform local system initialization
  */
 object initd()
 {
     if (previous_program() == DRIVER) {
-	return compile_object(USR_DIR + "/System/initd");
+	return compile_object("/usr/System/initd");
     }
 }
 
@@ -596,14 +357,6 @@ void reboot()
     if (previous_program() == DRIVER) {
 	object *objects;
 	int i;
-
-	objects = OBJREGD->remove_editors();
-	for (i = sizeof(objects); --i >= 0; ) {
-	    owners[objects[i]->query_owner()]->rsrc_incr("editors", objects[i],
-							 -1,
-							 resources["editors"],
-							 TRUE);
-	}
 
 	downtime = time() - downtime;
 	objects = map_values(owners);

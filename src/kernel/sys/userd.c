@@ -1,4 +1,5 @@
 # include <kernel/kernel.h>
+# include <kernel/rsrc.h>
 # include <kernel/user.h>
 # include <status.h>
 
@@ -7,6 +8,7 @@ object *users;		/* user mappings */
 mapping names;		/* name : connection object */
 object *connections;	/* saved connections */
 mapping telnet, binary;	/* port managers */
+mapping editors;	/* editor : TRUE */
 
 /*
  * NAME:	create()
@@ -24,13 +26,14 @@ static void create()
     names = ([ ]);
     telnet = ([ ]);
     binary = ([ ]);
+    editors = ([ ]);
 }
 
 /*
  * NAME:	telnet_connection()
  * DESCRIPTION:	return a new telnet connection object
  */
-object telnet_connection(mixed *tls, int port)
+object telnet_connection(mapping tls, int port)
 {
     if (previous_program() == DRIVER) {
 	object conn;
@@ -45,7 +48,7 @@ object telnet_connection(mixed *tls, int port)
  * NAME:	binary_connection()
  * DESCRIPTION:	return a new binary connection object
  */
-object binary_connection(mixed *tls, int port)
+object binary_connection(mapping tls, int port)
 {
     if (previous_program() == DRIVER) {
 	object conn;
@@ -257,6 +260,39 @@ object find_user(string name)
     }
 }
 
+/*
+ * NAME:	add_editor()
+ * DESCRIPTION:	register an editor object
+ */
+void add_editor(object obj)
+{
+    if (previous_program() == AUTO) {
+	editors[obj] = TRUE;
+    }
+}
+
+/*
+ * NAME:	remove_editor()
+ * DESCRIPTION:	unregister an editor object
+ */
+void remove_editor(object obj)
+{
+    if (previous_program() == AUTO) {
+	editors[obj] = nil;
+    }
+}
+
+/*
+ * NAME:	query_editors()
+ * DESCRIPTION:	return the current editor objects
+ */
+object *query_editors()
+{
+    if (SYSTEM()) {
+	return map_indices(editors);
+    }
+}
+
 
 /*
  * NAME:	prepare_reboot()
@@ -265,6 +301,7 @@ object find_user(string name)
 void prepare_reboot()
 {
     if (previous_program() == DRIVER) {
+	editors = ([ ]);
 	catch {
 	    connections = users();
 	}

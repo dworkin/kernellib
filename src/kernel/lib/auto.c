@@ -1,5 +1,4 @@
 # include <kernel/kernel.h>
-# include <kernel/objreg.h>
 # include <kernel/rsrc.h>
 # include <kernel/access.h>
 # include <kernel/user.h>
@@ -7,8 +6,9 @@
 # include <type.h>
 # include <trace.h>
 
-# define TLSVAR2		::call_trace()[1][TRACE_FIRSTARG][1]
-# define LONG_TIME		(365 * 24 * 60 * 60)
+
+# define TLS()			::call_trace()[1][TRACE_FIRSTARG]
+# define TLSVAR(tls, n)		tls[-1 - n]
 # define CHECKARG(arg, n, func)	if (!(arg)) badarg((n), (func))
 
 /*
@@ -21,17 +21,7 @@ private void badarg(int n, string func)
 }
 
 
-private object prev, next;	/* previous and next in linked list */
 private string creator, owner;	/* creator and owner of this object */
-private mapping resources;	/* resources associated with this object */
-private mapping events;		/* events for this object */
-
-nomask void _F_prev(object obj)
-			    { if (previous_program() == OBJREGD) prev = obj; }
-nomask void _F_next(object obj)
-			    { if (previous_program() == OBJREGD) next = obj; }
-nomask object _Q_prev()	    { if (previous_program() == OBJREGD) return prev; }
-nomask object _Q_next()	    { if (previous_program() == OBJREGD) return next; }
 
 /*
  * NAME:	query_owner()
@@ -42,24 +32,7 @@ nomask string query_owner()
     return owner;
 }
 
-/*
- * NAME:	_F_rsrc_incr()
- * DESCRIPTION:	increase/decrease a resource associated with this object
- */
-nomask void _F_rsrc_incr(string rsrc, int incr)
-{
-    if (previous_program() == RSRCOBJ) {
-	if (!resources) {
-	    resources = ([ rsrc : incr ]);
-	} else if (!resources[rsrc]) {
-	    resources[rsrc] = incr;
-	} else if (!(resources[rsrc] += incr)) {
-	    resources[rsrc] = nil;
-	}
-    }
-}
-
-void create(varargs int clone) { }	/* default high-level create function */
+void create() { }	/* default high-level create function */
 
 /*
  * NAME:	_F_create()
@@ -67,13 +40,13 @@ void create(varargs int clone) { }	/* default high-level create function */
  */
 nomask void _F_create()
 {
-    if (!prev) {
+    if (!creator) {
 	string oname;
 # ifdef CREATOR
 	string cname;
 # endif
 	object driver;
-	int clone, number;
+	int clone;
 
 	rlimits (-1; -1) {
 	    /*
@@ -82,112 +55,32 @@ nomask void _F_create()
 	    oname = object_name(this_object());
 	    driver = ::find_object(DRIVER);
 	    creator = driver->creator(oname);
-	    clone = !!sscanf(oname, "%s#%d", oname, number);
-	    if (clone) {
-		owner = TLSVAR2;
+	    if (sscanf(oname, "%s#%d", oname, clone) != 0) {
+		owner = TLSVAR(TLS(), TLS_ARGUMENT);
+		if (clone >= 0) {
+		    /*
+		     * register object
+		     */
+		    driver->clone(this_object(), owner);
+		}
 	    } else {
 		owner = creator;
 	    }
-
-	    if (number >= 0) {
-		/*
-		 * register object
-		 */
-		if (oname != BINARY_CONN && oname != TELNET_CONN &&
-		    oname != OBJREGD) {
-		    ::find_object(OBJREGD)->link(this_object(), owner);
-
-		    if (clone) {
-			driver->clone(this_object(), owner);
-		    }
-		}
-	    } else {
-		/*
-		 * new non-persistent object
-		 */
-		prev = driver;
+	    if (!creator) {
+		creator = "";
 	    }
 
 # ifdef CREATOR
 	    cname = function_object(CREATOR, this_object());
-	    if (cname && sscanf(cname, USR_DIR + "/System/%*s") != 0) {
+	    if (cname && sscanf(cname, "/usr/System/%*s") != 0) {
 		/* extra initialisation function */
-		if (call_other(this_object(), CREATOR, clone)) {
+		if (call_other(this_object(), CREATOR)) {
 		    return;
 		}
 	    }
 # endif
 	}
-	/* call higher-level creator function */
-	if (sscanf(oname, "%*s" + CLONABLE_SUBDIR) == 0 &&
-	    sscanf(oname, "%*s" + LIGHTWEIGHT_SUBDIR) == 0) {
-	    create();
-	} else {
-	    create(clone);
-	}
-    }
-}
-
-/*
- * NAME:	_F_destruct()
- * DESCRIPTION:	prepare object for being destructed
- */
-nomask void _F_destruct()
-{
-    if (previous_program() == AUTO) {
-	object rsrcd;
-	int i, j;
-
-	rsrcd = ::find_object(RSRCD);
-
-	if (events) {
-	    object **evtlist, *objlist, obj;
-
-	    /*
-	     * decrease resources of other objects subscribed to events
-	     */
-	    evtlist = map_values(events);
-	    i = sizeof(evtlist);
-	    while (--i >= 0) {
-		j = sizeof(objlist = evtlist[i] - ({ nil }));
-		while (--j >= 0) {
-		    obj = objlist[j];
-		    if (obj != this_object()) {
-			rsrcd->rsrc_incr(obj->query_owner(), "events", obj, -1);
-		    }
-		}
-	    }
-	}
-
-	/*
-	 * remove any suspended callouts
-	 */
-	rsrcd->remove_callouts(this_object());
-
-	if (resources) {
-	    string *names;
-	    int *values;
-
-	    /*
-	     * decrease resources associated with object
-	     */
-	    names = map_indices(resources);
-	    values = map_values(resources);
-	    i = sizeof(names);
-	    while (--i >= 0) {
-		rsrcd->rsrc_incr(owner, names[i], this_object(), -values[i]);
-	    }
-	}
-
-	if (next) {
-	    ::find_object(OBJREGD)->unlink(this_object(), owner);
-	    if (sscanf(object_name(this_object()), "%*s#") != 0) {
-		/*
-		 * non-clones are handled by driver->remove_program()
-		 */
-		rsrcd->rsrc_incr(owner, "objects", nil, -1);
-	    }
-	}
+	create();
     }
 }
 
@@ -203,13 +96,10 @@ static object find_object(string path)
 	return nil;
     }
 
-    path = ::find_object(DRIVER)->normalize_path(path,
-						 object_name(this_object()) +
-						 "/..",
-						 creator);
-    if (sscanf(path, "%*s" + INHERITABLE_SUBDIR) != 0) {
+    path = ::find_object(DRIVER)->normalize_path(path, nil, creator);
+    if (sscanf(path, "%*s/lib/") != 0) {
 	/*
-	 * It is not possible to find a lib object by name, or to call a
+	 * It is not possible to find a class object by name, or to call a
 	 * function in it.
 	 */
 	return nil;
@@ -225,7 +115,7 @@ static int destruct_object(mixed obj)
 {
     object driver;
     string oname, oowner;
-    int lib;
+    int clone, lib;
 
     /* check and translate argument */
     driver = ::find_object(DRIVER);
@@ -233,10 +123,7 @@ static int destruct_object(mixed obj)
 	if (!this_object()) {
 	    return FALSE;
 	}
-	obj = ::find_object(driver->normalize_path(obj,
-						   object_name(this_object()) +
-						   "/..",
-						   creator));
+	obj = ::find_object(driver->normalize_path(obj, nil, creator));
 	if (!obj) {
 	    return FALSE;
 	}
@@ -251,28 +138,50 @@ static int destruct_object(mixed obj)
      * check privileges
      */
     oname = object_name(obj);
-    if (sscanf(oname, "%s#%d", oname, lib) != 0 && lib < 0) {
+    clone = sscanf(oname, "%s#%d", oname, lib);
+    if (clone && lib < 0) {
 	error("Cannot destruct non-persistent object");
     }
-    lib = sscanf(oname, "%*s" + INHERITABLE_SUBDIR);
-    oowner = (lib) ? driver->creator(oname) : obj->query_owner();
+    lib = sscanf(oname, "%*s/lib/");
+    oowner = (lib || sscanf(oname, "%*s#") == 0) ?
+	      driver->creator(oname) : obj->query_owner();
     if ((sscanf(oname, "/kernel/%*s") != 0 && !lib && !KERNEL()) ||
 	(creator != "System" && owner != oowner)) {
 	error("Cannot destruct object: not owner");
     }
 
     rlimits (-1; -1) {
-	if (!lib) {
-	    if (oname != BINARY_CONN && oname != TELNET_CONN) {
-		driver->destruct(obj, oowner);
-	    }
-	    obj->_F_destruct();
+	if (clone) {
+	    /*
+	     * non-clones are handled by driver->remove_program()
+	     */
+	    ::find_object(RSRCD)->rsrc_incr(oowner, "objects", -1);
 	} else {
-	    driver->destruct_lib(object_name(obj), oowner);
+	    driver->destruct(object_name(obj), oowner);
 	}
 	::destruct_object(obj);
     }
     return TRUE;
+}
+
+/*
+ * NAME:	_compile()
+ * DESCRIPTION:	reversible low-level compile
+ */
+private atomic object _compile(object driver, string path, string uid,
+			       string *source)
+{
+    int add;
+    object obj;
+
+    driver->compiling(path);
+    add = !::find_object(path);
+    obj = ::compile_object(path, source...);
+    if (add) {
+	::find_object(RSRCD)->rsrc_incr(uid, "objects", 1);
+    }
+    driver->compile(path, uid, source);
+    return obj;
 }
 
 /*
@@ -281,9 +190,9 @@ static int destruct_object(mixed obj)
  */
 static object compile_object(string path, string source...)
 {
-    string oname, uid;
-    object driver, rsrcd, obj;
-    int *rsrc, lib, kernel, is_new, stack, ticks;
+    string uid, err;
+    object driver, obj;
+    int lib, kernel;
 
     CHECKARG(path, 1, "compile_object");
     if (!this_object()) {
@@ -293,15 +202,14 @@ static object compile_object(string path, string source...)
     /*
      * check access
      */
-    oname = object_name(this_object());
     driver = ::find_object(DRIVER);
-    path = driver->normalize_path(path, oname + "/..", creator);
-    lib = sscanf(path, "%*s" + INHERITABLE_SUBDIR);
+    path = driver->normalize_path(path, nil, creator);
+    lib = sscanf(path, "%*s/lib/");
     kernel = sscanf(path, "/kernel/%*s");
     uid = driver->creator(path);
     if ((sizeof(source) != 0 && kernel) ||
 	(creator != "System" &&
-	 !::find_object(ACCESSD)->access(oname, path,
+	 !::find_object(ACCESSD)->access(object_name(this_object()), path,
 					 ((lib || !uid) &&
 					  sizeof(source) == 0 && !kernel) ?
 					  READ_ACCESS : WRITE_ACCESS))) {
@@ -309,57 +217,30 @@ static object compile_object(string path, string source...)
     }
 
     /*
-     * check resource usage
-     */
-    rsrcd = ::find_object(RSRCD);
-    rsrc = rsrcd->rsrc_get(uid, "objects");
-    if (rsrc[RSRC_USAGE] >= rsrc[RSRC_MAX] && rsrc[RSRC_MAX] >= 0) {
-	error("Too many objects");
-    }
-
-    /*
      * do the compiling
      */
-    is_new = !::find_object(path);
-    stack = ::status()[ST_STACKDEPTH];
-    ticks = ::status()[ST_TICKS];
     rlimits (-1; -1) {
-	catch {
-	    if (is_new && !lib) {
-		if ((stack >= 0 &&
-		     stack - 2 < rsrcd->rsrc_get(uid,
-						 "create stack")[RSRC_MAX]) ||
-		    (ticks >= 0 &&
-		     ticks < rsrcd->rsrc_get(uid, "create ticks")[RSRC_MAX])) {
-		    error("Insufficient stack or ticks to create object");
-		}
-	    }
-	    driver->compiling(path);
-	    if (sizeof(source) != 0) {
-		obj = ::compile_object(path, source...);
-	    } else {
-		obj = ::compile_object(path);
-	    }
-	    if (is_new) {
-		rsrcd->rsrc_incr(uid, "objects", nil, 1, TRUE);
-	    }
-	    if (lib) {
-		driver->compile_lib(path, uid, source...);
-	    } else {
-		driver->compile(obj, uid, source...);
-	    }
-	} : {
+	err = catch(obj = _compile(driver, path, uid, source));
+	if (err) {
 	    driver->compile_failed(path, uid);
-	    rlimits (stack; ticks) {
-		error(TLSVAR2);
-	    }
+	    error(err);
 	}
-    }
-    if (is_new && !lib) {
-	call_other(obj, "???");	/* initialize & register */
     }
 
     return (lib) ? nil : obj;
+}
+
+/*
+ * NAME:	_clone()
+ * DESCRIPTION:	reversible low-level clone
+ */
+private atomic object _clone(string path, string uid, object obj)
+{
+    if (path != RSRCOBJ) {
+	::find_object(RSRCD)->rsrc_incr(uid, "objects", 1);
+    }
+    TLSVAR(TLS(), TLS_ARGUMENT) = uid;
+    return ::clone_object(obj);
 }
 
 /*
@@ -368,9 +249,7 @@ static object compile_object(string path, string source...)
  */
 static object clone_object(string path, varargs string uid)
 {
-    string oname;
-    object rsrcd, obj;
-    int *rsrc, stack, ticks;
+    object obj;
 
     CHECKARG(path, 1, "clone_object");
     if (uid) {
@@ -385,11 +264,11 @@ static object clone_object(string path, varargs string uid)
     /*
      * check access
      */
-    oname = object_name(this_object());
-    path = ::find_object(DRIVER)->normalize_path(path, oname + "/..", creator);
+    path = ::find_object(DRIVER)->normalize_path(path, nil, creator);
     if ((sscanf(path, "/kernel/%*s") != 0 && !KERNEL()) ||
 	(creator != "System" &&
-	 !::find_object(ACCESSD)->access(oname, path, READ_ACCESS))) {
+	 !::find_object(ACCESSD)->access(object_name(this_object()), path,
+					 READ_ACCESS))) {
 	/*
 	 * kernel objects can only be cloned by kernel objects, and cloning
 	 * in general requires read access
@@ -400,51 +279,27 @@ static object clone_object(string path, varargs string uid)
     /*
      * check if object can be cloned
      */
-    if (!owner || !(obj=::find_object(path)) ||
-	sscanf(path, "%*s" + CLONABLE_SUBDIR) == 0 ||
-	sscanf(path, "%*s" + LIGHTWEIGHT_SUBDIR) != 0 ||
-	sscanf(path, "%*s" + INHERITABLE_SUBDIR) != 0) {
+    if (!owner || !(obj=::find_object(path)) || sscanf(path, "%*s#") != 0 ||
+	sscanf(path, "%*s/lib/") != 0) {
 	/*
-	 * no owner for clone, master object not compiled, or not path of
-	 * clonable
+	 * no owner for clone, master object not compiled, or not clonable
 	 */
 	error("Cannot clone " + path);
     }
 
     /*
-     * check resource usage
-     */
-    rsrcd = ::find_object(RSRCD);
-    if (path != BINARY_CONN && path != TELNET_CONN && path != RSRCOBJ) {
-	rsrc = rsrcd->rsrc_get(uid, "objects");
-	if (rsrc[RSRC_USAGE] >= rsrc[RSRC_MAX] && rsrc[RSRC_MAX] >= 0) {
-	    error("Too many objects");
-	}
-    }
-    if (::status()[ST_NOBJECTS] == ::status()[ST_OTABSIZE]) {
-	error("Too many objects");
-    }
-
-    /*
      * do the cloning
      */
-    stack = ::status()[ST_STACKDEPTH];
-    ticks = ::status()[ST_TICKS];
-    catch {
-	rlimits (-1; -1) {
-	    if ((stack >= 0 &&
-		 stack - 2 < rsrcd->rsrc_get(uid, "create stack")[RSRC_MAX]) ||
-		(ticks >= 0 &&
-		 ticks < rsrcd->rsrc_get(uid, "create ticks")[RSRC_MAX])) {
-		error("Insufficient stack or ticks to create object");
-	    }
-	    if (path != BINARY_CONN && path != TELNET_CONN && path != RSRCOBJ) {
-		rsrcd->rsrc_incr(uid, "objects", nil, 1, TRUE);
-	    }
-	    TLSVAR2 = uid;
-	}
-    } : error(TLSVAR2);
-    return ::clone_object(obj);
+    return _clone(path, uid, obj);
+}
+
+/*
+ * NAME:	_new()
+ * DESCRIPTION:	reversible low-level new
+ */
+private atomic object _new(object obj)
+{
+    return ::new_object(obj);
 }
 
 /*
@@ -454,112 +309,110 @@ static object clone_object(string path, varargs string uid)
 static object new_object(mixed obj, varargs string uid)
 {
     string str;
-    object rsrcd;
-    int is_new, stack, ticks;
+    int create;
 
+    if (!this_object()) {
+	error("Permission denied");
+    }
     switch (typeof(obj)) {
     case T_STRING:
-	str = object_name(this_object());
-	str = ::find_object(DRIVER)->normalize_path(obj, str + "/..", creator);
+	str = ::find_object(DRIVER)->normalize_path(obj, nil, creator);
 	obj = ::find_object(str);
-	is_new = TRUE;
+	create = TRUE;
 	break;
 
     case T_OBJECT:
 	str = object_name(obj);
-	if (sscanf(str, "%*s#-1") == 0) {
-	    error("new_object() requires non-persistent object argument");
+	if (sscanf(str, "%*s#-1") != 0) {
+	    create = FALSE;
+	    break;
 	}
-	is_new = FALSE;
-	break;
-
+	/* fall through */
     default:
-	error("Bad argument 1 for function new_object");
+	badarg(1, "new_object");
     }
     if (uid) {
-	CHECKARG(is_new && creator == "System", 1, "new_object");
+	CHECKARG(create && creator == "System", 1, "new_object");
     } else {
 	uid = owner;
     }
-    if (!this_object()) {
-	error("Permission denied");
-    }
-
 
     /*
      * create the object
      */
-    if (is_new) {
+    if (create) {
+	/*
+	 * check access
+	 */
+	if (sscanf(str, "/kernel/%*s") != 0 ||
+	    (creator != "System" &&
+	     !::find_object(ACCESSD)->access(object_name(this_object()), str,
+					     READ_ACCESS))) {
+	    error("Access denied");
+	}
+
 	/*
 	 * check if object can be created
 	 */
-	if (!obj || sscanf(str, "%*s" + LIGHTWEIGHT_SUBDIR) == 0 ||
-	    sscanf(str, "%*s" + CLONABLE_SUBDIR) != 0 ||
-	    sscanf(str, "%*s" + INHERITABLE_SUBDIR) != 0) {
+	if (!obj || sscanf(str, "%*s/lib/") != 0) {
 	    /*
-	     * master object not compiled, or not path of non-persistent object
+	     * master object not compiled, or not suitable
 	     */
 	    error("Cannot create new instance of " + str);
 	}
 
-	rsrcd = ::find_object(RSRCD);
-	stack = ::status()[ST_STACKDEPTH];
-	ticks = ::status()[ST_TICKS];
-	catch {
-	    rlimits (-1; -1) {
-		if ((stack >= 0 &&
-		     stack - 2 < rsrcd->rsrc_get(uid,
-						 "create stack")[RSRC_MAX]) ||
-		    (ticks >= 0 &&
-		     ticks < rsrcd->rsrc_get(uid, "create ticks")[RSRC_MAX])) {
-		    error("Insufficient stack or ticks to create object");
-		}
-		TLSVAR2 = uid;
-	    }
-	} : error(TLSVAR2);
+	TLSVAR(TLS(), TLS_ARGUMENT) = uid;
     }
-    return ::new_object(obj);
+    return _new(obj);
 }
 
 /*
- * NAME:	call_trace()
- * DESCRIPTION:	call trace
+ * NAME:	process_trace()
+ * DESCRIPTION:	filter out function call arguments from a call trace
  */
-static mixed **call_trace()
+private mixed *process_trace(object driver, mixed *trace)
 {
-    mixed **trace, *call;
-    int i;
-    object driver;
-
-    trace = ::call_trace();
-    trace[1][TRACE_FIRSTARG] = nil;
-    if (creator != "System") {
-	driver = ::find_object(DRIVER);
-	for (i = sizeof(trace) - 1; --i >= 0; ) {
-	    if (sizeof(call = trace[i]) > TRACE_FIRSTARG &&
-		creator != driver->creator(call[TRACE_PROGNAME])) {
-		/* remove arguments */
-		trace[i] = call[.. TRACE_FIRSTARG - 1];
-	    }
-	}
+    if (sizeof(trace) > TRACE_FIRSTARG &&
+	creator != driver->creator(trace[TRACE_PROGNAME])) {
+	/* remove arguments */
+	return trace[.. TRACE_FIRSTARG - 1];
     }
-
     return trace;
 }
 
 /*
- * NAME:	process_precompiled()
- * DESCRIPTION:	process precompiled objects in a status() return value
+ * NAME:	call_trace()
+ * DESCRIPTION:	function call trace
  */
-private void process_precompiled(mixed *precompiled)
+static mixed *call_trace(varargs mixed index)
 {
-    int i;
+    mixed *trace;
 
-    if (precompiled) {
-	for (i = sizeof(precompiled); --i >= 0; ) {
-	    precompiled[i] = object_name(precompiled[i]);
+    if (index == nil) {
+	trace = ::call_trace();
+	if (previous_program() != RSRCOBJ) {
+	    trace[1][TRACE_FIRSTARG] = nil;
+	}
+	if (creator != "System") {
+	    object driver;
+	    int i;
+
+	    driver = ::find_object(DRIVER);
+	    for (i = sizeof(trace) - 1; --i >= 0; ) {
+		trace[i] = process_trace(driver, trace[i]);
+	    }
+	}
+    } else {
+	trace = ::call_trace()[index];
+	if (index == 1 && previous_program() != RSRCOBJ) {
+	    trace[TRACE_FIRSTARG] = nil;
+	}
+	if (creator != "System") {
+	    trace = process_trace(::find_object(DRIVER), trace);
 	}
     }
+
+    return trace;
 }
 
 /*
@@ -584,15 +437,15 @@ private mixed **process_callouts(object obj, mixed **callouts)
 		--i;
 		co = callouts[i];
 		callouts[i] = ({ co[CO_HANDLE], co[CO_FIRSTXARG],
-				 (co[CO_FIRSTXARG + 1]) ? 0 : co[CO_DELAY] });
+				 co[CO_DELAY] });
 	    } while (i != 0);
 	} else {
 	    do {
 		--i;
 		co = callouts[i];
 		callouts[i] = ({ co[CO_HANDLE], co[CO_FIRSTXARG],
-				 (co[CO_FIRSTXARG + 1]) ? 0 : co[CO_DELAY] }) +
-			      co[CO_FIRSTXARG + 2];
+				 co[CO_DELAY] }) +
+			      co[CO_FIRSTXARG + 1];
 	    } while (i != 0);
 	}
     }
@@ -620,26 +473,24 @@ static mixed status(varargs mixed obj, mixed index)
 	if (status[ST_STACKDEPTH] >= 0) {
 	    status[ST_STACKDEPTH]++;
 	}
-	process_precompiled(status[ST_PRECOMPILED]);
 	break;
 
     case T_INT:
-	CHECKARG(index == nil, 1, "status");
-	status = ::status()[obj];
-	if (obj == ST_STACKDEPTH && status >= 0) {
-	    status++;
-	} else if (obj == ST_PRECOMPILED) {
-	    process_precompiled(status);
+	if (obj == -1) {
+	    return (index == nil) ? ::status(1) : ::status(1)[index];
+	} else {
+	    CHECKARG(index == nil, 1, "status");
+	    status = ::status()[obj];
+	    if (obj == ST_STACKDEPTH && status >= 0) {
+		status++;
+	    }
 	}
 	break;
 
     case T_STRING:
 	/* get corresponding object */
 	driver = ::find_object(DRIVER);
-	obj = ::find_object(driver->normalize_path(obj,
-						   object_name(this_object()) +
-						   "/..",
-						   creator));
+	obj = ::find_object(driver->normalize_path(obj, nil, creator));
 	if (!obj) {
 	    return nil;
 	}
@@ -676,7 +527,10 @@ static object this_user()
     object user;
 
     user = ::this_user();
-    while (user && user <- LIB_CONN) {
+    if (!user) {
+	user = TLSVAR(TLS(), TLS_USER);
+    }
+    if (user) {
 	user = user->query_user();
     }
     return user;
@@ -724,7 +578,7 @@ static void swapout()
 
 /*
  * NAME:	dump_state()
- * DESCRIPTION:	create state dump
+ * DESCRIPTION:	create snapshot
  */
 static void dump_state(varargs int incr)
 {
@@ -747,8 +601,8 @@ static void shutdown(varargs int hotboot)
 	error("Permission denied");
     }
     rlimits (-1; -1) {
-	::find_object(DRIVER)->message("System halted.\n");
 	::shutdown(hotboot);
+	::find_object(DRIVER)->message("System halted.\n");
     }
 }
 
@@ -756,12 +610,12 @@ static void shutdown(varargs int hotboot)
  * NAME:	call_touch()
  * DESCRIPTION:	arrange to be warned when a function is called in an object
  */
-static void call_touch(object obj)
+static int call_touch(object obj)
 {
     if (creator != "System") {
 	error("Permission denied");
     }
-    ::call_touch(obj);
+    return ::call_touch(obj);
 }
 
 
@@ -781,11 +635,13 @@ private mixed _F_call_limited(mixed arg1, mixed *args)
     stack = ::status()[ST_STACKDEPTH];
     ticks = ::status()[ST_TICKS];
     rlimits (-1; -1) {
-	tls = ::call_trace()[1][TRACE_FIRSTARG];
+	tls = TLS();
 	if (tls == arg1) {
-	    tls = arg1 = allocate(::find_object(DRIVER)->query_tls_size());
+	    tls = arg1 = ([ ]);
 	}
-	limits = tls[0] = rsrcd->call_limits(tls[0], owner, stack, ticks);
+	limits = TLSVAR(tls, TLS_LIMIT) =
+		 rsrcd->call_limits(TLSVAR(tls, TLS_LIMIT), owner, stack,
+				    ticks);
     }
 
     rlimits (limits[LIM_MAXSTACK]; limits[LIM_MAXTICKS]) {
@@ -794,7 +650,7 @@ private mixed _F_call_limited(mixed arg1, mixed *args)
 	ticks = ::status()[ST_TICKS];
 	rlimits (-1; -1) {
 	    rsrcd->update_ticks(limits, ticks);
-	    tls[0] = limits[LIM_NEXT];
+	    TLSVAR(tls, TLS_LIMIT) = limits[LIM_NEXT];
 
 	    return result;
 	}
@@ -811,8 +667,7 @@ static mixed call_limited(string func, mixed args...)
     if (!this_object()) {
 	return nil;
     }
-    CHECKARG(function_object(func, this_object()) != AUTO ||
-							 func == "create",
+    CHECKARG(function_object(func, this_object()) != AUTO || func == "create",
 	     1, "call_limited");
 
     return _F_call_limited(func, args);
@@ -833,8 +688,7 @@ static int call_out(string func, mixed delay, mixed args...)
     if (!this_object()) {
 	return 0;
     }
-    CHECKARG(function_object(func, this_object()) != AUTO ||
-							 func == "create",
+    CHECKARG(function_object(func, this_object()) != AUTO || func == "create",
 	     1, "call_out");
     oname = object_name(this_object());
     if (sscanf(oname, "%*s#-1") != 0) {
@@ -848,287 +702,17 @@ static int call_out(string func, mixed delay, mixed args...)
 	/* direct callouts for kernel objects */
 	return ::call_out(func, delay, args...);
     }
-    return ::call_out("_F_callout", delay, func, 0, args);
-}
-
-/*
- * NAME:	remove_call_out()
- * DESCRIPTION:	remove a callout
- */
-static mixed remove_call_out(int handle)
-{
-    rlimits (-1; -1) {
-	mixed delay;
-
-	if (!next && prev) {
-	    error("No callouts in non-persistent object");
-	}
-	if ((delay=::remove_call_out(handle)) != -1 &&
-	    ::find_object(RSRCD)->remove_callout(nil, this_object(), handle)) {
-	    return 0;
-	}
-	return delay;
-    }
+    return ::call_out("_F_callout", delay, func, args);
 }
 
 /*
  * NAME:	_F_callout()
  * DESCRIPTION:	callout gate
  */
-nomask void _F_callout(string func, int handle, mixed *args)
+nomask void _F_callout(string func, mixed *args)
 {
     if (!previous_program()) {
-	if (handle == 0 && !::find_object(RSRCD)->suspended(this_object())) {
-	    _F_call_limited(func, args);
-	} else {
-	    mixed *tls;
-	    mixed **callouts;
-	    int i;
-
-	    tls = allocate(::find_object(DRIVER)->query_tls_size());
-	    if (handle != 0) {
-		::find_object(RSRCD)->remove_callout(tls, this_object(),
-						     handle);
-	    }
-	    handle = ::call_out("_F_callout", LONG_TIME, func, 0, args);
-	    callouts = ::status(this_object())[O_CALLOUTS];
-	    for (i = sizeof(callouts); callouts[--i][CO_HANDLE] != handle; ) ;
-	    callouts[i][CO_FIRSTXARG + 1] = handle;
-	    ::find_object(RSRCD)->suspend(tls, this_object(), handle);
-	}
-    }
-}
-
-/*
- * NAME:	_F_release()
- * DESCRIPTION:	release a suspended callout
- */
-nomask void _F_release(mixed handle)
-{
-    if (previous_program() == RSRCD) {
-	mixed **callouts;
-	int i;
-
-	callouts = ::status(this_object())[O_CALLOUTS];
-	::remove_call_out(handle);
-	for (i = sizeof(callouts); callouts[--i][CO_HANDLE] != handle; ) ;
-	handle = allocate(::find_object(DRIVER)->query_tls_size());
-	_F_call_limited(callouts[i][CO_FIRSTXARG],
-			callouts[i][CO_FIRSTXARG + 2]);
-    }
-}
-
-/*
- * NAME:	add_event()
- * DESCRIPTION:	add a new event type
- */
-static void add_event(string name)
-{
-    CHECKARG(name, 1, "add_event");
-    if (!next && prev) {
-	error("Cannot add event in non-persistent object");
-    }
-
-    if (!events) {
-	events = ([ ]);
-    }
-    if (!events[name]) {
-	events[name] = ({ });
-    }
-}
-
-/*
- * NAME:	remove_event()
- * DESCRIPTION:	remove an event type
- */
-static void remove_event(string name)
-{
-    object *objlist, rsrcd;
-    int i;
-
-    CHECKARG(name, 1, "remove_event");
-
-    if (events && (objlist=events[name])) {
-	rsrcd = ::find_object(RSRCD);
-	i = sizeof(objlist -= ({ nil }));
-	rlimits (-1; -1) {
-	    while (--i >= 0) {
-		rsrcd->rsrc_incr(objlist[i]->query_owner(), "events",
-				 objlist[i], -1);
-	    }
-	    events[name] = nil;
-	}
-    } else {
-	error("No such event");
-    }
-}
-
-/*
- * NAME:	query_events()
- * DESCRIPTION:	return a list of existing events
- */
-static string *query_events()
-{
-    if (events) {
-	return map_indices(events);
-    } else {
-	return ({ });
-    }
-}
-
-/*
- * NAME:	_F_subscribe_event()
- * DESCRIPTION:	subscribe to an event
- */
-nomask void
-_F_subscribe_event(object obj, string oowner, string name, int subscribe)
-{
-    if (previous_program() == AUTO) {
-	object *objlist, rsrcd;
-
-	if (!events || !(objlist=events[name])) {
-	    error("No such event");
-	}
-
-	rsrcd = ::find_object(RSRCD);
-	if (subscribe) {
-	    if (sizeof(objlist & ({ obj })) != 0) {
-		error("Already subscribed to event");
-	    }
-	    objlist = objlist - ({ nil }) + ({ obj });
-	    catch {
-		rlimits (-1; -1) {
-		    if (!rsrcd->rsrc_incr(oowner, "events", obj, 1)) {
-			error("Too many events");
-		    }
-		    events[name] = objlist;
-		}
-	    } : error(TLSVAR2);
-	} else {
-	    if (sizeof(objlist & ({ obj })) == 0) {
-		error("Not subscribed to event");
-	    }
-	    rlimits (-1; -1) {
-		rsrcd->rsrc_incr(oowner, "events", obj, -1);
-		events[name] -= ({ nil, obj });
-	    }
-	}
-    }
-}
-
-/*
- * NAME:	subscribe_event()
- * DESCRIPTION:	subscribe to an event
- */
-static void subscribe_event(object obj, string name)
-{
-    CHECKARG(obj, 1, "subscribe_event");
-    CHECKARG(name, 2, "subscribe_event");
-
-    if (!next || !obj->allow_subscribe(this_object(), name) || !obj) {
-	error("Cannot subscribe to event");
-    }
-    obj->_F_subscribe_event(this_object(), owner, name, TRUE);
-}
-
-/*
- * NAME:	unsubscribe_event()
- * DESCRIPTION:	unsubscribe from an event
- */
-static void unsubscribe_event(object obj, string name)
-{
-    CHECKARG(obj, 1, "unsubscribe_event");
-    CHECKARG(name, 2, "unsubscribe_event");
-
-    obj->_F_subscribe_event(this_object(), owner, name, FALSE);
-}
-
-/*
- * NAME:	query_subscribed_event()
- * DESCRIPTION:	return a list of objects subscribed to an event
- */
-static object *query_subscribed_event(string name)
-{
-    object *objlist;
-    int sz;
-
-    CHECKARG(name, 1, "query_subscribed_event");
-
-    if (!events || !(objlist=events[name])) {
-	error("No such event");
-    }
-
-    sz = sizeof(objlist);
-    objlist -= ({ nil });
-    if (sz != sizeof(objlist)) {
-	events[name] = objlist[..];
-    }
-    return objlist;
-}
-
-/*
- * NAME:	_F_start_event()
- * DESCRIPTION:	start an event in this object
- */
-nomask void _F_start_event(string name, mixed *args)
-{
-    if (previous_program() == AUTO) {
-	::call_out("_F_callout", 0, name, FALSE, args);
-    }
-}
-
-/*
- * NAME:	event()
- * DESCRIPTION:	broadcast an event
- */
-static void event(string name, mixed args...)
-{
-    object *objlist;
-    string *names;
-    int i, sz;
-
-    CHECKARG(name, 1, "event");
-    if (!events || !(objlist=events[name])) {
-	error("No such event");
-    }
-
-    name = "evt_" + name;
-    args = ({ this_object() }) + args;
-    sz = sizeof(objlist);
-    objlist -= ({ nil });
-    if (sz != sizeof(objlist)) {
-	events[name] = objlist;
-	sz = sizeof(objlist);
-    }
-    for (i = 0; i < sz; i++) {
-	objlist[i]->_F_start_event(name, args);
-    }
-}
-
-/*
- * NAME:	event_except()
- * DESCRIPTION:	broadcast an event, except to certain objects
- */
-static void event_except(string name, object *exclude, mixed args...)
-{
-    object *objlist;
-    string *names;
-    int i, sz;
-
-    CHECKARG(name, 1, "event");
-    if (!events || !(objlist=events[name])) {
-	error("No such event");
-    }
-
-    name = "evt_" + name;
-    args = ({ this_object() }) + args;
-    sz = sizeof(objlist);
-    objlist -= ({ nil });
-    if (sz != sizeof(objlist)) {
-	events[name] = objlist;
-    }
-    for (i = 0, sz = sizeof(objlist -= exclude); i < sz; i++) {
-	objlist[i]->_F_start_event(name, args);
+	_F_call_limited(func, args);
     }
 }
 
@@ -1139,17 +723,15 @@ static void event_except(string name, object *exclude, mixed args...)
  */
 static string read_file(string path, varargs int offset, int size)
 {
-    string oname;
-
     CHECKARG(path, 1, "read_file");
     if (!this_object()) {
 	error("Permission denied");
     }
 
-    oname = object_name(this_object());
-    path = ::find_object(DRIVER)->normalize_path(path, oname + "/..", creator);
+    path = ::find_object(DRIVER)->normalize_path(path, nil, creator);
     if (creator != "System" &&
-	!::find_object(ACCESSD)->access(oname, path, READ_ACCESS)) {
+	!::find_object(ACCESSD)->access(object_name(this_object()), path,
+					READ_ACCESS)) {
 	error("Access denied");
     }
 
@@ -1162,7 +744,7 @@ static string read_file(string path, varargs int offset, int size)
  */
 static int write_file(string path, string str, varargs int offset)
 {
-    string oname, fcreator;
+    string fcreator;
     object driver, rsrcd;
     int size, result, *rsrc;
 
@@ -1172,19 +754,19 @@ static int write_file(string path, string str, varargs int offset)
 	error("Permission denied");
     }
 
-    oname = object_name(this_object());
     driver = ::find_object(DRIVER);
-    path = driver->normalize_path(path, oname + "/..", creator);
+    path = driver->normalize_path(path, nil, creator);
     if (sscanf(path, "/kernel/%*s") != 0 ||
 	sscanf(path, "/include/kernel/%*s") != 0 ||
 	(creator != "System" &&
-	 !::find_object(ACCESSD)->access(oname, path, WRITE_ACCESS))) {
+	 !::find_object(ACCESSD)->access(object_name(this_object()), path,
+					 WRITE_ACCESS))) {
 	error("Access denied");
     }
 
     fcreator = driver->creator(path);
     rsrcd = ::find_object(RSRCD);
-    rsrc = rsrcd->rsrc_get(fcreator, "filequota");
+    rsrc = rsrcd->rsrc_get(fcreator, "fileblocks");
     if (creator != "System" && rsrc[RSRC_USAGE] >= rsrc[RSRC_MAX] &&
 	rsrc[RSRC_MAX] >= 0) {
 	error("File quota exceeded");
@@ -1195,10 +777,10 @@ static int write_file(string path, string str, varargs int offset)
 	rlimits (-1; -1) {
 	    result = ::write_file(path, str, offset);
 	    if (result != 0 && (size=driver->file_size(path) - size) != 0) {
-		rsrcd->rsrc_incr(fcreator, "filequota", nil, size, TRUE);
+		rsrcd->rsrc_incr(fcreator, "fileblocks", size);
 	    }
 	}
-    } : error(TLSVAR2);
+    } : error(TLSVAR(TLS(), TLS_ARGUMENT));
 
     return result;
 }
@@ -1209,7 +791,6 @@ static int write_file(string path, string str, varargs int offset)
  */
 static int remove_file(string path)
 {
-    string oname;
     object driver;
     int size, result;
 
@@ -1218,13 +799,13 @@ static int remove_file(string path)
 	error("Permission denied");
     }
 
-    oname = object_name(this_object());
     driver = ::find_object(DRIVER);
-    path = driver->normalize_path(path, oname + "/..", creator);
+    path = driver->normalize_path(path, nil, creator);
     if (sscanf(path, "/kernel/%*s") != 0 ||
 	sscanf(path, "/include/kernel/%*s") != 0 ||
 	(creator != "System" &&
-	 !::find_object(ACCESSD)->access(oname, path, WRITE_ACCESS))) {
+	 !::find_object(ACCESSD)->access(object_name(this_object()), path,
+					 WRITE_ACCESS))) {
 	error("Access denied");
     }
 
@@ -1234,10 +815,10 @@ static int remove_file(string path)
 	    result = ::remove_file(path);
 	    if (result != 0 && size != 0) {
 		::find_object(RSRCD)->rsrc_incr(driver->creator(path),
-						"filequota", nil, -size);
+						"fileblocks", -size);
 	    }
 	}
-    } : error(TLSVAR2);
+    } : error(TLSVAR(TLS(), TLS_ARGUMENT));
     return result;
 }
 
@@ -1276,7 +857,7 @@ static int rename_file(string from, string to)
     tcreator = driver->creator(to);
     size = driver->file_size(from, TRUE);
     rsrcd = ::find_object(RSRCD);
-    rsrc = rsrcd->rsrc_get(tcreator, "filequota");
+    rsrc = rsrcd->rsrc_get(tcreator, "fileblocks");
     if (size != 0 && fcreator != tcreator && creator != "System" &&
 	rsrc[RSRC_USAGE] >= rsrc[RSRC_MAX] && rsrc[RSRC_MAX] >= 0) {
 	error("File quota exceeded");
@@ -1286,11 +867,11 @@ static int rename_file(string from, string to)
 	rlimits (-1; -1) {
 	    result = ::rename_file(from, to);
 	    if (result != 0 && fcreator != tcreator) {
-		rsrcd->rsrc_incr(tcreator, "filequota", nil, size, TRUE);
-		rsrcd->rsrc_incr(fcreator, "filequota", nil, -size);
+		rsrcd->rsrc_incr(tcreator, "fileblocks", size);
+		rsrcd->rsrc_incr(fcreator, "fileblocks", -size);
 	    }
 	}
-    } : error(TLSVAR2);
+    } : error(TLSVAR(TLS(), TLS_ARGUMENT));
     return result;
 }
 
@@ -1300,7 +881,7 @@ static int rename_file(string from, string to)
  */
 static mixed **get_dir(string path)
 {
-    string oname, *names, dir;
+    string *names, dir;
     mixed **list, *olist;
     int i, sz;
 
@@ -1309,10 +890,10 @@ static mixed **get_dir(string path)
 	error("Permission denied");
     }
 
-    oname = object_name(this_object());
-    path = ::find_object(DRIVER)->normalize_path(path, oname + "/..", creator);
+    path = ::find_object(DRIVER)->normalize_path(path, nil, creator);
     if (creator != "System" &&
-	!::find_object(ACCESSD)->access(oname, path, READ_ACCESS)) {
+	!::find_object(ACCESSD)->access(object_name(this_object()), path,
+					READ_ACCESS)) {
 	error("Access denied");
     }
 
@@ -1321,8 +902,8 @@ static mixed **get_dir(string path)
     dir = implode(names[.. sizeof(names) - 2], "/");
     names = list[0];
     olist = allocate(sz = sizeof(names));
-    if (sscanf(path, "%*s" + INHERITABLE_SUBDIR) != 0) {
-	/* lib objects */
+    if (sscanf(path, "%*s/lib/") != 0) {
+	/* class objects */
 	for (i = sz; --i >= 0; ) {
 	    path = dir + "/" + names[i];
 	    if ((sz=strlen(path)) >= 2 && path[sz - 2 ..] == ".c" &&
@@ -1361,10 +942,10 @@ static mixed *file_info(string path)
 	error("Permission denied");
     }
 
-    name = object_name(this_object());
-    path = ::find_object(DRIVER)->normalize_path(path, name + "/..", creator);
+    path = ::find_object(DRIVER)->normalize_path(path, nil, creator);
     if (creator != "System" &&
-	!::find_object(ACCESSD)->access(name, path, READ_ACCESS)) {
+	!::find_object(ACCESSD)->access(object_name(this_object()), path,
+					READ_ACCESS)) {
 	error("Access denied");
     }
 
@@ -1392,7 +973,7 @@ static mixed *file_info(string path)
     info = ({ info[1][i], info[2][i], nil });
     if ((sz=strlen(path)) >= 2 && path[sz - 2 ..] == ".c" &&
 	(obj=::find_object(path[.. sz - 3]))) {
-	info[2] = (sscanf(path, "%*s" + INHERITABLE_SUBDIR) != 0) ? TRUE : obj;
+	info[2] = (sscanf(path, "%*s/lib/") != 0) ? TRUE : obj;
     }
     return info;
 }
@@ -1403,7 +984,7 @@ static mixed *file_info(string path)
  */
 static int make_dir(string path)
 {
-    string oname, fcreator;
+    string fcreator;
     object driver, rsrcd;
     int result, *rsrc;
 
@@ -1412,19 +993,19 @@ static int make_dir(string path)
 	error("Permission denied");
     }
 
-    oname = object_name(this_object());
     driver = ::find_object(DRIVER);
-    path = driver->normalize_path(path, oname + "/..", creator);
+    path = driver->normalize_path(path, nil, creator);
     if (sscanf(path, "/kernel/%*s") != 0 ||
 	sscanf(path, "/include/kernel/%*s") != 0 ||
 	(creator != "System" &&
-	 !::find_object(ACCESSD)->access(oname, path, WRITE_ACCESS))) {
+	 !::find_object(ACCESSD)->access(object_name(this_object()), path,
+					 WRITE_ACCESS))) {
 	error("Access denied");
     }
 
     fcreator = driver->creator(path + "/");
     rsrcd = ::find_object(RSRCD);
-    rsrc = rsrcd->rsrc_get(fcreator, "filequota");
+    rsrc = rsrcd->rsrc_get(fcreator, "fileblocks");
     if (creator != "System" && rsrc[RSRC_USAGE] >= rsrc[RSRC_MAX] &&
 	rsrc[RSRC_MAX] >= 0) {
 	error("File quota exceeded");
@@ -1434,10 +1015,10 @@ static int make_dir(string path)
 	rlimits (-1; -1) {
 	    result = ::make_dir(path);
 	    if (result != 0) {
-		rsrcd->rsrc_incr(fcreator, "filequota", nil, 1, TRUE);
+		rsrcd->rsrc_incr(fcreator, "fileblocks", 1);
 	    }
 	}
-    } : error(TLSVAR2);
+    } : error(TLSVAR(TLS(), TLS_ARGUMENT));
     return result;
 }
 
@@ -1447,7 +1028,6 @@ static int make_dir(string path)
  */
 static int remove_dir(string path)
 {
-    string oname;
     object driver;
     int result;
 
@@ -1456,13 +1036,13 @@ static int remove_dir(string path)
 	error("Permission denied");
     }
 
-    oname = object_name(this_object());
     driver = ::find_object(DRIVER);
-    path = driver->normalize_path(path, oname + "/..", creator);
+    path = driver->normalize_path(path, nil, creator);
     if (sscanf(path, "/kernel/%*s") != 0 ||
 	sscanf(path, "/include/kernel/%*s") != 0 ||
 	(creator != "System" &&
-	 !::find_object(ACCESSD)->access(oname, path, WRITE_ACCESS))) {
+	 !::find_object(ACCESSD)->access(object_name(this_object()), path,
+					 WRITE_ACCESS))) {
 	error("Access denied");
     }
 
@@ -1471,10 +1051,10 @@ static int remove_dir(string path)
 	    result = ::remove_dir(path);
 	    if (result != 0) {
 		::find_object(RSRCD)->rsrc_incr(driver->creator(path + "/"),
-						"filequota", nil, -1);
+						"fileblocks", -1);
 	    }
 	}
-    } : error(TLSVAR2);
+    } : error(TLSVAR(TLS(), TLS_ARGUMENT));
     return result;
 }
 
@@ -1484,17 +1064,15 @@ static int remove_dir(string path)
  */
 static int restore_object(string path)
 {
-    string oname;
-
     CHECKARG(path, 1, "restore_object");
     if (!this_object()) {
 	error("Permission denied");
     }
 
-    oname = object_name(this_object());
-    path = ::find_object(DRIVER)->normalize_path(path, oname + "/..", creator);
+    path = ::find_object(DRIVER)->normalize_path(path, nil, creator);
     if (creator != "System" &&
-	!::find_object(ACCESSD)->access(oname, path, READ_ACCESS)) {
+	!::find_object(ACCESSD)->access(object_name(this_object()), path,
+					READ_ACCESS)) {
 	error("Access denied");
     }
 
@@ -1529,7 +1107,7 @@ static void save_object(string path)
 
     fcreator = driver->creator(path);
     rsrcd = ::find_object(RSRCD);
-    rsrc = rsrcd->rsrc_get(fcreator, "filequota");
+    rsrc = rsrcd->rsrc_get(fcreator, "fileblocks");
     if (creator != "System" && rsrc[RSRC_USAGE] >= rsrc[RSRC_MAX] &&
 	rsrc[RSRC_MAX] >= 0) {
 	error("File quota exceeded");
@@ -1540,10 +1118,10 @@ static void save_object(string path)
 	rlimits (-1; -1) {
 	    ::save_object(path);
 	    if ((size=driver->file_size(path) - size) != 0) {
-		rsrcd->rsrc_incr(fcreator, "filequota", nil, size, TRUE);
+		rsrcd->rsrc_incr(fcreator, "fileblocks", size);
 	    }
 	}
-    } : error(TLSVAR2);
+    } : error(TLSVAR(TLS(), TLS_ARGUMENT));
 }
 
 /*
@@ -1556,7 +1134,8 @@ static string editor(varargs string cmd)
     string result;
     mixed *info;
 
-    if (creator != "System" || !this_object() || !next) {
+    if (creator != "System" || !this_object() ||
+	sscanf(object_name(this_object()), "%*s#-1") != 0) {
 	error("Permission denied");
     }
 
@@ -1564,26 +1143,98 @@ static string editor(varargs string cmd)
 	rlimits (-1; -1) {
 	    rsrcd = ::find_object(RSRCD);
 	    if (!query_editor(this_object())) {
-		if (!rsrcd->rsrc_incr(owner, "editors", this_object(), 1)) {
-		    error("Too many editors");
-		}
-		::find_object(OBJREGD)->add_editor(this_object());
+		::find_object(USERD)->add_editor(this_object());
 	    }
 	    driver = ::find_object(DRIVER);
 
-	    TLSVAR2 = nil;
+	    TLSVAR(TLS(), TLS_ARGUMENT) = nil;
 	    result = (cmd) ? ::editor(cmd) : ::editor();
-	    info = TLSVAR2;
+	    info = TLSVAR(TLS(), TLS_ARGUMENT);
 
 	    if (!query_editor(this_object())) {
-		rsrcd->rsrc_incr(owner, "editors", this_object(), -1);
-		::find_object(OBJREGD)->remove_editor(this_object());
+		::find_object(USERD)->remove_editor(this_object());
 	    }
 	    if (info) {
-		rsrcd->rsrc_incr(driver->creator(info[0]), "filequota", nil,
-				 driver->file_size(info[0]) - info[1], TRUE);
+		rsrcd->rsrc_incr(driver->creator(info[0]), "fileblocks",
+				 driver->file_size(info[0]) - info[1]);
 	    }
 	}
-    } : error(TLSVAR2);
+    } : error(TLSVAR(TLS(), TLS_ARGUMENT));
     return result;
+}
+
+
+/*
+ * NAME:	tls_set()
+ * DESCRIPTION:	set TLS value
+ */
+static void tls_set(mixed index, mixed value)
+{
+    if (typeof(index) == T_INT && index < 0) {
+	badarg(1, "tls_set");
+    }
+    TLS()[index] = value;
+}
+
+/*
+ * NAME:	tls_get()
+ * DESCRIPTION:	get TLS value
+ */
+static mixed tls_get(mixed index)
+{
+    if (typeof(index) == T_INT && index < 0) {
+	badarg(1, "tls_get");
+    }
+    return TLS()[index];
+}
+
+/*
+ * NAME:	send_atomic_message()
+ * DESCRIPTION:	add a message to be passed on through an atomic error
+ */
+static void send_atomic_message(string str)
+{
+    mapping tls;
+    string *mesg, *messages;
+
+    if (!str || sscanf(str, "*%s\0") != 0) {
+	badarg(1, "send_atomic_message");
+    }
+
+    mesg = ({ "." + str });
+    tls = TLS();
+    messages = TLSVAR(tls, TLS_PUT_ATOMIC);
+    if (messages) {
+	messages += mesg;
+    } else {
+	messages = mesg;
+    }
+    TLSVAR(tls, TLS_PUT_ATOMIC) = messages;
+}
+
+/*
+ * NAME:	retrieve_atomic_messages()
+ * DESCRIPTION:	retrieve messages after an atomic error
+ */
+static string *retrieve_atomic_messages()
+{
+    mapping tls;
+    string *messages;
+
+    tls = TLS();
+    messages = TLSVAR(tls, TLS_GET_ATOMIC);
+    TLSVAR(tls, TLS_GET_ATOMIC) = nil;
+    return (messages) ? messages : ({ });
+}
+
+/*
+ * NAME:	error()
+ * DESCRIPTION:	throw an error
+ */
+static void error(string str)
+{
+    if (!str || sscanf(str, "%*s\0") != 0) {
+	badarg(1, "error");
+    }
+    ::error(str);
 }

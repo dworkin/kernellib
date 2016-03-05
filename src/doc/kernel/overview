@@ -5,10 +5,9 @@
 
 The kernel library was written to solve the technical problems encountered
 when writing a mudlib for users who will have programming access.  It deals
-with resource control, file security and user management, and offers basic
-functionality in the form of events.  The library is designed to be fully
-configurable, and should not have to be modified for use on any system.  It
-can be used for both persistent and non-persistent systems.
+with resource control, file security and user management.  The library is
+designed to be fully configurable, and should not have to be modified for use
+on any system.  It can be used for both persistent and non-persistent systems.
 
 Throughout this document, a game mudlib point of view will be taken, but the
 kernel library can be used for any type of multi-user system.
@@ -32,7 +31,7 @@ The kernel library itself resides in /kernel.  Subdirectories are:
 		    reside in this directory.
     /kernel/sys
 		    Kernel manager objects, such as the driver object, access
-		    manager, resource manager, object registry, etc.
+		    manager, resource manager, etc.
 
 The kernel imposes the following directory structure on the rest of the
 system:
@@ -60,11 +59,9 @@ The kernel imposes strict limits on the use of objects. An inherited object
 can never itself be accessed as an object.  It is not possible to call a
 function in it, and special functionality exists to compile and destruct it.
 
-Inheritable objects must have "lib" as a path component.  Clonable objects
-must have "obj" as a path component.  "lib" overrides "obj", so the file
-/usr/System/lib/foo/obj/bar.c is inheritable, but not clonable.  Objects
-with neither "lib" nor "obj" in their path are not clonable or inheritable,
-and can be used for such things as rooms or manager objects.
+Inheritable objects must have "lib" as a path component.  Objects without "lib"
+in their path are not inheritable, and can be used for such things as rooms or
+other mudlib objects.
 
 
 3. Resource control
@@ -96,16 +93,7 @@ access to the root directory.  However, the programmer's access has no effect
 on the access of the programmer's objects.
 
 
-5. Events
-
-An event is a way to broadcast a message to listeners.  Events are
-processed using the resource limits of the receiving objects.
-
-The number of events that an object is subscribed to is a resource,
-controlled by the resource manager.
-
-
-6. Application Programmer Interfaces
+5. Application Programmer Interfaces
 
 Each kernel manager object has a corresponding inheritable API.  The API
 provides functions which, when called, are routed to the manager object.
@@ -117,7 +105,7 @@ are unrestricted, so any security must be provided by the inheriting
 object.
 
 
-7. User management
+6. User management
 
 The kernel library provides a bare-bones user manager and user object.
 The user object provides basic communication commands for unprivileged
@@ -131,14 +119,14 @@ existing user is "admin", who has administrator access.  Using the
 "admin" account, other users can be granted programming access.
 
 
-8. Standard wiztool
+7. Standard wiztool
 
 The kernel library includes a "wiztool", an object which defines the basic
 developer commands for programmers.  The wiztool is inheritable, and can
 thus be used as the basis for a more advanced development tool.
 
 
-9. Extending the kernel library
+8. Extending the kernel library
 
 The kernel library was written in such a way that it can easily be extended
 without modifying any kernel objects.  The user manager and driver object
@@ -147,7 +135,7 @@ contain hooks that allow routing of some calls to different objects.
 When you begin building, start with making a new user object.  This object
 should reside in /usr/System/obj.  The user object must inherit
 /kernel/lib/user.  Next, create a telnet connection manager which can be
-installed using "/kernel/sys/userd"->set_telnet_manager(port, obj).  Finally,
+installed using "/kernel/sys/userd"->set_telnet_manager(obj).  Finally,
 create /usr/System/initd.c which handles system-specific initialization
 (for instance, the telnet connection manager must be installed from its
 create() function).
@@ -157,17 +145,3 @@ SYS_PERSISTENT in /include/std.h.
 
 Next step: reboot.  If everything works, you can start extending your
 user object, over which you now have full control.
-
-
-10. Backdoor
-
-Even if a different binary connections manager has been installed, the
-user "admin" can still login on the first binary port.  To disable this
-backdoor, change the file /kernel/data/admin.pwd to contain this line:
-
-    password "*"
-
-This will disable access for "admin".  If, at some time in the future,
-things have gone so thoroughly wrong that nobody can login in the
-ordinary way anymore, remove the file /kernel/data/admin.pwd and login
-as "admin" on the first binary port.

@@ -10,12 +10,10 @@ private object user;		/* associated user object */
  * NAME:	create()
  * DESCRIPTION:	initialize object
  */
-static void create(int clone)
+static void create()
 {
-    if (clone) {
-	::create(200);
-	user = this_user();
-    }
+    ::create(200);
+    user = this_user();
 }
 
 /*
@@ -74,6 +72,7 @@ static void process(string str)
     case "compile":
     case "clone":
     case "destruct":
+    case "new":
 
     case "cd":
     case "pwd":
@@ -94,7 +93,7 @@ static void process(string str)
     case "people":
     case "status":
     case "swapout":
-    case "statedump":
+    case "snapshot":
     case "shutdown":
     case "reboot":
 	call_other(this_object(), "cmd_" + str, user, str, arg);
