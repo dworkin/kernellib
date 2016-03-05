@@ -1,7 +1,22 @@
-This is the github release of the Kernel Library, for Hydra and DGD.  The
+This is the final release of the Kernel Library, for Hydra and DGD.  The
 kernellib is and has always been in the public domain (even though it was
 distributed with DGD), so this repository includes the full history.
 
-A sample config file is here:
+The last release only modifies this file, and moves everything else into
+a src directory; it will work fine with current versions of DGD and Hydra.
+There will be no further updates, and no more pull requests will be
+accepted.
 
-    /doc/kernel/kernel.dgd
+
+If you are looking for something that will track future versions of Hydra
+and DGD, as of the time of writing of this file you have two options:
+
+ * https://github.com/shentino/kernellib
+
+   A fork that stays true to the spirit of the kernel library.
+
+ * https://github.com/dworkin/cloud-server
+
+   Cloud Server incorporates an extensively modified version of the
+   kernel library, a snapshot of which is included on the cloud-0.7
+   branch in this repository.
