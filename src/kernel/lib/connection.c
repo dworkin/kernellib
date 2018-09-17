@@ -67,10 +67,12 @@ static void open(mapping tls)
     int timeout;
     string banner;
 
-    banner = call_other(userd, "query_" + conntype + "_banner", port,
-			this_object());
-    if (banner) {
-	send_message(banner);
+    if (conntype != "datagram") {
+	banner = call_other(userd, "query_" + conntype + "_banner", port,
+			    this_object());
+	if (banner) {
+	    send_message(banner);
+	}
     }
 
     timeout = call_other(userd, "query_" + conntype + "_timeout", port,
@@ -119,9 +121,9 @@ void disconnect()
  * NAME:	_unconnected()
  * DESCRIPTION:	an outbound connection could not be established
  */
-private void _unconnected(mapping tls, int refused)
+private void _unconnected(mapping tls, int errcode)
 {
-    this_object()->connect_failed(refused);
+    this_object()->connect_failed(errcode);
 }
 
 /*
@@ -273,13 +275,13 @@ void datagram_challenge(string str)
 }
 
 /*
- * NAME:	open_datagram()
- * DESCRIPTION:	open a datagram channel for this connection
+ * NAME:	datagram_attach()
+ * DESCRIPTION:	attach a datagram channel to this connection
  */
-static void open_datagram(mapping tls)
+static void datagram_attach(mapping tls)
 {
     if (user) {
-	user->open_datagram();
+	user->datagram_attach();
     }
 }
 

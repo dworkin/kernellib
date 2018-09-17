@@ -162,7 +162,7 @@ mixed *rsrc_get(string name, int *grsrc)
  * NAME:	rsrc_incr()
  * DESCRIPTION:	increment or decrement a resource
  */
-void rsrc_incr(string name, int incr, int *grsrc, int force)
+void rsrc_incr(string name, int incr, int *grsrc)
 {
     if (previous_program() == RSRCD && incr != 0) {
 	mapping tls, map, pending;

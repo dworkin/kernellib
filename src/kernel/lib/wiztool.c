@@ -18,7 +18,7 @@ private int hsize, hindex, hmax; /* expression table size and index */
 private string directory;	/* current directory */
 private object driver;		/* driver object */
 
-static void message(string str);
+int message(string str);
 
 /*
  * NAME:	create()
@@ -90,6 +90,19 @@ static void remove_user(string user)
 	message("Insufficient access granting privileges.\n");
     } else {
 	::remove_user(user);
+    }
+}
+
+/*
+ * NAME:	save_access()
+ * DESCRIPTION:	save the state of the access server to file
+ */
+static void save_access()
+{
+    if (!access(owner, "/", FULL_ACCESS)) {
+	message("Insufficient access granting privileges.\n");
+    } else {
+	::save_access();
     }
 }
 
@@ -207,12 +220,12 @@ static mixed *rsrc_get(string owner, string name)
  * DESCRIPTION:	increment or decrement a resource, returning TRUE if succeeded,
  *		FALSE if failed
  */
-static void rsrc_incr(string rowner, string name, int incr, varargs int force)
+static void rsrc_incr(string rowner, string name, int incr)
 {
     if (!access(owner, "/", FULL_ACCESS)) {
 	message("Permission denied.\n");
     } else {
-	::rsrc_incr(rowner, name, incr, force);
+	::rsrc_incr(rowner, name, incr);
     }
 }
 
@@ -563,7 +576,14 @@ static string dump_value(mixed value, mapping seen)
     case T_FLOAT:
 	str = (string) value;
 	if (sscanf(str, "%*s.") == 0 && sscanf(str, "%*se") == 0) {
-	    str += "." + (int) (fabs(value) * 10.0) % 10;
+	    if (value >= 0.0) {
+		value += .05;
+		str = (string) floor(value);
+	    } else {
+		value -= .05;
+		str = (string) ceil(value);
+	    }
+	    str += "." + floor(fmod(fabs(value) * 10.0, 10.0));
 	}
 	return str;
 
@@ -1026,7 +1046,7 @@ static void cmd_clone(object user, string cmd, string str)
 	break;
     }
 
-    if (sscanf(str, "%*s#") != 0 || sscanf(str, "%*s/lib/") != 0) {
+    if (sscanf(str, "%*s#") != 0) {
 	message("Not a master object.\n");
     } else if (status(str, O_INDEX) == nil) {
 	message("No such object.\n");
@@ -1091,10 +1111,9 @@ static void cmd_new(object user, string cmd, string str)
 	break;
     }
 
-    if ((sscanf(str, "%*s#%d", num) != 0 && num != -1) ||
-	sscanf(str, "%*s/lib/") != 0) {
+    if (sscanf(str, "%*s#%d", num) != 0 && num != -1) {
 	message("Not a lightweight master object.\n");
-    } else if (!obj) {
+    } else if (status(str, O_INDEX) == nil) {
 	message("No such object.\n");
     } else {
 	if (num != -1) {
@@ -1491,7 +1510,7 @@ static void cmd_ed(object user, string cmd, string str)
  * NAME:	list_access()
  * DESCRIPTION:	return an access listing in string form
  */
-private string list_access(mapping access)
+static string list_access(mapping access)
 {
     string str, *files;
     int i, *values;
@@ -1624,6 +1643,7 @@ static void cmd_grant(object user, string cmd, string str)
 	    message("That global access already exists.\n");
 	} else {
 	    set_global_access(str, TRUE);
+	    save_access();
 	}
     } else if (dir == "access") {
 	/*
@@ -1639,6 +1659,7 @@ static void cmd_grant(object user, string cmd, string str)
 	    ::add_user(who);
 	    ::add_owner(who);
 	    ::make_dir("/usr/" + who);
+	    save_access();
 	}
     } else {
 	/*
@@ -1650,6 +1671,7 @@ static void cmd_grant(object user, string cmd, string str)
 	    message(who + " already has that access.\n");
 	} else {
 	    set_access(who, str, type);
+	    save_access();
 	}
     }
 }
@@ -1684,6 +1706,7 @@ static void cmd_ungrant(object user, string cmd, string str)
 	    message("That global access does not exist.\n");
 	} else {
 	    set_global_access(str, FALSE);
+	    save_access();
 	}
     } else if (dir == "access") {
 	/*
@@ -1693,6 +1716,7 @@ static void cmd_ungrant(object user, string cmd, string str)
 	    message(who + " has no file access.\n");
 	} else {
 	    remove_user(who);
+	    save_access();
 	}
     } else {
 	/*
@@ -1704,6 +1728,7 @@ static void cmd_ungrant(object user, string cmd, string str)
 	    message(who + " has no such access.\n");
 	} else {
 	    set_access(who, str, 0);
+	    save_access();
 	}
     }
 }
@@ -1713,7 +1738,7 @@ static void cmd_ungrant(object user, string cmd, string str)
  * NAME:	ralign()
  * DESCRIPTION:	return a number as a right-aligned string
  */
-private string ralign(mixed num, int width)
+static string ralign(mixed num, int width)
 {
     string str;
 
@@ -1725,7 +1750,7 @@ private string ralign(mixed num, int width)
  * NAME:	list_resources()
  * DESCRIPTION:	create a listing of resource usage, limits etc
  */
-private string list_resources(string name, string *names, mixed *resources)
+static string list_resources(string name, string *names, mixed *resources)
 {
     int i, n;
     mixed *rsrc;
@@ -1928,7 +1953,7 @@ static void cmd_people(object user, string cmd, string str)
  * NAME:	swapavg()
  * DESCRIPTION:	return a swap average in X.XX format
  */
-private string swapavg(int num, int div)
+static string swapavg(int num, int div)
 {
     string str;
 
@@ -1944,7 +1969,7 @@ private string swapavg(int num, int div)
  * NAME:	ntoa()
  * DESCRIPTION:	convert a positive integer (or float) to a string
  */
-private string ntoa(mixed num)
+static string ntoa(mixed num)
 {
     string str;
     float mantissa;
@@ -1969,7 +1994,7 @@ private string ntoa(mixed num)
  * NAME:	percentage()
  * DESCRIPTION:	show a percentage
  */
-private string percentage(mixed part, mixed total)
+static string percentage(mixed part, mixed total)
 {
     if (total == 0) {
 	return "(  0%)";
@@ -2127,7 +2152,7 @@ static void cmd_snapshot(object user, string cmd, string str)
 	return;
     }
 
-    dump_state(TRUE);
+    dump_state(FALSE);
 }
 
 /*

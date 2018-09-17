@@ -117,10 +117,10 @@ static mixed *rsrc_get(string owner, string name)
  * NAME:	rsrc_incr()
  * DESCRIPTION:	increment or decrement a resource
  */
-static void rsrc_incr(string owner, string name, int incr, varargs int force)
+static void rsrc_incr(string owner, string name, int incr)
 {
     if (!name) {
 	error("Bad arguments for rsrc_incr");
     }
-    rsrcd->rsrc_incr(owner, name, incr, force);
+    rsrcd->rsrc_incr(owner, name, incr);
 }

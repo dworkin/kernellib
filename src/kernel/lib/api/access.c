@@ -58,6 +58,15 @@ static string *query_users()
 }
 
 /*
+ * NAME:	save_access()
+ * DESCRIPTION:	save access state to file
+ */
+static void save_access()
+{
+    accessd->save();
+}
+
+/*
  * NAME:	set_access()
  * DESCRIPTION:	set access
  */

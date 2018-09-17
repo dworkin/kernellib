@@ -11,4 +11,4 @@ DESCRIPTION
 	current object's owner.
 
 SEE ALSO
-	efun/call_other
+	efun/call_other, efun/call_out_other

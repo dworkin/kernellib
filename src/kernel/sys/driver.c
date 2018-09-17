@@ -123,6 +123,23 @@ private int dir_size(string file)
     return size;
 }
 
+# define EG "token = /[\\*\\?\\[\\\\]?[^\\*\\?\\[\\\\]*/ path: path: path token"
+
+/*
+ * NAME:	escape_path()
+ * DESCRIPTION:	escape get_dir special characters in a path
+ */
+string escape_path(string file)
+{
+    string *files;
+    int sz;
+
+    files = explode("/" + file + "/", "/");
+    sz = sizeof(files);
+    files[sz - 1] = implode(parse_string(EG, "/" + files[sz - 1]), "\\")[1 ..];
+    return implode(files, "/");
+}
+
 /*
  * NAME:	file_size()
  * DESCRIPTION:	get the size of a file in K, or 0 if the file doesn't exist
@@ -331,8 +348,8 @@ private void _initialize(mapping tls)
     load(RSRCOBJ);
 
     /* initialize some resources */
-    rsrcd->set_rsrc("stack",	        50, 0, 0);
-    rsrcd->set_rsrc("ticks",	    250000, 0, 0);
+    rsrcd->set_rsrc("stack",     100, 0, 0);
+    rsrcd->set_rsrc("ticks", 5000000, 0, 0);
 
     /* create initial resource owners */
     rsrcd->add_owner("System");
@@ -715,6 +732,15 @@ static object binary_connect(int port)
 }
 
 /*
+ * NAME:	datagram_connect()
+ * DESCRIPTION:	return a datagram connection user object
+ */
+static object datagram_connect(int port)
+{
+    return userd->datagram_connection(([ ]), port);
+}
+
+/*
  * NAME:	_interrupt()
  * DESCRIPTION:	handle interrupt signal, with proper TLS on the stack
  */
@@ -844,49 +870,51 @@ static string runtime_error(string str, int caught, int ticks)
 	user = user->query_user();
     }
 
-    messages = TLSVAR(tls, TLS_PUT_ATOMIC);
-    messages = explode(str, "\0")[(messages) ? sizeof(messages) : 0 ..];
-    for (i = 0, sz = sizeof(messages) - 1; i < sz; i++) {
-	string file;
-	int line;
+    if (sscanf(str, "%*s\0") != 0) {
+	messages = TLSVAR(tls, TLS_PUT_ATOMIC);
+	messages = explode(str, "\0")[(messages) ? sizeof(messages) : 0 ..];
+	for (i = 0, sz = sizeof(messages) - 1; i < sz; i++) {
+	    string file;
+	    int line;
 
-	str = messages[i][1 ..];
-	switch (messages[i][0]) {
-	case 'e':
-	    sscanf(str, "%s#%d#%s", file, line, str);
-	    if (errord) {
-		errord->compile_error(file, line, str);
-	    } else {
-		send_message(file += ", " + line + ": " + str + "\n");
-		if (user) {
-		    user->message(file);
+	    str = messages[i][1 ..];
+	    switch (messages[i][0]) {
+	    case 'e':
+		sscanf(str, "%s#%d#%s", file, line, str);
+		if (errord) {
+		    errord->compile_error(file, line, str);
+		} else {
+		    send_message(file += ", " + line + ": " + str + "\n");
+		    if (user) {
+			user->message(file);
+		    }
 		}
-	    }
-	    messages[i] = nil;
-	    break;
+		messages[i] = nil;
+		break;
 
-	case 'c':
-	    if (objectd) {
-		objectd->compile_failed(creator(str), str);
-	    }
-	    messages[i] = nil;
-	    break;
+	    case 'c':
+		if (objectd) {
+		    objectd->compile_failed(creator(str), str);
+		}
+		messages[i] = nil;
+		break;
 
-	default:
-	    messages[i] = str;
-	    break;
+	    default:
+		messages[i] = str;
+		break;
+	    }
 	}
+	str = messages[sz];
+	messages[sz] = nil;
+	TLSVAR(tls, TLS_GET_ATOMIC) = messages - ({ nil });
     }
-    str = messages[sz];
-    messages[sz] = nil;
 
-    TLSVAR(tls, TLS_GET_ATOMIC) = messages - ({ nil });
     if (caught <= 1) {
 	caught = 0;		/* ignore top-level catch */
     } else if (ticks < 0 && sscanf(trace[caught - 1][TRACE_PROGNAME],
 				   "/kernel/%*s") != 0 &&
 	       trace[caught - 1][TRACE_FUNCTION] != "cmd_code") {
-	return TLSVAR(tls, TLS_ARGUMENT) = str;
+	return TLSVAR(tls, TLS_ERROR) = str;
     }
 
     _runtime_error(tls, str, caught, ticks, trace, user);
@@ -1003,22 +1031,26 @@ static int runtime_rlimits(object obj, int maxdepth, int maxticks)
 {
     int depth, ticks;
 
+    if (maxdepth < 0) {
+	return FALSE;
+    }
+    if (SYSTEM()) {
+	return TRUE;
+    }
+
     if (maxdepth != 0) {
-	if (maxdepth < 0) {
-	    return FALSE;
-	}
 	depth = status()[ST_STACKDEPTH];
 	if (depth >= 0 && maxdepth > depth + 1) {
-	    return SYSTEM();
+	    return FALSE;
 	}
     }
     if (maxticks != 0) {
 	if (maxticks < 0) {
-	    return SYSTEM();
+	    return FALSE;
 	}
 	ticks = status()[ST_TICKS];
 	if (ticks >= 0 && maxticks > ticks) {
-	    return SYSTEM();
+	    return FALSE;
 	}
     }
 

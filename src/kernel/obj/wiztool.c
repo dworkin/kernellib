@@ -20,9 +20,9 @@ static void create()
  * NAME:	message()
  * DESCRIPTION:	pass on a message to the user
  */
-static void message(string str)
+static int message(string str)
 {
-    user->message(str);
+    return user->message(str);
 }
 
 /*

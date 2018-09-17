@@ -27,5 +27,5 @@ ERRORS
 	result in an error but returns the value nil.
 
 SEE ALSO
-	efun/call_limited, efun/clone_object, efun/destruct_object,
-	kfun/function_object
+	efun/call_limited, efun/call_out_other, efun/clone_object,
+	efun/destruct_object, kfun/function_object

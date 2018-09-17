@@ -1,8 +1,9 @@
 void set_telnet_manager(int port, object telnetd) [System only]
 void set_binary_manager(int port, object binaryd) [System only]
+void set_datagram_manager(int port, object datagramd) [System only]
 
-    Install a manager on a specific port for a telnet/binary connection, in
-    which the following functions will be called:
+    Install a manager on a specific port for new connections, in which the
+    following functions will be called:
 
     * object select(string str)
 

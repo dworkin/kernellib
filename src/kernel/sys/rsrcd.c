@@ -41,8 +41,7 @@ void add_owner(string owner)
 	    catch {
 		owners[owner] = obj;
 		obj->set_owner(owner);
-		owners["System"]->rsrc_incr("objects", 1, resources["objects"],
-					    FALSE);
+		owners["System"]->rsrc_incr("objects", 1, resources["objects"]);
 		olimits[owner] = ({ -1, -1, 0 });
 	    } : {
 		destruct_object(obj);
@@ -227,7 +226,7 @@ mixed *rsrc_get(string owner, string name)
  * NAME:	rsrc_incr()
  * DESCRIPTION:	increment or decrement a resource
  */
-void rsrc_incr(string owner, string name, int incr, varargs int force)
+void rsrc_incr(string owner, string name, int incr)
 {
     if (KERNEL()) {
 	object obj;
@@ -239,7 +238,7 @@ void rsrc_incr(string owner, string name, int incr, varargs int force)
 	if (!(rsrc=resources[name])) {
 	    error("No such resource: " + name);
 	}
-	obj->rsrc_incr(name, incr, rsrc, force);
+	obj->rsrc_incr(name, incr, rsrc);
     }
 }
 

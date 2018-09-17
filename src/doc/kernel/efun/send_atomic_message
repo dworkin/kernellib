@@ -1,8 +1,8 @@
 NAME
-	add_atomic_message - add message that can be retrieved after rollback
+	send_atomic_message - send message that can be retrieved after rollback
 
 SYNOPSIS
-	void add_atomic_message(string message)
+	void send_atomic_message(string message)
 
 
 DESCRIPTION
@@ -13,4 +13,4 @@ ERRORS
 	If the message contains any \0 characters, an error will result.
 
 SEE ALSO
-	efun/get_atomic_messages
+	efun/retrieve_atomic_messages
