@@ -17,6 +17,7 @@ private string buffer;		/* buffered output string */
 static void create(string type)
 {
     userd = find_object(USERD);
+    port = -1;
     conntype = type;
     mode = MODE_ECHO;	/* same as MODE_LINE for binary connection */
 }
@@ -89,6 +90,18 @@ static void open(mapping tls)
 }
 
 /*
+ * NAME:	unconnected()
+ * DESCRIPTION:	an outbound connection could not be established
+ */
+static void unconnected(mapping tls, int errcode)
+{
+    if (user) {
+	user->connect_failed(errcode);
+    }
+    destruct_object(this_object());
+}
+
+/*
  * NAME:	close()
  * DESCRIPTION:	close the connection
  */
@@ -114,26 +127,6 @@ void disconnect()
 {
     if (previous_program() == LIB_USER) {
 	destruct_object(this_object());
-    }
-}
-
-/*
- * NAME:	_unconnected()
- * DESCRIPTION:	an outbound connection could not be established
- */
-private void _unconnected(mapping tls, int errcode)
-{
-    this_object()->connect_failed(errcode);
-}
-
-/*
- * NAME:	unconnected()
- * DESCRIPTION:	an outbound connection could not be established
- */
-static nomask void unconnected(int refused)
-{
-    if (!previous_program()) {
-	_unconnected(([ ]), refused);
     }
 }
 

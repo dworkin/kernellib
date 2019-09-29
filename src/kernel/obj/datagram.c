@@ -3,7 +3,6 @@
 
 inherit LIB_CONN;	/* basic connection object */
 
-# define TLS(tls, n)	tls[-1 - n]
 
 object driver;		/* driver object */
 
@@ -18,12 +17,33 @@ static void create()
 }
 
 /*
+ * NAME:	connect_datagram()
+ * DESCRIPTION:	initiate an outbound datagram connection
+ */
+void connect_datagram(object user, int dgram, string address, int port)
+{
+    if (previous_program() == LIB_USER) {
+	::connect_datagram(dgram, address, port);
+	set_user(user, nil);
+    }
+}
+
+/*
  * NAME:	open()
  * DESCRIPTION:	open the connection
  */
 static void open()
 {
     ::open(([ ]));
+}
+
+/*
+ * NAME:	unconnected()
+ * DESCRIPTION:	an outbound connection could not be established
+ */
+static void unconnected(int refused)
+{
+    ::unconnected(([ ]), refused);
 }
 
 /*

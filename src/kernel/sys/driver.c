@@ -7,7 +7,6 @@
 # include <type.h>
 
 # define TLS()		call_trace()[1][TRACE_FIRSTARG]
-# define TLSVAR(tls, n)	tls[-1 - n]
 
 
 object rsrcd;		/* resource manager object */

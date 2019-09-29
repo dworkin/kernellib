@@ -3,7 +3,6 @@
 
 inherit LIB_CONN;	/* basic connection object */
 
-# define TLS(tls, n)	tls[-1 - n]
 
 object driver;		/* driver object */
 string buffer;		/* buffered input */
@@ -22,12 +21,33 @@ static void create()
 }
 
 /*
+ * NAME:	connect()
+ * DESCRIPTION:	initiate an outbound connection
+ */
+void connect(object user, string address, int port)
+{
+    if (previous_program() == LIB_USER) {
+	::connect(address, port);
+	set_user(user, nil);
+    }
+}
+
+/*
  * NAME:	open()
  * DESCRIPTION:	open the connection
  */
 static void open()
 {
     ::open(([ ]));
+}
+
+/*
+ * NAME:	unconnected()
+ * DESCRIPTION:	an outbound connection could not be established
+ */
+static void unconnected(int refused)
+{
+    ::unconnected(([ ]), refused);
 }
 
 /*
@@ -174,7 +194,7 @@ static void raw_message()
 	    buffer = "";
 	}
 	tls = ([ ]);
-	TLS(tls, TLS_USER) = this_object();
+	TLSVAR(tls, TLS_USER) = this_object();
 	::receive_message(tls, str);
     }
 }

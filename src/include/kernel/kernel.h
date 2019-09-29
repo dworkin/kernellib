@@ -12,6 +12,8 @@
 /*
  * kernel TLS
  */
+# define TLSVAR(tls, n)	tls[-1 - n]
+
 # define TLS_LIMIT	0	/* resource limits */
 # define TLS_ARGUMENT	1	/* argument or result */
 # define TLS_ERROR	2	/* error */

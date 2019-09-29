@@ -252,7 +252,9 @@ string query_binary_banner(int port, object obj)
 	manager = binary[port];
 	return (manager) ?
 		manager->query_banner(obj) :
-		"\r\n" + status(ST_VERSION) + " (binary)\r\n\r\nlogin: ";
+		(port >= 0) ?
+		 "\r\n" + status(ST_VERSION) + " (binary)\r\n\r\nlogin: " :
+		 nil;
     }
 }
 

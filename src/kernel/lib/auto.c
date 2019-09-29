@@ -5,11 +5,11 @@
 # include <status.h>
 # include <type.h>
 # include <trace.h>
-
+# include <kfun.h>
 
 # define TLS()			::call_trace()[1][TRACE_FIRSTARG]
-# define TLSVAR(tls, n)		tls[-1 - n]
 # define CHECKARG(arg, n, func)	if (!(arg)) badarg((n), (func))
+
 
 /*
  * NAME:	badarg()
@@ -94,7 +94,7 @@ static object find_object(string path)
 	return nil;
     }
 
-    path = ::find_object(DRIVER)->normalize_path(path, nil, creator);
+    path = ::find_object(DRIVER)->normalize_path(path, nil);
     if (sscanf(path, "%*s/lib/") != 0) {
 	/*
 	 * It is not possible to find a class object by name, or to call a
@@ -247,11 +247,12 @@ private atomic object _clone(string path, string uid, object obj)
  */
 static object clone_object(string path, varargs string uid)
 {
+    string creator;
     object obj;
 
     CHECKARG(path, 1, "clone_object");
     if (uid) {
-	CHECKARG(creator == "System", 1, "clone_object");
+	CHECKARG(KERNEL() || SYSTEM(), 1, "clone_object");
     } else {
 	uid = owner;
     }
@@ -262,7 +263,9 @@ static object clone_object(string path, varargs string uid)
     /*
      * check access
      */
-    path = ::find_object(DRIVER)->normalize_path(path, nil, creator);
+    obj = ::find_object(DRIVER);
+    creator = obj->creator(object_name(this_object()));
+    path = obj->normalize_path(path, nil, creator);
     if ((sscanf(path, "/kernel/%*s") != 0 && !KERNEL()) ||
 	(creator != "System" &&
 	 !::find_object(ACCESSD)->access(object_name(this_object()), path,
@@ -306,7 +309,7 @@ private atomic object _new(object obj)
  */
 static object new_object(mixed obj, varargs string uid)
 {
-    string str;
+    string creator, str;
     int create;
 
     if (!this_object()) {
@@ -314,7 +317,10 @@ static object new_object(mixed obj, varargs string uid)
     }
     switch (typeof(obj)) {
     case T_STRING:
-	str = ::find_object(DRIVER)->normalize_path(obj, nil, creator);
+	str = obj;
+	obj = ::find_object(DRIVER);
+	creator = obj->creator(object_name(this_object()));
+	str = obj->normalize_path(str, nil, creator);
 	obj = ::find_object(str);
 	create = TRUE;
 	break;
@@ -330,7 +336,7 @@ static object new_object(mixed obj, varargs string uid)
 	badarg(1, "new_object");
     }
     if (uid) {
-	CHECKARG(create && creator == "System", 1, "new_object");
+	CHECKARG(create && SYSTEM(), 1, "new_object");
     } else {
 	uid = owner;
     }
@@ -368,7 +374,7 @@ static object new_object(mixed obj, varargs string uid)
  * NAME:	process_trace()
  * DESCRIPTION:	filter out function call arguments from a call trace
  */
-private mixed *process_trace(object driver, mixed *trace)
+private mixed *process_trace(mixed *trace, string creator, object driver)
 {
     if (sizeof(trace) > TRACE_FIRSTARG &&
 	creator != driver->creator(trace[TRACE_PROGNAME])) {
@@ -384,20 +390,22 @@ private mixed *process_trace(object driver, mixed *trace)
  */
 static mixed *call_trace(varargs mixed index)
 {
+    object driver;
+    string creator;
     mixed *trace;
 
+    driver = ::find_object(DRIVER);
+    creator = driver->creator(object_name(this_object()));
     if (index == nil) {
 	trace = ::call_trace();
 	if (previous_program() != RSRCOBJ) {
 	    trace[1][TRACE_FIRSTARG] = nil;
 	}
 	if (creator != "System") {
-	    object driver;
 	    int i;
 
-	    driver = ::find_object(DRIVER);
 	    for (i = sizeof(trace) - 1; --i >= 0; ) {
-		trace[i] = process_trace(driver, trace[i]);
+		trace[i] = process_trace(trace[i], creator, driver);
 	    }
 	}
     } else {
@@ -406,7 +414,7 @@ static mixed *call_trace(varargs mixed index)
 	    trace[TRACE_FIRSTARG] = nil;
 	}
 	if (creator != "System") {
-	    trace = process_trace(::find_object(DRIVER), trace);
+	    trace = process_trace(trace, creator, driver);
 	}
     }
 
@@ -488,7 +496,7 @@ static mixed status(varargs mixed obj, mixed index)
     case T_STRING:
 	/* get corresponding object */
 	driver = ::find_object(DRIVER);
-	obj = ::find_object(driver->normalize_path(obj, nil, creator));
+	obj = ::find_object(driver->normalize_path(obj, nil));
 	if (!obj) {
 	    return nil;
 	}
@@ -556,10 +564,26 @@ static object *users()
  */
 static void connect(string address, int port)
 {
-    if (!(this_object() <- LIB_CONN)) {
+    if (previous_program() != BINARY_CONN) {
 	error("Permission denied");
     }
     ::connect(address, port);
+}
+
+/*
+ * NAME:	connect_datagram()
+ * DESCRIPTION:	establish an outbound datagram connection
+ */
+static void connect_datagram(int dgram, string address, int port)
+{
+    if (previous_program() != DATAGRAM_CONN) {
+	error("Permission denied");
+    }
+# ifdef KF_CONNECT_DATAGRAM
+    ::connect_datagram(dgram, address, port);
+# else
+    ::call_out("unconnected", 0, 0);
+# endif
 }
 
 /*
@@ -718,20 +742,22 @@ nomask void _F_callout(string func, string oowner, mixed *args)
  * NAME:	call_out_other()
  * DESCRIPTION:	start a callout in another object
  */
-static int call_out_other(object obj, string func, mixed args...)
+static int call_out_other(object obj, string func, mixed delay, mixed args...)
 {
+    int type;
     string oname;
+    mixed *limits;
 
     CHECKARG(obj, 1, "call_out_other");
     CHECKARG(func, 2, "call_out_other");
+    type = typeof(delay);
+    CHECKARG(type == T_INT || type == T_FLOAT, 3, "call_out_other");
     if (!this_object()) {
 	return 0;
     }
     oname = function_object(func, obj);
-    CHECKARG(oname != AUTO || func == "create", 2, "call_out_other");
-    if (!oname) {
-	func = "???";
-    }
+    CHECKARG(oname && (sscanf(oname, "/kernel/%*s") == 0 || func == "create"),
+	     2, "call_out_other");
     oname = object_name(obj);
     if (sscanf(oname, "%*s#-1") != 0) {
 	error("Callout in non-persistent object");
@@ -740,17 +766,20 @@ static int call_out_other(object obj, string func, mixed args...)
     /*
      * add callout
      */
-    return obj->_F_callout_other(func, owner, args);
+    limits = TLSVAR(TLS(), TLS_LIMIT);
+    return obj->_F_callout_other(delay, func,
+				 (limits) ? limits[LIM_OWNER] : "System", args);
 }
 
 /*
  * NAME:	_F_callout_other()
  * DESCRIPTION:	callout_other gate
  */
-nomask int _F_callout_other(string func, string oowner, mixed *args)
+nomask int _F_callout_other(mixed delay, string func, string oowner,
+			    mixed *args)
 {
     if (previous_program() == AUTO) {
-	return ::call_out("_F_callout", 0, func, oowner, args);
+	return ::call_out("_F_callout", delay, func, oowner, args);
     }
 }
 

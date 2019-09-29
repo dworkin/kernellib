@@ -25,6 +25,28 @@ static void disconnect()
 }
 
 /*
+ * NAME:	connect()
+ * DESCRIPTION:	initiate an outbound connection
+ */
+static atomic void connect(string address, int port)
+{
+    disconnect();
+    connection = clone_object(BINARY_CONN);
+    connection->connect(this_object(), address, port);
+}
+
+/*
+ * NAME:	connect_datagram()
+ * DESCRIPTION:	initiate an outbound datagram connection
+ */
+static atomic void connect_datagram(int dgram, string address, int port)
+{
+    disconnect();
+    connection = clone_object(DATAGRAM_CONN);
+    connection->connect_datagram(this_object(), dgram, address, port);
+}
+
+/*
  * NAME:	connection()
  * DESCRIPTION:	establish connection
  */
